@@ -52,20 +52,20 @@ Savebeam 是一个本地优先的桌面媒体下载器。用户粘贴受支持�
 
 项目当前已经使用以下基础技术并通过 `pnpm tauri dev` 启动验证：
 
-| 层级 | 技术 |
-| --- | --- |
-| 桌面容器 | Tauri 2 |
-| 前端 | React 19、TypeScript、Vite |
-| UI 组件 | Mantine、Tabler Icons |
-| 前端状态与导航 | Zustand、React Router `HashRouter` |
-| 包管理器 | pnpm |
-| 本地核心 | Rust 2024 Edition |
-| IDE | RustRover |
-| 应用标识 | `com.coopsrc.matrix.savebeam` |
-| 下载引擎 | yt-dlp，后续按需安装 |
-| 媒体处理 | FFmpeg、ffprobe，后续按需安装 |
-| JS runtime | Deno 优先，也支持 Node.js、Bun、QuickJS，后续按需安装 |
-| 持久化 | SQLite，里程碑 M5 引入 |
+| 层级           | 技术                                                  |
+| -------------- | ----------------------------------------------------- |
+| 桌面容器       | Tauri 2                                               |
+| 前端           | React 19、TypeScript、Vite                            |
+| UI 组件        | Mantine、Tabler Icons                                 |
+| 前端状态与导航 | Zustand、React Router `HashRouter`                    |
+| 包管理器       | pnpm                                                  |
+| 本地核心       | Rust 2024 Edition                                     |
+| IDE            | RustRover                                             |
+| 应用标识       | `com.coopsrc.matrix.savebeam`                         |
+| 下载引擎       | yt-dlp，后续按需安装                                  |
+| 媒体处理       | FFmpeg、ffprobe，后续按需安装                         |
+| JS runtime     | Deno 优先，也支持 Node.js、Bun、QuickJS，后续按需安装 |
+| 持久化         | SQLite，里程碑 M5 引入                                |
 
 新依赖必须有明确用途，不应仅因模板或未来可能需要而提前加入。
 
@@ -248,11 +248,11 @@ Linux 使用中性桌面风格：
 
 ### 6.5 窗口与导航响应规则
 
-| 内容宽度 | 导航形态 |
-| --- | --- |
-| `≥ 960px` | 完整图标和文字导航 |
+| 内容宽度    | 导航形态                                   |
+| ----------- | ------------------------------------------ |
+| `≥ 960px`   | 完整图标和文字导航                         |
 | `760–959px` | `56px` 紧凑图标导航，文字通过 tooltip 提供 |
-| `< 760px` | 不作为正式支持尺寸；由最小窗口宽度避免进入 |
+| `< 760px`   | 不作为正式支持尺寸；由最小窗口宽度避免进入 |
 
 这是桌面应用，不为首版增加移动式汉堡菜单或覆盖式抽屉。窗口缩放不能导致主要操作、进度或错误信息不可访问。
 
@@ -376,12 +376,12 @@ DownloadEngine
 
 ### 8.1 必需组件
 
-| 组件 | 用途 | 必需性 |
-| --- | --- | --- |
-| yt-dlp | URL解析与媒体下载 | 必需 |
-| FFmpeg | 合并与后处理 | 高质量音视频下载必需 |
-| ffprobe | 媒体信息检查 | 推荐，与 FFmpeg 同源 |
-| JavaScript runtime | yt-dlp JavaScript challenge 支持；Deno 优先，也可使用 Node.js、Bun、QuickJS | 完整站点兼容推荐 |
+| 组件               | 用途                                                                        | 必需性               |
+| ------------------ | --------------------------------------------------------------------------- | -------------------- |
+| yt-dlp             | URL解析与媒体下载                                                           | 必需                 |
+| FFmpeg             | 合并与后处理                                                                | 高质量音视频下载必需 |
+| ffprobe            | 媒体信息检查                                                                | 推荐，与 FFmpeg 同源 |
+| JavaScript runtime | yt-dlp JavaScript challenge 支持；Deno 优先，也可使用 Node.js、Bun、QuickJS | 完整站点兼容推荐     |
 
 ### 8.2 三种组件来源
 

@@ -51,7 +51,7 @@ chore(milestone): verify M4 single-download workflow
 - [x] M0-T1 更新应用名称、描述、作者和窗口基础配置。
 - [ ] M0-T2 确认 bundle identifier、版本策略和最低系统版本。
 - [x] M0-T3 整理目录结构，建立 `commands/domain/services/infrastructure/security` 模块。
-- [ ] M0-T4 配置 Rust 格式化、Clippy、前端 lint/format 和以 macOS 为首要环境的基础 CI。
+- [x] M0-T4 配置 Rust 格式化、Clippy、前端 lint/format 和以 macOS 为首要环境的基础 CI。
 - [x] M0-T5 建立错误类型、IPC 响应约定和事件命名规范。
 - [ ] M0-T6 更新 README，记录 pnpm、RustRover 和运行命令。
 
