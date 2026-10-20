@@ -1,8 +1,8 @@
-mod commands;
-mod domain;
-mod infrastructure;
-mod security;
-mod services;
+pub mod commands;
+pub mod domain;
+pub mod infrastructure;
+pub mod security;
+pub mod services;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {

@@ -308,6 +308,14 @@ download://log
 
 事件载荷必须包含 schema version，便于后续兼容升级。
 
+IPC 协议约定：
+
+- Rust 命令名使用 `snake_case`；命令参数沿用 Tauri 默认映射，Rust 侧为 `snake_case`、前端调用侧为 `camelCase`。序列化到前端的结构字段统一使用 `camelCase`。
+- Rust 命令统一返回 `CommandResult<T>`。成功时直接返回 `T`，失败时由 Tauri 序列化 `AppError`，不再增加第二层 success/error envelope。
+- `AppError` 使用 `{ code, message, retryable, diagnostic? }`；`code` 为稳定的 `snake_case` 值，`message` 可直接展示，`diagnostic` 必须先脱敏且不能代替用户提示。
+- 事件名使用 `domain://past-tense` 或 `domain://noun` 格式，并集中定义常量，业务代码不得散落字符串字面量。
+- 所有事件统一使用 `{ schemaVersion, payload }` envelope；首版 `schemaVersion` 为 `1`。
+
 ## 7. Rust 核心设计
 
 ### 7.1 推荐模块结构
