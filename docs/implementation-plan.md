@@ -63,6 +63,8 @@ chore(milestone): verify M4 single-download workflow
 - CI 能在至少一个桌面平台运行基础检查。
 - 模板欢迎页面和无关资源被清理。
 
+验收状态：已通过，证据见 [`docs/verification/M0.md`](verification/M0.md)。
+
 ### M1：平台自适应应用外壳与交互原型
 
 **目标**：完成真实页面结构，但暂不执行下载。
