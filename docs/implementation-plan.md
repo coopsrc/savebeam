@@ -48,7 +48,7 @@ chore(milestone): verify M4 single-download workflow
 任务：
 
 - [x] M0-T0 初始化 Git 仓库，确认忽略规则并建立任务提交基线。
-- [ ] M0-T1 更新应用名称、描述、作者和窗口基础配置。
+- [x] M0-T1 更新应用名称、描述、作者和窗口基础配置。
 - [ ] M0-T2 确认 bundle identifier、版本策略和最低系统版本。
 - [ ] M0-T3 整理目录结构，建立 `commands/domain/services/infrastructure/security` 模块。
 - [ ] M0-T4 配置 Rust 格式化、Clippy、前端 lint/format 和以 macOS 为首要环境的基础 CI。
