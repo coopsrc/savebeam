@@ -61,7 +61,7 @@ Savebeam 是一个本地优先的桌面媒体下载器。用户粘贴受支持�
 | 包管理器       | pnpm                                                  |
 | 本地核心       | Rust 2024 Edition                                     |
 | IDE            | RustRover                                             |
-| 应用标识       | `com.coopsrc.savebeam`                                |
+| 应用标识       | `com.coopsrc.matrix.savebeam`                         |
 | 下载引擎       | yt-dlp，后续按需安装                                  |
 | 媒体处理       | FFmpeg、ffprobe，后续按需安装                         |
 | JS runtime     | Deno 优先，也支持 Node.js、Bun、QuickJS，后续按需安装 |
@@ -92,7 +92,7 @@ Savebeam 是一个本地优先的桌面媒体下载器。用户粘贴受支持�
 
 ### 4.3 标识与版本策略
 
-- 正式 bundle identifier 为 `com.coopsrc.savebeam`，发布后不得因品牌文案或版本变化随意修改，否则系统会把应用视为不同产品。
+- 正式 bundle identifier 为 `com.coopsrc.matrix.savebeam`，发布后不得因品牌文案或版本变化随意修改，否则系统会把应用视为不同产品。
 - 应用版本遵循 SemVer `MAJOR.MINOR.PATCH`；1.0 前使用 `0.MINOR.PATCH`，不兼容的持久化或公开协议变化必须在发布说明中明确。
 - `package.json` 的 `version` 是 Tauri 打包版本来源；`tauri.conf.json` 通过路径引用该文件，避免前端包与安装包版本分叉。
 - `Cargo.toml` 的 crate 版本在发布任务中与应用版本同步；发布标签使用 `vMAJOR.MINOR.PATCH`。
