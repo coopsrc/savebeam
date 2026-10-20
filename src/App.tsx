@@ -2,19 +2,19 @@ import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Badge, Group, Paper, Stack, Text, ThemeIcon, Title } from "@mantine/core";
 import { IconDownload } from "@tabler/icons-react";
 import { usePlatformProfile } from "./app/platform/profile";
+import { AppShell } from "./layout/AppShell";
 import "./App.css";
-
-const routeTitles: Record<string, string> = {
-  "/download": "下载",
-  "/tasks": "任务",
-  "/history": "历史",
-  "/settings": "设置",
-};
 
 function FoundationPage() {
   const location = useLocation();
   const profile = usePlatformProfile();
-  const title = routeTitles[location.pathname] ?? "下载";
+  const titleByRoute: Record<string, string> = {
+    "/download": "下载",
+    "/tasks": "任务",
+    "/history": "历史",
+    "/settings": "设置",
+  };
+  const title = titleByRoute[location.pathname] ?? "下载";
 
   return (
     <main className="foundation-page">
@@ -47,11 +47,14 @@ function FoundationPage() {
 function App() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/download" replace />} />
-      {Object.keys(routeTitles).map((path) => (
-        <Route key={path} path={path} element={<FoundationPage />} />
-      ))}
-      <Route path="*" element={<Navigate to="/download" replace />} />
+      <Route element={<AppShell />}>
+        <Route path="/" element={<Navigate to="/download" replace />} />
+        <Route path="/download" element={<FoundationPage />} />
+        <Route path="/tasks" element={<FoundationPage />} />
+        <Route path="/history" element={<FoundationPage />} />
+        <Route path="/settings" element={<FoundationPage />} />
+        <Route path="*" element={<Navigate to="/download" replace />} />
+      </Route>
     </Routes>
   );
 }
