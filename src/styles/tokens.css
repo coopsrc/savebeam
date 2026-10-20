@@ -1,0 +1,77 @@
+:root {
+  color-scheme: light dark;
+  --sb-color-accent: #2563eb;
+  --sb-color-accent-soft: #e8f1ff;
+  --sb-color-canvas: #f5f5f7;
+  --sb-color-surface: #ffffff;
+  --sb-color-text: #1d1d1f;
+  --sb-color-muted: #64646a;
+  --sb-color-border: rgb(0 0 0 / 8%);
+  --sb-radius-control: 8px;
+  --sb-radius-card: 16px;
+  --sb-space-page: 32px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-width: 0;
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--mantine-font-family);
+}
+
+.app-root {
+  min-height: 100vh;
+  color: var(--sb-color-text);
+  background: var(--sb-color-canvas);
+}
+
+.foundation-page {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: var(--sb-space-page);
+}
+
+.foundation-card {
+  width: min(100%, 560px);
+  padding: 36px;
+}
+
+.eyebrow {
+  margin: 0 0 2px;
+  color: var(--sb-color-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --sb-color-canvas: #1c1c1e;
+    --sb-color-surface: #2c2c2e;
+    --sb-color-text: #f5f5f7;
+    --sb-color-muted: #aeaeb2;
+    --sb-color-border: rgb(255 255 255 / 10%);
+    --sb-color-accent-soft: rgb(10 93 203 / 24%);
+  }
+}
+
+@media (max-width: 700px) {
+  :root {
+    --sb-space-page: 20px;
+  }
+
+  .foundation-card {
+    padding: 24px;
+  }
+}

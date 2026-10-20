@@ -71,7 +71,7 @@ chore(milestone): verify M4 single-download workflow
 
 任务：
 
-- [ ] M1-T1 集成 Mantine、Tabler Icons、Zustand 和 React Router，建立基础 design tokens 与平台 profile。
+- [x] M1-T1 集成 Mantine、Tabler Icons、Zustand 和 React Router，建立基础 design tokens 与平台 profile。
 - [ ] M1-T2 实现共享 AppShell、左侧导航、右侧内容区、页面工具栏和状态栏。
 - [ ] M1-T3 实现 URL 输入与客户端基础校验。
 - [ ] M1-T4 实现组件缺失、空状态、加载状态和错误状态组件。

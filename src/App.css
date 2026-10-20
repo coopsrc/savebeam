@@ -1,95 +1,12 @@
+@import "./styles/tokens.css";
+
 :root {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 16px;
   line-height: 1.5;
   font-weight: 400;
-  color: #1d1d1f;
-  background: #f5f5f7;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
-}
-
-#root {
-  min-height: 100vh;
-}
-
-body {
-  margin: 0;
-}
-
-.app-root {
-  box-sizing: border-box;
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 48px;
-}
-
-.baseline-card {
-  width: min(100%, 560px);
-  box-sizing: border-box;
-  padding: 40px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.82);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
-}
-
-.eyebrow {
-  margin: 0 0 10px;
-  color: #64646a;
-  font-size: 0.78rem;
-  font-weight: 650;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-h1 {
-  margin: 0;
-  font-size: clamp(2rem, 5vw, 3rem);
-  line-height: 1.12;
-  letter-spacing: -0.035em;
-}
-
-.summary {
-  max-width: 42ch;
-  margin: 18px 0 28px;
-  color: #64646a;
-}
-
-.status {
-  display: inline-flex;
-  padding: 6px 10px;
-  border-radius: 999px;
-  color: #1859b7;
-  background: #e8f1ff;
-  font-size: 0.8rem;
-  font-weight: 650;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    color: #f5f5f7;
-    background: #1c1c1e;
-  }
-
-  .baseline-card {
-    border-color: rgba(255, 255, 255, 0.1);
-    background: rgba(44, 44, 46, 0.86);
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.24);
-  }
-
-  .eyebrow,
-  .summary {
-    color: #aeaeb2;
-  }
-
-  .status {
-    color: #8fc1ff;
-    background: rgba(10, 93, 203, 0.24);
-  }
 }
