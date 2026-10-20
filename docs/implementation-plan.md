@@ -54,6 +54,7 @@ chore(milestone): verify M4 single-download workflow
 - [x] M0-T4 配置 Rust 格式化、Clippy、前端 lint/format 和以 macOS 为首要环境的基础 CI。
 - [x] M0-T5 建立错误类型、IPC 响应约定和事件命名规范。
 - [x] M0-T6 更新 README，记录 pnpm、RustRover 和运行命令。
+- [x] M0-T7 清理预验收发现的模板欢迎页、失效 `greet` 调用和无关模板资源。
 
 验收标准：
 
