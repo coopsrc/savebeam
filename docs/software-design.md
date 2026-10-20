@@ -61,7 +61,7 @@ Savebeam 是一个本地优先的桌面媒体下载器。用户粘贴受支持�
 | 包管理器       | pnpm                                                  |
 | 本地核心       | Rust 2024 Edition                                     |
 | IDE            | RustRover                                             |
-| 应用标识       | `com.coopsrc.matrix.savebeam`                         |
+| 应用标识       | `com.coopsrc.savebeam`                                |
 | 下载引擎       | yt-dlp，后续按需安装                                  |
 | 媒体处理       | FFmpeg、ffprobe，后续按需安装                         |
 | JS runtime     | Deno 优先，也支持 Node.js、Bun、QuickJS，后续按需安装 |
@@ -79,6 +79,25 @@ Savebeam 是一个本地优先的桌面媒体下载器。用户粘贴受支持�
 - 任务级验证默认在 macOS 执行，并在任务提交中记录实际运行的检查。
 - 涉及平台条件编译、路径、进程管理、安装包或系统集成的任务，不能仅根据 macOS 结果宣称 Windows/Linux 已验证。
 - Windows/Linux 验证失败应独立记录和修复，不应在未经验证时推断跨平台行为一致。
+
+### 4.2 平台支持基线
+
+首个桌面版本采用以下最低支持基线：
+
+- macOS 12.0 或更高版本，首发构建为 Apple Silicon。`bundle.macOS.minimumSystemVersion` 必须显式保持为 `12.0`，不能依赖 Tauri 默认值。
+- Windows 10 1809（build 17763）或更高版本，首发构建为 x86_64。安装程序负责检测或安装 WebView2 Runtime。
+- Linux 以 Ubuntu 22.04 LTS x86_64 或具有 WebKitGTK 4.1 的等价发行版作为兼容基线；Linux 正式安装包是否进入首发范围在 M8 前复核。
+
+最低版本是产品支持边界，不代表仅凭编译成功即可宣称兼容。涉及路径、子进程、系统 WebView、安装器或签名的行为必须在对应平台完成验证。
+
+### 4.3 标识与版本策略
+
+- 正式 bundle identifier 为 `com.coopsrc.savebeam`，发布后不得因品牌文案或版本变化随意修改，否则系统会把应用视为不同产品。
+- 应用版本遵循 SemVer `MAJOR.MINOR.PATCH`；1.0 前使用 `0.MINOR.PATCH`，不兼容的持久化或公开协议变化必须在发布说明中明确。
+- `package.json` 的 `version` 是 Tauri 打包版本来源；`tauri.conf.json` 通过路径引用该文件，避免前端包与安装包版本分叉。
+- `Cargo.toml` 的 crate 版本在发布任务中与应用版本同步；发布标签使用 `vMAJOR.MINOR.PATCH`。
+- yt-dlp、FFmpeg、ffprobe 和 JavaScript runtime 保持各自版本，不跟随应用版本号；组件兼容矩阵独立维护。
+- 数据库 schema version、IPC event schema version 和应用 SemVer 相互独立，升级时分别迁移和验证。
 
 ## 5. 总体架构
 
