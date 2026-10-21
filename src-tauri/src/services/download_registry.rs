@@ -1,7 +1,7 @@
 //! In-memory download task state and cancellation registry.
 
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet, VecDeque},
     sync::{
         Arc, Mutex,
         atomic::{AtomicU64, Ordering},
@@ -19,16 +19,40 @@ use crate::{
 
 static NEXT_TASK_ID: AtomicU64 = AtomicU64::new(1);
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct DownloadTaskRegistry {
     inner: Arc<Mutex<RegistryState>>,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 struct RegistryState {
     tasks: HashMap<String, DownloadTask>,
     options: HashMap<String, DownloadOptions>,
     cancellations: HashMap<String, CancellationToken>,
+    pending: VecDeque<String>,
+    active_task_ids: HashSet<String>,
+    max_concurrent: usize,
+}
+
+impl Default for RegistryState {
+    fn default() -> Self {
+        Self {
+            tasks: HashMap::new(),
+            options: HashMap::new(),
+            cancellations: HashMap::new(),
+            pending: VecDeque::new(),
+            active_task_ids: HashSet::new(),
+            max_concurrent: 1,
+        }
+    }
+}
+
+impl Default for DownloadTaskRegistry {
+    fn default() -> Self {
+        Self {
+            inner: Arc::new(Mutex::new(RegistryState::default())),
+        }
+    }
 }
 
 impl DownloadTaskRegistry {
@@ -154,6 +178,64 @@ impl DownloadTaskRegistry {
             .cancellations
             .insert(task_id.to_owned(), CancellationToken::default());
         Ok((task, options))
+    }
+
+    pub fn enqueue(&self, task_id: &str) -> Result<(), AppError> {
+        let mut state = self.lock()?;
+        let task = state
+            .tasks
+            .get(task_id)
+            .ok_or_else(|| AppError::new(ErrorCode::Unknown, "找不到下载任务。", false))?;
+        if task.status != DownloadTaskStatus::Queued {
+            return Err(AppError::new(
+                ErrorCode::Unknown,
+                "只有排队中的任务可以加入队列。",
+                false,
+            ));
+        }
+        if !state.pending.iter().any(|pending_id| pending_id == task_id)
+            && !state.active_task_ids.contains(task_id)
+        {
+            state.pending.push_back(task_id.to_owned());
+        }
+        Ok(())
+    }
+
+    pub fn claim_next(&self) -> Result<Option<(DownloadTask, DownloadOptions)>, AppError> {
+        let mut state = self.lock()?;
+        if state.active_task_ids.len() >= state.max_concurrent {
+            return Ok(None);
+        }
+        while let Some(task_id) = state.pending.pop_front() {
+            let Some(task) = state.tasks.get(&task_id).cloned() else {
+                continue;
+            };
+            if task.status != DownloadTaskStatus::Queued {
+                continue;
+            }
+            let Some(options) = state.options.get(&task_id).cloned() else {
+                continue;
+            };
+            state.active_task_ids.insert(task_id);
+            return Ok(Some((task, options)));
+        }
+        Ok(None)
+    }
+
+    pub fn finish(&self, task_id: &str) -> Result<bool, AppError> {
+        Ok(self.lock()?.active_task_ids.remove(task_id))
+    }
+
+    pub fn set_max_concurrent(&self, limit: usize) -> Result<(), AppError> {
+        if !(1..=4).contains(&limit) {
+            return Err(AppError::new(
+                ErrorCode::Unknown,
+                "并发任务数必须在 1 到 4 之间。",
+                false,
+            ));
+        }
+        self.lock()?.max_concurrent = limit;
+        Ok(())
     }
 
     pub fn cancel_all(&self) -> Result<Vec<DownloadTask>, AppError> {
@@ -288,6 +370,43 @@ mod tests {
                 .expect("new token exists")
                 .is_cancelled()
         );
+    }
+
+    #[test]
+    fn default_queue_runs_sequentially_and_advances_after_release() {
+        let registry = DownloadTaskRegistry::default();
+        let first = registry
+            .create(test_options("https://example.com/1", "First", "18"))
+            .unwrap();
+        let second = registry
+            .create(test_options("https://example.com/2", "Second", "22"))
+            .unwrap();
+        registry.enqueue(&first.id).unwrap();
+        registry.enqueue(&second.id).unwrap();
+
+        assert_eq!(registry.claim_next().unwrap().unwrap().0.id, first.id);
+        assert!(registry.claim_next().unwrap().is_none());
+        assert!(registry.finish(&first.id).unwrap());
+        assert_eq!(registry.claim_next().unwrap().unwrap().0.id, second.id);
+        assert!(!registry.finish("unknown").unwrap());
+    }
+
+    #[test]
+    fn cancelled_queued_tasks_are_skipped_and_concurrency_is_bounded() {
+        let registry = DownloadTaskRegistry::default();
+        let first = registry
+            .create(test_options("https://example.com/1", "First", "18"))
+            .unwrap();
+        let second = registry
+            .create(test_options("https://example.com/2", "Second", "22"))
+            .unwrap();
+        registry.enqueue(&first.id).unwrap();
+        registry.enqueue(&second.id).unwrap();
+        registry.cancel(&first.id).unwrap();
+        registry.set_max_concurrent(2).unwrap();
+        assert_eq!(registry.claim_next().unwrap().unwrap().0.id, second.id);
+        assert!(registry.claim_next().unwrap().is_none());
+        assert!(registry.set_max_concurrent(5).is_err());
     }
 
     fn test_options(url: &str, title: &str, format_id: &str) -> DownloadOptions {

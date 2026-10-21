@@ -49,12 +49,11 @@ pub fn start_download(
     }
     validate_task_options(&options)?;
     let task = tasks.create(options.clone())?;
-    launch_task(
+    tasks.enqueue(&task.id)?;
+    launch_next_task(
         app.clone(),
         components.inner().clone(),
         tasks.inner().clone(),
-        options,
-        task.clone(),
     );
     Ok(task)
 }
@@ -77,29 +76,39 @@ pub fn retry_download(
     components: State<'_, ComponentRegistry>,
     tasks: State<'_, DownloadTaskRegistry>,
 ) -> CommandResult<DownloadTask> {
-    let (task, options) = tasks.retry(&task_id)?;
+    let (task, _options) = tasks.retry(&task_id)?;
+    tasks.enqueue(&task_id)?;
     emit_task(&app, &task);
-    launch_task(
+    launch_next_task(
         app.clone(),
         components.inner().clone(),
         tasks.inner().clone(),
-        options,
-        task.clone(),
     );
     Ok(task)
 }
 
-fn launch_task(
-    app: AppHandle,
-    components: ComponentRegistry,
-    tasks: DownloadTaskRegistry,
-    options: DownloadOptions,
-    task: DownloadTask,
-) {
-    let task_id = task.id.clone();
-    tauri::async_runtime::spawn_blocking(move || {
-        run_task(app, tasks, components, options, task_id);
-    });
+fn launch_next_task(app: AppHandle, components: ComponentRegistry, tasks: DownloadTaskRegistry) {
+    while let Ok(Some((task, options))) = tasks.claim_next() {
+        let task_id = task.id.clone();
+        let completion_task_id = task_id.clone();
+        let worker_app = app.clone();
+        let worker_components = components.clone();
+        let worker_tasks = tasks.clone();
+        let scheduler_app = app.clone();
+        let scheduler_components = components.clone();
+        let scheduler_tasks = tasks.clone();
+        tauri::async_runtime::spawn_blocking(move || {
+            run_task(
+                worker_app,
+                worker_tasks.clone(),
+                worker_components,
+                options,
+                task_id,
+            );
+            let _ = worker_tasks.finish(&completion_task_id);
+            launch_next_task(scheduler_app, scheduler_components, scheduler_tasks);
+        });
+    }
 }
 
 fn validate_task_options(options: &DownloadOptions) -> CommandResult<()> {
