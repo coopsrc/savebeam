@@ -158,6 +158,8 @@ chore(milestone): verify M4 single-download workflow
 - 文件名包含空格和非 ASCII 字符时工作正常。
 - 日志不暴露敏感 header 或签名 URL。
 
+验收状态：本机自动化检查与 FFmpeg 音视频合成检查通过；真实第三方视频站点下载和 Windows/Linux 专项验证保留为发布前限制，证据见 [`docs/verification/M4.md`](verification/M4.md)。
+
 ### M5：任务队列、设置与历史
 
 **目标**：从单次工具升级为可持续使用的桌面应用。
