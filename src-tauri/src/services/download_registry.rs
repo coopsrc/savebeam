@@ -15,6 +15,7 @@ use crate::{
         error::{AppError, ErrorCode},
     },
     infrastructure::ytdlp_process::CancellationToken,
+    infrastructure::{database::Database, database::repositories::DownloadTaskRepository},
 };
 
 static NEXT_TASK_ID: AtomicU64 = AtomicU64::new(1);
@@ -32,6 +33,7 @@ struct RegistryState {
     pending: VecDeque<String>,
     active_task_ids: HashSet<String>,
     max_concurrent: usize,
+    repository: Option<DownloadTaskRepository>,
 }
 
 impl Default for RegistryState {
@@ -43,6 +45,7 @@ impl Default for RegistryState {
             pending: VecDeque::new(),
             active_task_ids: HashSet::new(),
             max_concurrent: 1,
+            repository: None,
         }
     }
 }
@@ -56,6 +59,37 @@ impl Default for DownloadTaskRegistry {
 }
 
 impl DownloadTaskRegistry {
+    /// Attach durable storage and recover tasks left by the previous process.
+    /// Active tasks are not resumed automatically: yt-dlp partial files remain available,
+    /// and the user can explicitly retry after reviewing the interrupted task.
+    pub fn initialize_from_database(&self, database: Database) -> Result<(), AppError> {
+        let repository = DownloadTaskRepository::new(database);
+        let records = repository.list()?;
+        let mut state = self.lock()?;
+        state.repository = Some(repository.clone());
+        for (mut task, options) in records.into_iter().rev() {
+            if matches!(
+                task.status,
+                DownloadTaskStatus::Preparing
+                    | DownloadTaskStatus::Downloading
+                    | DownloadTaskStatus::PostProcessing
+                    | DownloadTaskStatus::Cancelling
+            ) {
+                task.status = DownloadTaskStatus::Failed;
+                repository.update_status(&task.id, task.status, now_unix_ms()?)?;
+            }
+            if task.status == DownloadTaskStatus::Queued {
+                state.pending.push_back(task.id.clone());
+            }
+            state.options.insert(task.id.clone(), options);
+            state.tasks.insert(task.id.clone(), task.clone());
+            state
+                .cancellations
+                .insert(task.id, CancellationToken::default());
+        }
+        Ok(())
+    }
+
     pub fn create(&self, options: DownloadOptions) -> Result<DownloadTask, AppError> {
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -71,6 +105,9 @@ impl DownloadTaskRegistry {
             created_at_unix_ms: timestamp,
         };
         let mut state = self.lock()?;
+        if let Some(repository) = &state.repository {
+            repository.insert(&task, &options)?;
+        }
         state.options.insert(task.id.clone(), options);
         state.tasks.insert(task.id.clone(), task.clone());
         state
@@ -85,6 +122,7 @@ impl DownloadTaskRegistry {
         next_status: DownloadTaskStatus,
     ) -> Result<DownloadTask, AppError> {
         let mut state = self.lock()?;
+        let repository = state.repository.clone();
         let task = state
             .tasks
             .get_mut(task_id)
@@ -97,7 +135,11 @@ impl DownloadTaskRegistry {
             ));
         }
         task.status = next_status;
-        Ok(task.clone())
+        let updated = task.clone();
+        if let Some(repository) = repository {
+            repository.update_status(task_id, next_status, now_unix_ms()?)?;
+        }
+        Ok(updated)
     }
 
     pub fn cancellation_token(&self, task_id: &str) -> Result<CancellationToken, AppError> {
@@ -116,8 +158,15 @@ impl DownloadTaskRegistry {
             .ok_or_else(|| AppError::new(ErrorCode::Unknown, "找不到下载任务。", false))
     }
 
+    pub fn list(&self) -> Result<Vec<DownloadTask>, AppError> {
+        let mut tasks = self.lock()?.tasks.values().cloned().collect::<Vec<_>>();
+        tasks.sort_by_key(|task| std::cmp::Reverse(task.created_at_unix_ms));
+        Ok(tasks)
+    }
+
     pub fn cancel(&self, task_id: &str) -> Result<DownloadTask, AppError> {
         let mut state = self.lock()?;
+        let repository = state.repository.clone();
         let cancellation = state.cancellations.get(task_id).cloned();
         let task = state
             .tasks
@@ -126,6 +175,9 @@ impl DownloadTaskRegistry {
         match task.status {
             DownloadTaskStatus::Queued => {
                 task.status = DownloadTaskStatus::Cancelled;
+                if let Some(repository) = &repository {
+                    repository.update_status(task_id, task.status, now_unix_ms()?)?;
+                }
                 if let Some(token) = cancellation.as_ref() {
                     token.cancel();
                 }
@@ -134,6 +186,9 @@ impl DownloadTaskRegistry {
             | DownloadTaskStatus::Downloading
             | DownloadTaskStatus::PostProcessing => {
                 task.status = DownloadTaskStatus::Cancelling;
+                if let Some(repository) = &repository {
+                    repository.update_status(task_id, task.status, now_unix_ms()?)?;
+                }
                 if let Some(token) = cancellation.as_ref() {
                     token.cancel();
                 }
@@ -154,6 +209,7 @@ impl DownloadTaskRegistry {
 
     pub fn retry(&self, task_id: &str) -> Result<(DownloadTask, DownloadOptions), AppError> {
         let mut state = self.lock()?;
+        let repository = state.repository.clone();
         let options =
             state.options.get(task_id).cloned().ok_or_else(|| {
                 AppError::new(ErrorCode::Unknown, "找不到任务的下载参数。", false)
@@ -174,6 +230,9 @@ impl DownloadTaskRegistry {
         }
         task.status = DownloadTaskStatus::Queued;
         let task = task.clone();
+        if let Some(repository) = repository {
+            repository.update_status(task_id, task.status, now_unix_ms()?)?;
+        }
         state
             .cancellations
             .insert(task_id.to_owned(), CancellationToken::default());
@@ -241,6 +300,7 @@ impl DownloadTaskRegistry {
     pub fn cancel_all(&self) -> Result<Vec<DownloadTask>, AppError> {
         let mut state = self.lock()?;
         let mut changed = Vec::new();
+        let repository = state.repository.clone();
         for task in state.tasks.values_mut() {
             match task.status {
                 DownloadTaskStatus::Queued => task.status = DownloadTaskStatus::Cancelled,
@@ -253,6 +313,11 @@ impl DownloadTaskRegistry {
             }
             changed.push(task.clone());
         }
+        if let Some(repository) = repository {
+            for task in &changed {
+                repository.update_status(&task.id, task.status, now_unix_ms()?)?;
+            }
+        }
         for token in state.cancellations.values() {
             token.cancel();
         }
@@ -264,6 +329,13 @@ impl DownloadTaskRegistry {
             .lock()
             .map_err(|_| AppError::new(ErrorCode::Unknown, "下载任务状态暂时不可用。", true))
     }
+}
+
+fn now_unix_ms() -> Result<u64, AppError> {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_millis() as u64)
+        .map_err(|_| AppError::new(ErrorCode::Unknown, "系统时间不可用。", false))
 }
 
 pub const fn can_transition(from: DownloadTaskStatus, to: DownloadTaskStatus) -> bool {
@@ -389,6 +461,42 @@ mod tests {
         assert!(registry.finish(&first.id).unwrap());
         assert_eq!(registry.claim_next().unwrap().unwrap().0.id, second.id);
         assert!(!registry.finish("unknown").unwrap());
+    }
+
+    #[test]
+    fn restart_recovers_queued_tasks_and_marks_interrupted_tasks_retryable() {
+        use crate::{domain::download::DownloadTaskStatus, infrastructure::database::Database};
+
+        let database = Database::open_in_memory().unwrap();
+        let first_process = DownloadTaskRegistry::default();
+        first_process
+            .initialize_from_database(database.clone())
+            .unwrap();
+        let queued = first_process
+            .create(test_options("https://example.com/queued", "Queued", "18"))
+            .unwrap();
+        let interrupted = first_process
+            .create(test_options("https://example.com/active", "Active", "22"))
+            .unwrap();
+        first_process
+            .transition(&interrupted.id, DownloadTaskStatus::Preparing)
+            .unwrap();
+
+        let second_process = DownloadTaskRegistry::default();
+        second_process.initialize_from_database(database).unwrap();
+        let recovered = second_process.list().unwrap();
+        let recovered_queued = recovered.iter().find(|task| task.id == queued.id).unwrap();
+        let recovered_interrupted = recovered
+            .iter()
+            .find(|task| task.id == interrupted.id)
+            .unwrap();
+        assert_eq!(recovered_queued.status, DownloadTaskStatus::Queued);
+        assert_eq!(recovered_interrupted.status, DownloadTaskStatus::Failed);
+        assert_eq!(
+            second_process.claim_next().unwrap().unwrap().0.id,
+            queued.id
+        );
+        assert!(second_process.retry(&interrupted.id).is_ok());
     }
 
     #[test]

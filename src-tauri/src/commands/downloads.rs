@@ -59,6 +59,26 @@ pub fn start_download(
 }
 
 #[tauri::command]
+pub fn get_download_tasks(
+    tasks: State<'_, DownloadTaskRegistry>,
+) -> CommandResult<Vec<DownloadTask>> {
+    tasks.list()
+}
+
+pub(crate) fn resume_queued_downloads(app: AppHandle) {
+    if let (Some(components), Some(tasks)) = (
+        app.try_state::<ComponentRegistry>(),
+        app.try_state::<DownloadTaskRegistry>(),
+    ) {
+        launch_next_task(
+            app.clone(),
+            components.inner().clone(),
+            tasks.inner().clone(),
+        );
+    }
+}
+
+#[tauri::command]
 pub fn cancel_download(
     app: AppHandle,
     task_id: String,

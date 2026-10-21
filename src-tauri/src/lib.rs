@@ -15,8 +15,13 @@ pub fn run() {
         .manage(infrastructure::database::DatabaseManager::default())
         .setup(|app| {
             let app_data = app.path().resolve(".", BaseDirectory::AppData)?;
-            app.state::<infrastructure::database::DatabaseManager>()
-                .initialize(app_data.join("savebeam.sqlite3"));
+            let database_manager = app.state::<infrastructure::database::DatabaseManager>();
+            database_manager.initialize(app_data.join("savebeam.sqlite3"));
+            if let Ok(database) = database_manager.database() {
+                app.state::<services::download_registry::DownloadTaskRegistry>()
+                    .initialize_from_database(database)?;
+                commands::downloads::resume_queued_downloads(app.handle().clone());
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -25,6 +30,7 @@ pub fn run() {
             commands::components::clear_component_custom_path,
             commands::media::inspect_media,
             commands::downloads::start_download,
+            commands::downloads::get_download_tasks,
             commands::downloads::cancel_download,
             commands::downloads::retry_download,
         ])

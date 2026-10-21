@@ -8,6 +8,7 @@ import { Sidebar } from "./Sidebar";
 import { IPC_EVENTS, listenToEvent } from "../ipc/events";
 import type { AppError, DownloadProgress, DownloadResult, DownloadTask } from "../types/domain";
 import { useAppStore } from "../stores/appStore";
+import { invokeCommand } from "../ipc/client";
 
 const routeTitles: Record<string, string> = {
   "/download": "下载",
@@ -75,7 +76,20 @@ export function AppShell() {
     ])
       .then((listeners) => {
         if (disposed) listeners.forEach((stop) => stop());
-        else unlisten = listeners;
+        else {
+          unlisten = listeners;
+          void invokeCommand<DownloadTask[]>("get_download_tasks")
+            .then((tasks) =>
+              tasks.forEach((task) => useAppStore.getState().upsertDownloadTask(task)),
+            )
+            .catch((error: unknown) => {
+              useAppStore.getState().setLastDownloadError({
+                code: "unknown",
+                message: error instanceof Error ? error.message : "无法读取本地任务记录。",
+                retryable: true,
+              });
+            });
+        }
       })
       .catch(() => {
         useAppStore.getState().setLastDownloadError({
