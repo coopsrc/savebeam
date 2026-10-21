@@ -181,6 +181,8 @@ chore(milestone): verify M4 single-download workflow
 - 删除历史不删除已下载文件，除非未来提供独立且明确的删除操作。
 - 数据库损坏时应用能给出可恢复错误而不是直接崩溃。
 
+验收状态：自动化验收通过，证据见 [`docs/verification/M5.md`](verification/M5.md)。真实站点与 Windows/Linux 交互验证保留为发布前项目。
+
 ### M6：应用管理组件安装与更新
 
 **目标**：用户无需预装命令行工具即可完成本地组件配置。
