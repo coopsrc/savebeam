@@ -195,6 +195,20 @@ body {
   color: var(--sb-color-accent);
 }
 
+.app-root[data-platform="macos"] .sidebar-link[data-active] {
+  border-radius: 10px;
+}
+
+.app-root[data-platform="windows"] .sidebar-link[data-active] {
+  border-radius: 4px;
+  background: transparent;
+}
+
+.app-root[data-platform="linux"] .sidebar-link[data-active] {
+  border-radius: 8px;
+  background: rgb(100 100 106 / 10%);
+}
+
 .app-root[data-selection-style="accent-indicator"] .sidebar-link[data-active]::before {
   position: absolute;
   top: 7px;
@@ -279,6 +293,27 @@ body {
   white-space: nowrap;
 }
 
+.dev-platform-switcher {
+  position: fixed;
+  z-index: 900;
+  right: 14px;
+  bottom: 48px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--sb-color-border);
+  border-radius: 10px;
+  background: var(--sb-color-surface);
+  box-shadow: 0 4px 18px rgb(0 0 0 / 12%);
+}
+
+.dev-platform-label {
+  color: var(--sb-color-muted);
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+
 .is-compact .app-sidebar {
   flex-basis: var(--sb-sidebar-compact-width);
   width: var(--sb-sidebar-compact-width);
@@ -347,6 +382,17 @@ body {
   }
 
   .shortcut-hint {
+    display: none;
+  }
+
+  .dev-platform-switcher {
+    right: 8px;
+    bottom: 42px;
+    gap: 6px;
+    padding: 5px;
+  }
+
+  .dev-platform-label {
     display: none;
   }
 }

@@ -2,6 +2,7 @@ import type { CSSProperties, PropsWithChildren } from "react";
 import { MantineProvider } from "@mantine/core";
 import { createAppTheme } from "./theme";
 import { usePlatformProfile } from "./platform/profile";
+import { DevPlatformSwitcher } from "./platform/DevPlatformSwitcher";
 
 type ProfileVariables = CSSProperties & {
   "--sb-sidebar-width": string;
@@ -26,6 +27,7 @@ export function AppProviders({ children }: PropsWithChildren) {
         style={profileVariables}
       >
         {children}
+        <DevPlatformSwitcher />
       </div>
     </MantineProvider>
   );
