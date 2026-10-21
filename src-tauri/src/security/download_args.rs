@@ -48,6 +48,8 @@ pub fn build_download_args(options: &DownloadOptions) -> Result<Vec<OsString>, A
         format!("home:{}", options.output_directory).into(),
         "--output".into(),
         "%(title)s [%(id)s].%(ext)s".into(),
+        "--print".into(),
+        "after_move:SB_RESULT:%(filepath)j".into(),
         "--".into(),
         options.url.clone().into(),
     ];

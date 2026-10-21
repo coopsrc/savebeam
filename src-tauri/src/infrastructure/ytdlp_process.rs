@@ -197,7 +197,7 @@ fn read_capped(mut reader: impl Read, limit: usize) -> CappedOutput {
     output
 }
 
-fn classify_process_error(stderr: &[u8]) -> AppError {
+pub(crate) fn classify_process_error(stderr: &[u8]) -> AppError {
     let stderr = String::from_utf8_lossy(stderr).to_ascii_lowercase();
     if stderr.contains("sign in")
         || stderr.contains("login required")
