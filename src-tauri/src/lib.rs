@@ -10,6 +10,7 @@ pub mod services;
 pub fn run() {
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .manage(commands::components::ComponentRegistry::default())
         .manage(services::component_install_registry::ComponentInstallRegistry::default())
         .manage(services::download_registry::DownloadTaskRegistry::default())

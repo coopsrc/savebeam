@@ -126,8 +126,14 @@ export interface DownloadOptions {
   writeThumbnail: boolean;
   writeInfoJson: boolean;
   embedMetadata: boolean;
+  cookiesFilePath: string | null;
+  cookiesBrowser: CookieBrowser | null;
+  cookieAccessConfirmed: boolean;
   conflictStrategy: "skip" | "overwrite";
 }
+
+export type CookieBrowser =
+  "brave" | "chrome" | "chromium" | "edge" | "firefox" | "opera" | "safari" | "vivaldi" | "whale";
 
 export interface DownloadPreferences {
   outputDirectory: string;

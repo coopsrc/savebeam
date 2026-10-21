@@ -10,7 +10,7 @@ use rusqlite::{Connection, TransactionBehavior};
 
 use crate::domain::error::{AppError, ErrorCode};
 
-pub const CURRENT_SCHEMA_VERSION: u32 = 4;
+pub const CURRENT_SCHEMA_VERSION: u32 = 5;
 
 pub mod repositories;
 
@@ -50,6 +50,10 @@ const MIGRATIONS: &[(u32, &str)] = &[(
      ALTER TABLE download_tasks ADD COLUMN write_thumbnail INTEGER NOT NULL DEFAULT 0;
      ALTER TABLE download_tasks ADD COLUMN write_info_json INTEGER NOT NULL DEFAULT 0;
      ALTER TABLE download_tasks ADD COLUMN embed_metadata INTEGER NOT NULL DEFAULT 0;"
+), (5,
+    "ALTER TABLE download_tasks ADD COLUMN cookies_file_path TEXT;
+     ALTER TABLE download_tasks ADD COLUMN cookies_browser TEXT;
+     ALTER TABLE download_tasks ADD COLUMN cookie_access_confirmed INTEGER NOT NULL DEFAULT 0;"
 )];
 
 #[derive(Debug, Clone)]
@@ -234,6 +238,21 @@ mod tests {
 
     #[test]
     fn upgrades_a_version_one_database_without_losing_task_rows() {
+        #[derive(Debug, PartialEq, Eq)]
+        struct MigratedTask {
+            task_id: String,
+            conflict_strategy: String,
+            playlist_item_count: Option<i64>,
+            audio_only: bool,
+            write_automatic_subtitles: bool,
+            write_thumbnail: bool,
+            write_info_json: bool,
+            embed_metadata: bool,
+            cookies_file_path: Option<String>,
+            cookies_browser: Option<String>,
+            cookie_access_confirmed: bool,
+        }
+
         let mut connection = Connection::open_in_memory().unwrap();
         connection
             .execute_batch(
@@ -258,23 +277,27 @@ mod tests {
         let version: u32 = connection
             .pragma_query_value(None, "user_version", |row| row.get(0))
             .unwrap();
-        let migrated: (String, String, Option<i64>, bool, bool, bool, bool, bool) = connection
+        let migrated: MigratedTask = connection
             .query_row(
                 "SELECT task_id, conflict_strategy, playlist_item_count, audio_only,
-                        write_automatic_subtitles, write_thumbnail, write_info_json, embed_metadata
+                        write_automatic_subtitles, write_thumbnail, write_info_json, embed_metadata,
+                        cookies_file_path, cookies_browser, cookie_access_confirmed
                  FROM download_tasks WHERE task_id = 'old-task'",
                 [],
                 |row| {
-                    Ok((
-                        row.get(0)?,
-                        row.get(1)?,
-                        row.get(2)?,
-                        row.get(3)?,
-                        row.get(4)?,
-                        row.get(5)?,
-                        row.get(6)?,
-                        row.get(7)?,
-                    ))
+                    Ok(MigratedTask {
+                        task_id: row.get(0)?,
+                        conflict_strategy: row.get(1)?,
+                        playlist_item_count: row.get(2)?,
+                        audio_only: row.get(3)?,
+                        write_automatic_subtitles: row.get(4)?,
+                        write_thumbnail: row.get(5)?,
+                        write_info_json: row.get(6)?,
+                        embed_metadata: row.get(7)?,
+                        cookies_file_path: row.get(8)?,
+                        cookies_browser: row.get(9)?,
+                        cookie_access_confirmed: row.get(10)?,
+                    })
                 },
             )
             .unwrap();
@@ -282,16 +305,19 @@ mod tests {
         assert_eq!(version, CURRENT_SCHEMA_VERSION);
         assert_eq!(
             migrated,
-            (
-                "old-task".into(),
-                "skip".into(),
-                None,
-                false,
-                false,
-                false,
-                false,
-                false,
-            )
+            MigratedTask {
+                task_id: "old-task".into(),
+                conflict_strategy: "skip".into(),
+                playlist_item_count: None,
+                audio_only: false,
+                write_automatic_subtitles: false,
+                write_thumbnail: false,
+                write_info_json: false,
+                embed_metadata: false,
+                cookies_file_path: None,
+                cookies_browser: None,
+                cookie_access_confirmed: false,
+            }
         );
     }
 

@@ -218,7 +218,7 @@ M6 待决：T6b 应用侧交互及 T8 本地准备已完成，但 Savebeam 仓�
 
 - [x] M7-T1 支持播放列表并提供数量确认和安全上限。
 - [x] M7-T2 支持仅音频、字幕、缩略图和元数据选项。
-- [ ] M7-T3 支持用户显式选择 `cookies.txt`。
+- [x] M7-T3 支持用户显式选择 `cookies.txt`，并在任务级明确授权后允许 yt-dlp 从选定浏览器默认配置读取登录 Cookie。
 - [ ] M7-T4 完成日志脱敏和用户主动导出诊断包。
 - [ ] M7-T5 启用并收紧 CSP 与 Tauri capabilities。
 - [ ] M7-T6 完成可访问性、国际化准备和关键错误文案。
@@ -231,7 +231,7 @@ M6 待决：T6b 应用侧交互及 T8 本地准备已完成，但 Savebeam 仓�
 - 播放列表不会在未确认时创建超大任务集合。
 - 安全与许可证检查项有记录并关闭高优先级问题。
 
-当前进度：M7-T1 与 M7-T2 已完成任务级实现及 macOS 自动化验证，证据分别见 [`docs/verification/M7-T1.md`](verification/M7-T1.md) 和 [`docs/verification/M7-T2.md`](verification/M7-T2.md)。M7 整体仍未验收。
+当前进度：M7-T1 至 M7-T3 已完成任务级实现及 macOS 自动化验证，证据分别见 [`docs/verification/M7-T1.md`](verification/M7-T1.md)、[`docs/verification/M7-T2.md`](verification/M7-T2.md) 和 [`docs/verification/M7-T3.md`](verification/M7-T3.md)。M7 整体仍未验收。
 
 ### M8：桌面发布准备
 

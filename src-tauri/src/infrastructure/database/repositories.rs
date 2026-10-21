@@ -6,8 +6,8 @@ use serde::{Serialize, de::DeserializeOwned};
 use crate::{
     domain::{
         download::{
-            DownloadConflictStrategy, DownloadHistoryRecord, DownloadOptions, DownloadResult,
-            DownloadTask, DownloadTaskStatus,
+            CookieBrowser, DownloadConflictStrategy, DownloadHistoryRecord, DownloadOptions,
+            DownloadResult, DownloadTask, DownloadTaskStatus,
         },
         error::{AppError, ErrorCode},
     },
@@ -103,8 +103,9 @@ impl DownloadTaskRepository {
                      task_id, url, title, format_id, output_directory,
                      subtitle_languages_json, status, created_at_unix_ms, updated_at_unix_ms,
                      conflict_strategy, playlist_item_count, audio_only,
-                     write_automatic_subtitles, write_thumbnail, write_info_json, embed_metadata
-                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)",
+                     write_automatic_subtitles, write_thumbnail, write_info_json, embed_metadata,
+                     cookies_file_path, cookies_browser, cookie_access_confirmed
+                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18)",
                 params![
                     task.id,
                     options.url,
@@ -121,6 +122,9 @@ impl DownloadTaskRepository {
                     options.write_thumbnail,
                     options.write_info_json,
                     options.embed_metadata,
+                    options.cookies_file_path,
+                    options.cookies_browser.map(|browser| browser.yt_dlp_name()),
+                    options.cookie_access_confirmed,
                 ],
             )
         })?;
@@ -151,7 +155,8 @@ impl DownloadTaskRepository {
                     "SELECT task_id, url, title, format_id, output_directory,
                             subtitle_languages_json, conflict_strategy, status, created_at_unix_ms,
                             playlist_item_count, audio_only, write_automatic_subtitles,
-                            write_thumbnail, write_info_json, embed_metadata
+                            write_thumbnail, write_info_json, embed_metadata,
+                            cookies_file_path, cookies_browser, cookie_access_confirmed
                      FROM download_tasks WHERE task_id = ?1",
                     [task_id],
                     task_from_row,
@@ -166,7 +171,8 @@ impl DownloadTaskRepository {
                 "SELECT task_id, url, title, format_id, output_directory,
                         subtitle_languages_json, conflict_strategy, status, created_at_unix_ms,
                         playlist_item_count, audio_only, write_automatic_subtitles,
-                        write_thumbnail, write_info_json, embed_metadata
+                        write_thumbnail, write_info_json, embed_metadata,
+                        cookies_file_path, cookies_browser, cookie_access_confirmed
                  FROM download_tasks ORDER BY created_at_unix_ms DESC",
             )?;
             let rows = statement.query_map([], task_from_row)?;
@@ -285,6 +291,12 @@ fn task_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<(DownloadTask, Dow
             write_thumbnail: row.get(12)?,
             write_info_json: row.get(13)?,
             embed_metadata: row.get(14)?,
+            cookies_file_path: row.get(15)?,
+            cookies_browser: row
+                .get::<_, Option<String>>(16)?
+                .as_deref()
+                .and_then(CookieBrowser::from_yt_dlp_name),
+            cookie_access_confirmed: row.get(17)?,
         },
     ))
 }
@@ -361,7 +373,8 @@ fn from_sql_integer(value: i64) -> rusqlite::Result<u64> {
 mod tests {
     use crate::{
         domain::download::{
-            DownloadConflictStrategy, DownloadOptions, DownloadResult, DownloadTaskStatus,
+            CookieBrowser, DownloadConflictStrategy, DownloadOptions, DownloadResult,
+            DownloadTaskStatus,
         },
         infrastructure::database::Database,
     };
@@ -447,6 +460,9 @@ mod tests {
             write_thumbnail: true,
             write_info_json: true,
             embed_metadata: true,
+            cookies_file_path: None,
+            cookies_browser: Some(CookieBrowser::Firefox),
+            cookie_access_confirmed: true,
         };
         tasks.insert(&task, &options).expect("task should persist");
         assert!(
@@ -470,6 +486,9 @@ mod tests {
         assert!(loaded_options.write_thumbnail);
         assert!(loaded_options.write_info_json);
         assert!(loaded_options.embed_metadata);
+        assert_eq!(loaded_options.cookies_file_path, None);
+        assert_eq!(loaded_options.cookies_browser, Some(CookieBrowser::Firefox));
+        assert!(loaded_options.cookie_access_confirmed);
         assert_eq!(tasks.list().expect("list works").len(), 1);
     }
 
@@ -497,6 +516,9 @@ mod tests {
             write_thumbnail: false,
             write_info_json: false,
             embed_metadata: false,
+            cookies_file_path: None,
+            cookies_browser: None,
+            cookie_access_confirmed: false,
         };
         tasks.insert(&task, &options).expect("task should persist");
         let result = DownloadResult {

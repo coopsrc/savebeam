@@ -28,6 +28,22 @@ pub fn build_download_args(options: &DownloadOptions) -> Result<Vec<OsString>, A
             false,
         ));
     }
+    let cookie_source_selected =
+        options.cookies_file_path.is_some() || options.cookies_browser.is_some();
+    if options.cookies_file_path.is_some() && options.cookies_browser.is_some() {
+        return Err(AppError::new(
+            ErrorCode::InvalidPath,
+            "每个任务只能选择一种登录 Cookie 来源。",
+            false,
+        ));
+    }
+    if cookie_source_selected && !options.cookie_access_confirmed {
+        return Err(AppError::new(
+            ErrorCode::PermissionDenied,
+            "使用登录 Cookie 前需要明确确认授权。",
+            false,
+        ));
+    }
     let playlist_arguments = match options.playlist_item_count {
         Some(count) if (1..=MAX_PLAYLIST_ITEMS).contains(&count) => vec![
             OsString::from("--yes-playlist"),
@@ -88,6 +104,23 @@ pub fn build_download_args(options: &DownloadOptions) -> Result<Vec<OsString>, A
     let mut args = args;
     args.splice(2..2, playlist_arguments);
 
+    if let Some(path) = &options.cookies_file_path {
+        validate_cookies_file(path)?;
+        args.splice(
+            args.len() - 2..args.len() - 2,
+            [OsString::from("--cookies"), OsString::from(path)],
+        );
+    }
+    if let Some(browser) = options.cookies_browser {
+        args.splice(
+            args.len() - 2..args.len() - 2,
+            [
+                OsString::from("--cookies-from-browser"),
+                OsString::from(browser.yt_dlp_name()),
+            ],
+        );
+    }
+
     if !options.subtitle_languages.is_empty() {
         args.splice(
             2..2,
@@ -121,6 +154,24 @@ pub fn build_download_args(options: &DownloadOptions) -> Result<Vec<OsString>, A
         );
     }
     Ok(args)
+}
+
+fn validate_cookies_file(path: &str) -> Result<(), AppError> {
+    let file_path = Path::new(path);
+    if path.contains('\0')
+        || file_path
+            .extension()
+            .and_then(|extension| extension.to_str())
+            != Some("txt")
+        || !file_path.is_file()
+    {
+        return Err(AppError::new(
+            ErrorCode::InvalidPath,
+            "请选择一个存在且可访问的 .txt Cookie 文件。",
+            false,
+        ));
+    }
+    Ok(())
 }
 
 fn validate_subtitle_languages(languages: &[String]) -> Result<(), AppError> {
@@ -211,6 +262,9 @@ mod tests {
             write_thumbnail: false,
             write_info_json: false,
             embed_metadata: false,
+            cookies_file_path: None,
+            cookies_browser: None,
+            cookie_access_confirmed: false,
         }
     }
 
@@ -305,6 +359,32 @@ mod tests {
 
         download_options.subtitle_languages = vec!["en,all".into()];
         assert!(build_download_args(&download_options).is_err());
+        let _ = fs::remove_dir_all(directory);
+    }
+
+    #[test]
+    fn requires_cookie_consent_and_supports_only_one_cookie_source() {
+        let directory = temp_directory();
+        let cookie_file = directory.join("cookies.txt");
+        fs::write(&cookie_file, "not read by Savebeam").unwrap();
+        let mut download_options = options(&directory);
+        download_options.cookies_file_path = Some(cookie_file.to_string_lossy().into_owned());
+        assert!(build_download_args(&download_options).is_err());
+
+        download_options.cookie_access_confirmed = true;
+        let args = build_download_args(&download_options).unwrap();
+        let strings: Vec<_> = args.iter().map(|value| value.to_string_lossy()).collect();
+        assert!(strings.contains(&"--cookies".into()));
+        assert!(strings.contains(&cookie_file.to_string_lossy().into_owned().into()));
+
+        download_options.cookies_browser = Some(crate::domain::download::CookieBrowser::Firefox);
+        assert!(build_download_args(&download_options).is_err());
+        download_options.cookies_file_path = None;
+        let args = build_download_args(&download_options).unwrap();
+        let strings: Vec<_> = args.iter().map(|value| value.to_string_lossy()).collect();
+        assert!(strings.contains(&"--cookies-from-browser".into()));
+        assert!(strings.contains(&"firefox".into()));
+
         let _ = fs::remove_dir_all(directory);
     }
 

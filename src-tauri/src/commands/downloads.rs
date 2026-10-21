@@ -293,6 +293,35 @@ fn validate_task_options(options: &DownloadOptions) -> CommandResult<()> {
             false,
         ));
     }
+    if options.cookies_file_path.is_some() && options.cookies_browser.is_some() {
+        return Err(AppError::new(
+            ErrorCode::InvalidPath,
+            "每个任务只能选择一种登录 Cookie 来源。",
+            false,
+        ));
+    }
+    if (options.cookies_file_path.is_some() || options.cookies_browser.is_some())
+        && !options.cookie_access_confirmed
+    {
+        return Err(AppError::new(
+            ErrorCode::PermissionDenied,
+            "使用登录 Cookie 前需要明确确认授权。",
+            false,
+        ));
+    }
+    if let Some(cookie_path) = &options.cookies_file_path {
+        let path = Path::new(cookie_path);
+        if cookie_path.contains('\0')
+            || path.extension().and_then(|extension| extension.to_str()) != Some("txt")
+            || !path.is_file()
+        {
+            return Err(AppError::new(
+                ErrorCode::InvalidPath,
+                "请选择一个存在且可访问的 .txt Cookie 文件。",
+                false,
+            ));
+        }
+    }
     Ok(())
 }
 

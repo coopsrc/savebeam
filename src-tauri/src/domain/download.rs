@@ -4,6 +4,51 @@ use serde::{Deserialize, Serialize};
 
 pub const MAX_PLAYLIST_ITEMS: u8 = 50;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CookieBrowser {
+    Brave,
+    Chrome,
+    Chromium,
+    Edge,
+    Firefox,
+    Opera,
+    Safari,
+    Vivaldi,
+    Whale,
+}
+
+impl CookieBrowser {
+    pub fn yt_dlp_name(self) -> &'static str {
+        match self {
+            Self::Brave => "brave",
+            Self::Chrome => "chrome",
+            Self::Chromium => "chromium",
+            Self::Edge => "edge",
+            Self::Firefox => "firefox",
+            Self::Opera => "opera",
+            Self::Safari => "safari",
+            Self::Vivaldi => "vivaldi",
+            Self::Whale => "whale",
+        }
+    }
+
+    pub fn from_yt_dlp_name(value: &str) -> Option<Self> {
+        match value {
+            "brave" => Some(Self::Brave),
+            "chrome" => Some(Self::Chrome),
+            "chromium" => Some(Self::Chromium),
+            "edge" => Some(Self::Edge),
+            "firefox" => Some(Self::Firefox),
+            "opera" => Some(Self::Opera),
+            "safari" => Some(Self::Safari),
+            "vivaldi" => Some(Self::Vivaldi),
+            "whale" => Some(Self::Whale),
+            _ => None,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DownloadOptions {
@@ -27,6 +72,12 @@ pub struct DownloadOptions {
     pub write_info_json: bool,
     #[serde(default)]
     pub embed_metadata: bool,
+    #[serde(default)]
+    pub cookies_file_path: Option<String>,
+    #[serde(default)]
+    pub cookies_browser: Option<CookieBrowser>,
+    #[serde(default)]
+    pub cookie_access_confirmed: bool,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, Serialize)]
@@ -134,6 +185,9 @@ mod tests {
         assert!(!options.write_thumbnail);
         assert!(!options.write_info_json);
         assert!(!options.embed_metadata);
+        assert_eq!(options.cookies_file_path, None);
+        assert_eq!(options.cookies_browser, None);
+        assert!(!options.cookie_access_confirmed);
     }
 
     #[test]

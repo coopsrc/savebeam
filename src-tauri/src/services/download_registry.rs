@@ -531,6 +531,9 @@ mod tests {
             write_thumbnail: false,
             write_info_json: false,
             embed_metadata: false,
+            cookies_file_path: None,
+            cookies_browser: None,
+            cookie_access_confirmed: false,
         }
     }
 }
