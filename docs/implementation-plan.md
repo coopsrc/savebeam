@@ -222,7 +222,7 @@ M6 待决：T6b 应用侧交互及 T8 本地准备已完成，但 Savebeam 仓�
 - [x] M7-T4 完成错误诊断脱敏和用户主动导出隐私最小化诊断报告。
 - [x] M7-T5 启用并收紧 CSP 与 Tauri capabilities。
 - [x] M7-T6 完成基础可访问性、错误文案本地化准备和关键错误提示。
-- [ ] M7-T7 开展依赖、许可证和组件来源审计。
+- [x] M7-T7 完成依赖、许可证和组件来源审计，并记录剩余发布门槛。
 
 验收标准：
 
@@ -231,7 +231,7 @@ M6 待决：T6b 应用侧交互及 T8 本地准备已完成，但 Savebeam 仓�
 - 播放列表不会在未确认时创建超大任务集合。
 - 安全与许可证检查项有记录并关闭高优先级问题。
 
-当前进度：M7-T1 至 M7-T6 已完成任务级实现及 macOS 自动化验证，证据见 [`M7-T1`](verification/M7-T1.md)、[`M7-T2`](verification/M7-T2.md)、[`M7-T3`](verification/M7-T3.md)、[`M7-T4`](verification/M7-T4.md)、[`M7-T5`](verification/M7-T5.md) 和 [`M7-T6`](verification/M7-T6.md)。M7 整体仍未验收。
+当前进度：M7-T1 至 M7-T7 已完成任务级实现、审计及 macOS 自动化验证，证据见 [`M7-T1`](verification/M7-T1.md)、[`M7-T2`](verification/M7-T2.md)、[`M7-T3`](verification/M7-T3.md)、[`M7-T4`](verification/M7-T4.md)、[`M7-T5`](verification/M7-T5.md)、[`M7-T6`](verification/M7-T6.md) 和 [`M7-T7`](verification/M7-T7.md)。M7 整体仍未验收：尚缺 GUI 人工 smoke test、完整 VoiceOver/键盘巡检，且 M6 组件发行门槛仍打开。
 
 ### M8：桌面发布准备
 
