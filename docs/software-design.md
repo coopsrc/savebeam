@@ -623,7 +623,7 @@ MVP 不读取浏览器 Cookie。后续首先支持用户显式选择 `cookies.tx
 
 - M2：各平台最低组件版本及系统路径清单。
 - M4：默认格式策略、文件冲突策略和最大并发。
-- M5：具体 SQLite crate 与 migration 实现。
+- M5：使用 Rust `rusqlite`（`bundled` SQLite），数据库位于 Tauri app-data；schema 通过 `PRAGMA user_version` 做事务式版本迁移。数据库由 Rust Repository 独占访问，前端不直接连接 SQLite。
 - M6：各平台 FFmpeg 构建提供者和签名/哈希信任链。
 - M8：应用签名主体、正式发行渠道和更新服务位置。
 

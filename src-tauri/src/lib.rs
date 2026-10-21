@@ -1,4 +1,4 @@
-use tauri::Manager;
+use tauri::{Manager, path::BaseDirectory};
 
 pub mod commands;
 pub mod domain;
@@ -12,6 +12,13 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .manage(commands::components::ComponentRegistry::default())
         .manage(services::download_registry::DownloadTaskRegistry::default())
+        .manage(infrastructure::database::DatabaseManager::default())
+        .setup(|app| {
+            let app_data = app.path().resolve(".", BaseDirectory::AppData)?;
+            app.state::<infrastructure::database::DatabaseManager>()
+                .initialize(app_data.join("savebeam.sqlite3"));
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             commands::components::get_component_status,
             commands::components::set_component_custom_path,
