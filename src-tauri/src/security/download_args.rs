@@ -124,6 +124,7 @@ mod tests {
 
     fn options(directory: &std::path::Path) -> DownloadOptions {
         DownloadOptions {
+            title: "Example".into(),
             url: "https://example.com/watch?v=a&b=c".into(),
             format_id: "bestvideo+bestaudio".into(),
             output_directory: directory.to_string_lossy().into_owned(),

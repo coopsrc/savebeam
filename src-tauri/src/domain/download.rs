@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DownloadOptions {
+    pub title: String,
     pub url: String,
     pub format_id: String,
     pub output_directory: String,
@@ -64,6 +65,7 @@ mod tests {
     #[test]
     fn deserializes_download_options_from_camel_case_ipc_fields() {
         let options: DownloadOptions = serde_json::from_value(serde_json::json!({
+            "title": "Example",
             "url": "https://example.com/video",
             "formatId": "bestvideo+bestaudio",
             "outputDirectory": "/tmp/savebeam",
@@ -72,6 +74,7 @@ mod tests {
         .expect("options should deserialize");
 
         assert_eq!(options.format_id, "bestvideo+bestaudio");
+        assert_eq!(options.title, "Example");
         assert_eq!(options.subtitle_languages, ["en"]);
     }
 

@@ -1,6 +1,10 @@
 //! Component inventory IPC commands.
 
-use std::{collections::HashMap, path::PathBuf, sync::Mutex};
+use std::{
+    collections::HashMap,
+    path::PathBuf,
+    sync::{Arc, Mutex},
+};
 
 use tauri::{AppHandle, Manager, State};
 
@@ -17,9 +21,9 @@ use crate::{
     },
 };
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct ComponentRegistry {
-    pub(crate) custom_paths: Mutex<HashMap<ComponentKind, PathBuf>>,
+    pub(crate) custom_paths: Arc<Mutex<HashMap<ComponentKind, PathBuf>>>,
 }
 
 #[tauri::command]

@@ -4,5 +4,6 @@
 //! services. Business rules do not belong in this layer.
 
 pub mod components;
+pub mod downloads;
 pub mod ipc;
 pub mod media;
