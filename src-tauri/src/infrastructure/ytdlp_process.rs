@@ -1,10 +1,37 @@
 //! yt-dlp process adapter for metadata-only inspection.
 
-use std::{path::PathBuf, process::Command};
+use std::{
+    io::Read,
+    path::PathBuf,
+    process::{Command, Stdio},
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
+    thread,
+    time::{Duration, Instant},
+};
 
 use serde_json::Value;
 
 use crate::domain::error::{AppError, ErrorCode};
+
+const INSPECT_TIMEOUT: Duration = Duration::from_secs(60);
+const MAX_JSON_BYTES: usize = 16 * 1024 * 1024;
+const MAX_STDERR_BYTES: usize = 64 * 1024;
+
+#[derive(Debug, Clone, Default)]
+pub struct CancellationToken(Arc<AtomicBool>);
+
+impl CancellationToken {
+    pub fn cancel(&self) {
+        self.0.store(true, Ordering::Release);
+    }
+
+    pub fn is_cancelled(&self) -> bool {
+        self.0.load(Ordering::Acquire)
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct YtDlpProcessEngine {
@@ -25,6 +52,14 @@ impl YtDlpProcessEngine {
 
     /// Reads yt-dlp JSON without downloading media or loading user configuration.
     pub fn inspect(&self, url: &str) -> Result<Value, AppError> {
+        self.inspect_cancellable(url, &CancellationToken::default())
+    }
+
+    pub fn inspect_cancellable(
+        &self,
+        url: &str,
+        cancellation: &CancellationToken,
+    ) -> Result<Value, AppError> {
         if url.len() > 4096 || !(url.starts_with("http://") || url.starts_with("https://")) {
             return Err(AppError::new(
                 ErrorCode::InvalidUrl,
@@ -34,6 +69,10 @@ impl YtDlpProcessEngine {
         }
 
         let mut command = Command::new(&self.executable_path);
+        command
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
         command.args([
             "--ignore-config",
             "--no-warnings",
@@ -49,23 +88,73 @@ impl YtDlpProcessEngine {
             command.arg("--js-runtimes").arg(runtime);
         }
 
-        let output = command.arg(url).output().map_err(|_| {
+        let mut child = command.arg(url).spawn().map_err(|_| {
             AppError::new(
                 ErrorCode::ComponentMissing,
                 "无法启动 yt-dlp，请检查组件路径。",
                 false,
             )
         })?;
+        let stdout = child.stdout.take().expect("stdout is piped");
+        let stderr = child.stderr.take().expect("stderr is piped");
+        let stdout_reader = thread::spawn(move || read_capped(stdout, MAX_JSON_BYTES));
+        let stderr_reader = thread::spawn(move || read_capped(stderr, MAX_STDERR_BYTES));
+        let started_at = Instant::now();
+        let status = loop {
+            if cancellation.is_cancelled() {
+                let _ = child.kill();
+                let _ = child.wait();
+                let _ = stdout_reader.join();
+                let _ = stderr_reader.join();
+                return Err(AppError::new(
+                    ErrorCode::Cancelled,
+                    "已取消媒体信息读取。",
+                    false,
+                ));
+            }
+            if started_at.elapsed() >= INSPECT_TIMEOUT {
+                let _ = child.kill();
+                let _ = child.wait();
+                let _ = stdout_reader.join();
+                let _ = stderr_reader.join();
+                return Err(AppError::new(
+                    ErrorCode::NetworkFailure,
+                    "读取媒体信息超时，请检查网络后重试。",
+                    true,
+                ));
+            }
+            match child.try_wait() {
+                Ok(Some(status)) => break status,
+                Ok(None) => thread::sleep(Duration::from_millis(25)),
+                Err(_) => {
+                    let _ = child.kill();
+                    let _ = child.wait();
+                    let _ = stdout_reader.join();
+                    let _ = stderr_reader.join();
+                    return Err(AppError::new(
+                        ErrorCode::Unknown,
+                        "无法读取 yt-dlp 进程状态。",
+                        true,
+                    ));
+                }
+            }
+        };
+        let stdout = stdout_reader.join().unwrap_or_default();
+        let stderr = stderr_reader.join().unwrap_or_default();
 
-        if !output.status.success() {
+        if stdout.truncated {
             return Err(AppError::new(
-                ErrorCode::VideoUnavailable,
-                "无法读取此视频信息；请检查链接、网络和访问权限。",
-                true,
+                ErrorCode::Unknown,
+                "媒体信息过大，无法安全解析。",
+                false,
             ));
         }
 
-        serde_json::from_slice(&output.stdout).map_err(|_| {
+        if !status.success() {
+            return Err(classify_process_error(&stderr.bytes));
+        }
+
+        serde_json::from_slice(&stdout.bytes).map_err(|_| {
             AppError::new(
                 ErrorCode::Unknown,
                 "yt-dlp 返回了无法识别的媒体信息。",
@@ -73,6 +162,78 @@ impl YtDlpProcessEngine {
             )
         })
     }
+}
+
+#[derive(Debug, Default)]
+struct CappedOutput {
+    bytes: Vec<u8>,
+    truncated: bool,
+}
+
+fn read_capped(mut reader: impl Read, limit: usize) -> CappedOutput {
+    let mut output = CappedOutput::default();
+    let mut buffer = [0_u8; 8192];
+    loop {
+        match reader.read(&mut buffer) {
+            Ok(0) | Err(_) => break,
+            Ok(count) => {
+                let remaining = limit.saturating_sub(output.bytes.len());
+                output
+                    .bytes
+                    .extend_from_slice(&buffer[..count.min(remaining)]);
+                output.truncated |= count > remaining;
+            }
+        }
+    }
+    output
+}
+
+fn classify_process_error(stderr: &[u8]) -> AppError {
+    let stderr = String::from_utf8_lossy(stderr).to_ascii_lowercase();
+    if stderr.contains("sign in")
+        || stderr.contains("login required")
+        || stderr.contains("authentication required")
+        || stderr.contains("cookies are needed")
+    {
+        return AppError::new(
+            ErrorCode::LoginRequired,
+            "此视频需要登录后才能读取。",
+            false,
+        );
+    }
+    if stderr.contains("private video") || stderr.contains("video is private") {
+        return AppError::new(
+            ErrorCode::PrivateContent,
+            "此视频为私有内容，无法读取。",
+            false,
+        );
+    }
+    if stderr.contains("429") || stderr.contains("too many requests") {
+        return AppError::new(ErrorCode::RateLimited, "请求过于频繁，请稍后重试。", true);
+    }
+    if stderr.contains("unsupported url") {
+        return AppError::new(
+            ErrorCode::UnsupportedUrl,
+            "暂不支持此网站或链接类型。",
+            false,
+        );
+    }
+    if stderr.contains("timed out")
+        || stderr.contains("connection")
+        || stderr.contains("network is unreachable")
+        || stderr.contains("unable to download webpage")
+    {
+        return AppError::new(
+            ErrorCode::NetworkFailure,
+            "网络连接失败，请检查网络后重试。",
+            true,
+        );
+    }
+    AppError::new(
+        ErrorCode::VideoUnavailable,
+        "无法读取此视频；请检查链接、访问权限或视频可用性。",
+        true,
+    )
 }
 
 fn runtime_argument(path: &std::path::Path) -> Option<String> {
@@ -98,7 +259,7 @@ mod tests {
 
     use crate::domain::error::ErrorCode;
 
-    use super::YtDlpProcessEngine;
+    use super::{CancellationToken, YtDlpProcessEngine, classify_process_error};
 
     #[cfg(unix)]
     fn write_script(name: &str, body: &str) -> PathBuf {
@@ -157,6 +318,47 @@ mod tests {
             executable
                 .parent()
                 .expect("fake executable has a directory"),
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn cancellation_terminates_a_running_metadata_process() {
+        let executable = write_script("yt-dlp", "exec sleep 5");
+        let engine = YtDlpProcessEngine::new(&executable, None);
+        let cancellation = CancellationToken::default();
+        let worker_token = cancellation.clone();
+        let worker = std::thread::spawn(move || {
+            engine.inspect_cancellable("https://example.com/video", &worker_token)
+        });
+
+        std::thread::sleep(std::time::Duration::from_millis(100));
+        cancellation.cancel();
+        let error = worker
+            .join()
+            .expect("inspection worker should finish")
+            .expect_err("cancelled inspection should return an error");
+
+        assert_eq!(error.code, ErrorCode::Cancelled);
+        let _ = fs::remove_dir_all(
+            executable
+                .parent()
+                .expect("fake executable has a directory"),
+        );
+    }
+
+    #[test]
+    fn classifies_authentication_network_and_unavailable_errors_without_echoing_stderr() {
+        assert_eq!(
+            classify_process_error(b"Sign in to confirm your age").code,
+            ErrorCode::LoginRequired
+        );
+        let network_error = classify_process_error(b"Connection timed out at secret-url");
+        assert_eq!(network_error.code, ErrorCode::NetworkFailure);
+        assert!(!network_error.message.contains("secret-url"));
+        assert_eq!(
+            classify_process_error(b"No formats found").code,
+            ErrorCode::VideoUnavailable
         );
     }
 }
