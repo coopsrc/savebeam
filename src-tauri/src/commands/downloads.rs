@@ -377,7 +377,7 @@ fn run_task(
     };
     let mut current_status = preparing_task.status;
 
-    let result = (|| {
+    let result = (|| -> Result<_, AppError> {
         let app_data = app.path().app_data_dir().map_err(|error| {
             AppError::new(ErrorCode::Unknown, "无法访问应用数据目录。", false)
                 .with_diagnostic(error.to_string())
@@ -400,7 +400,7 @@ fn run_task(
         append_option_before_url(&mut args, "--ffmpeg-location", Path::new(ffmpeg))?;
         let executable = PathBuf::from(ytdlp);
         let cancellation = tasks.cancellation_token(&task_id)?;
-        let process_output =
+        let mut process_output =
             ProcessSupervisor::run(&executable, &args, &task_id, &cancellation, |progress| {
                 let target = progress.status;
                 if target != current_status
@@ -410,12 +410,21 @@ fn run_task(
                 }
                 let _ = app.emit(DOWNLOAD_PROGRESS_EVENT, EventPayload::new(progress));
             })?;
-        verify_download_outputs(
+        let intermediates = std::mem::take(&mut process_output.intermediate_files);
+        let result = verify_download_outputs(
             process_output,
             &task_id,
             &options.title,
             Path::new(&options.output_directory),
-        )
+        )?;
+        if options.keep_intermediate_files {
+            crate::services::intermediate_files::organize_retained_streams(
+                &intermediates,
+                &result.output_paths,
+                Path::new(&options.output_directory),
+            );
+        }
+        Ok(result)
     })();
 
     match result {

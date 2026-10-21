@@ -75,6 +75,8 @@ pub struct DownloadOptions {
     #[serde(default)]
     pub embed_metadata: bool,
     #[serde(default)]
+    pub keep_intermediate_files: bool,
+    #[serde(default)]
     pub cookies_file_path: Option<String>,
     #[serde(default)]
     pub cookies_browser: Option<CookieBrowser>,
@@ -216,6 +218,13 @@ mod tests {
         assert!(!options.write_thumbnail);
         assert!(!options.write_info_json);
         assert!(!options.embed_metadata);
+        assert!(!options.keep_intermediate_files);
+        let mut retained = options.clone();
+        retained.keep_intermediate_files = true;
+        assert_eq!(
+            serde_json::to_value(retained).unwrap()["keepIntermediateFiles"],
+            true
+        );
         assert_eq!(options.cookies_file_path, None);
         assert_eq!(options.cookies_browser, None);
         assert!(!options.cookie_access_confirmed);

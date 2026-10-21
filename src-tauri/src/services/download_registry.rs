@@ -472,12 +472,12 @@ mod tests {
         first_process
             .initialize_from_database(database.clone())
             .unwrap();
-        let queued = first_process
-            .create(test_options("https://example.com/queued", "Queued", "18"))
-            .unwrap();
-        let interrupted = first_process
-            .create(test_options("https://example.com/active", "Active", "22"))
-            .unwrap();
+        let mut queued_options = test_options("https://example.com/queued", "Queued", "18");
+        queued_options.keep_intermediate_files = true;
+        let queued = first_process.create(queued_options).unwrap();
+        let mut active_options = test_options("https://example.com/active", "Active", "22");
+        active_options.keep_intermediate_files = true;
+        let interrupted = first_process.create(active_options).unwrap();
         first_process
             .transition(&interrupted.id, DownloadTaskStatus::Preparing)
             .unwrap();
@@ -492,11 +492,11 @@ mod tests {
             .unwrap();
         assert_eq!(recovered_queued.status, DownloadTaskStatus::Queued);
         assert_eq!(recovered_interrupted.status, DownloadTaskStatus::Failed);
-        assert_eq!(
-            second_process.claim_next().unwrap().unwrap().0.id,
-            queued.id
-        );
-        assert!(second_process.retry(&interrupted.id).is_ok());
+        let (claimed, options) = second_process.claim_next().unwrap().unwrap();
+        assert_eq!(claimed.id, queued.id);
+        assert!(options.keep_intermediate_files);
+        let (_, options) = second_process.retry(&interrupted.id).unwrap();
+        assert!(options.keep_intermediate_files);
     }
 
     #[test]
@@ -532,6 +532,7 @@ mod tests {
             write_thumbnail: false,
             write_info_json: false,
             embed_metadata: false,
+            keep_intermediate_files: false,
             cookies_file_path: None,
             cookies_browser: None,
             cookie_access_confirmed: false,

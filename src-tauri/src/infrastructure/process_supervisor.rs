@@ -10,6 +10,7 @@ use std::{
     time::Duration,
 };
 
+use serde::Deserialize;
 use serde_json::Value;
 
 use crate::{
@@ -24,6 +25,7 @@ const MAX_LINE_BYTES: usize = 16 * 1024;
 const MAX_STDERR_BYTES: usize = 64 * 1024;
 const PROGRESS_MARKER: &str = "SB_PROGRESS:";
 const RESULT_MARKER: &str = "SB_RESULT:";
+const PARTS_MARKER: &str = "SB_PARTS:";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum OutputStream {
@@ -40,6 +42,29 @@ struct OutputLine {
 #[derive(Debug, Default)]
 pub struct ProcessOutput {
     pub output_paths: Vec<String>,
+    pub intermediate_files: Vec<IntermediateFiles>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct IntermediateFiles {
+    pub output: String,
+    pub streams: Vec<IntermediateStream>,
+}
+
+/// Minimal yt-dlp projection: no URLs, headers, cookies, or full info JSON.
+#[derive(Debug, Default, Deserialize)]
+pub struct IntermediateStream {
+    pub filepath: Option<String>,
+    pub format_id: Option<String>,
+    pub ext: Option<String>,
+    pub vcodec: Option<String>,
+    pub acodec: Option<String>,
+    pub width: Option<u32>,
+    pub height: Option<u32>,
+    pub resolution: Option<String>,
+    pub tbr: Option<f64>,
+    pub vbr: Option<f64>,
+    pub abr: Option<f64>,
 }
 
 pub struct ProcessSupervisor;
@@ -237,6 +262,14 @@ fn handle_line(
     {
         output.output_paths.push(path);
     }
+    if line.stream == OutputStream::Stdout
+        && output.intermediate_files.len() < 50
+        && let Some(payload) = text.strip_prefix(PARTS_MARKER)
+        && let Ok(group) = serde_json::from_str::<IntermediateFiles>(payload.trim())
+        && group.streams.len() <= 8
+    {
+        output.intermediate_files.push(group);
+    }
 }
 
 fn progress_from_json(task_id: &str, value: &Value) -> DownloadProgress {
@@ -300,6 +333,35 @@ mod tests {
     use crate::{
         domain::download::DownloadTaskStatus, infrastructure::ytdlp_process::CancellationToken,
     };
+
+    #[test]
+    fn parses_minimal_stream_metadata_and_ignores_invalid_or_stderr_records() {
+        let mut output = super::ProcessOutput::default();
+        let mut stderr = Vec::new();
+        let record = r#"SB_PARTS:{"output":"/tmp/title.mp4","streams":[{"filepath":"/tmp/title.f30120.mp4","format_id":"30120","ext":"mp4","vcodec":"avc1","width":3840,"height":2160,"vbr":5500},{"filepath":"/tmp/title.f30280.m4a","format_id":"30280","ext":"m4a","acodec":"mp4a","vcodec":"none","abr":152}]}"#;
+        for (stream, text) in [
+            (super::OutputStream::Stdout, record),
+            (super::OutputStream::Stderr, record),
+            (super::OutputStream::Stdout, "SB_PARTS:invalid"),
+        ] {
+            super::handle_line(
+                super::OutputLine {
+                    stream,
+                    bytes: text.as_bytes().to_vec(),
+                },
+                &mut output,
+                &mut stderr,
+                "task",
+                &mut |_| {},
+            );
+        }
+        assert_eq!(output.intermediate_files.len(), 1);
+        let streams = &output.intermediate_files[0].streams;
+        assert_eq!(streams[0].format_id.as_deref(), Some("30120"));
+        assert_eq!(streams[1].abr, Some(152.0));
+        assert_eq!(streams[1].height, None);
+        assert!(output.output_paths.is_empty());
+    }
 
     #[cfg(unix)]
     fn write_script(body: &str) -> PathBuf {

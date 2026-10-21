@@ -131,6 +131,7 @@ export interface DownloadOptions {
   writeThumbnail: boolean;
   writeInfoJson: boolean;
   embedMetadata: boolean;
+  keepIntermediateFiles: boolean;
   conflictStrategy: "skip" | "overwrite";
 }
 

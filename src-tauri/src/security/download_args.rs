@@ -15,6 +15,11 @@ const DOWNLOAD_PROGRESS_TEMPLATE: &str = concat!(
 );
 
 const SINGLE_OUTPUT_TEMPLATE: &str = "%(title)s.%(ext)s";
+// Project only per-stream naming metadata, never media URLs or authentication headers.
+const INTERMEDIATE_TEMPLATE: &str = concat!(
+    "after_move:SB_PARTS:{\"output\":%(filepath)j,\"streams\":",
+    "%(requested_formats.:.{filepath,format_id,ext,vcodec,acodec,width,height,resolution,tbr,vbr,abr}|null)j}"
+);
 const SERIES_OUTPUT_TEMPLATE: &str = "%(playlist_title,series,playlist|未命名系列)s/%(playlist_index,episode_number|1)d-%(title)s.%(ext)s";
 
 /// Builds fixed, shell-free argv for a download task.
@@ -113,6 +118,16 @@ pub fn build_download_args(
         options.url.clone().into(),
     ];
     let mut args = args;
+    if options.keep_intermediate_files {
+        args.splice(
+            2..2,
+            [
+                "--keep-video".into(),
+                "--print".into(),
+                INTERMEDIATE_TEMPLATE.into(),
+            ],
+        );
+    }
     args.splice(2..2, playlist_arguments);
     if !options.audio_only
         && let Some(container) = options.merge_container
@@ -288,6 +303,7 @@ mod tests {
             write_thumbnail: false,
             write_info_json: false,
             embed_metadata: false,
+            keep_intermediate_files: false,
             cookies_file_path: None,
             cookies_browser: None,
             cookie_access_confirmed: false,
@@ -302,6 +318,8 @@ mod tests {
         let strings: Vec<_> = args.iter().map(|value| value.to_string_lossy()).collect();
 
         assert!(strings.contains(&"--ignore-config".into()));
+        assert!(!strings.contains(&"--keep-video".into()));
+        assert!(!strings.iter().any(|value| value.contains("SB_PARTS:")));
         assert!(strings.contains(&"--no-playlist".into()));
         assert!(strings.contains(&"--no-overwrites".into()));
         assert!(strings.contains(&"--windows-filenames".into()));
@@ -318,6 +336,27 @@ mod tests {
             Some("https://example.com/watch?v=a&b=c")
         );
         assert!(strings.contains(&"--".into()));
+        let _ = fs::remove_dir_all(directory);
+    }
+
+    #[test]
+    fn retains_sources_only_when_explicitly_selected_without_changing_final_names() {
+        let directory = temp_directory();
+        let mut options = options(&directory);
+        options.keep_intermediate_files = true;
+        for audio_only in [false, true] {
+            options.audio_only = audio_only;
+            let args = build_download_args(&options, &CookiePreferences::default()).unwrap();
+            assert!(args.contains(&"--keep-video".into()));
+            assert!(
+                args.windows(2)
+                    .any(|pair| pair == ["--print", super::INTERMEDIATE_TEMPLATE])
+            );
+            assert!(
+                args.windows(2)
+                    .any(|pair| pair == ["--output", SINGLE_OUTPUT_TEMPLATE])
+            );
+        }
         let _ = fs::remove_dir_all(directory);
     }
 

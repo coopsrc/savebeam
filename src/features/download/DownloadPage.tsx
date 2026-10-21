@@ -50,6 +50,7 @@ export function DownloadPage() {
   const [writeThumbnail, setWriteThumbnail] = useState(false);
   const [writeInfoJson, setWriteInfoJson] = useState(false);
   const [embedMetadata, setEmbedMetadata] = useState(false);
+  const [keepIntermediateFiles, setKeepIntermediateFiles] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
   const upsertDownloadTask = useAppStore((state) => state.upsertDownloadTask);
   const navigate = useNavigate();
@@ -73,6 +74,7 @@ export function DownloadPage() {
     setWriteThumbnail(false);
     setWriteInfoJson(false);
     setEmbedMetadata(false);
+    setKeepIntermediateFiles(false);
 
     const checked = validateMediaUrl(url);
     if (!checked.valid) return;
@@ -118,6 +120,7 @@ export function DownloadPage() {
       writeThumbnail,
       writeInfoJson,
       embedMetadata,
+      keepIntermediateFiles,
       conflictStrategy: "skip",
     };
     try {
@@ -391,6 +394,12 @@ export function DownloadPage() {
                         checked={embedMetadata}
                         onChange={(event) => setEmbedMetadata(event.currentTarget.checked)}
                         label="将媒体元数据写入文件"
+                      />
+                      <Checkbox
+                        checked={keepIntermediateFiles}
+                        onChange={(event) => setKeepIntermediateFiles(event.currentTarget.checked)}
+                        label="保留中间文件"
+                        description="保留合并或转换前的源文件，会占用额外空间；分轨文件在合并成功后按格式 ID、编码、分辨率和码率命名。"
                       />
                     </Stack>
                     <Text size="sm" c="dimmed">

@@ -104,8 +104,9 @@ impl DownloadTaskRepository {
                      subtitle_languages_json, status, created_at_unix_ms, updated_at_unix_ms,
                      conflict_strategy, playlist_item_count, audio_only,
                      write_automatic_subtitles, write_thumbnail, write_info_json, embed_metadata,
-                     cookies_file_path, cookies_browser, cookie_access_confirmed, merge_container
-                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19)",
+                     cookies_file_path, cookies_browser, cookie_access_confirmed, merge_container,
+                     keep_intermediate_files
+                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20)",
                 params![
                     task.id,
                     options.url,
@@ -126,6 +127,7 @@ impl DownloadTaskRepository {
                     options.cookies_browser.map(|browser| browser.yt_dlp_name()),
                     options.cookie_access_confirmed,
                     options.merge_container.map(|container| container.extension()),
+                    options.keep_intermediate_files,
                 ],
             )
         })?;
@@ -157,7 +159,8 @@ impl DownloadTaskRepository {
                             subtitle_languages_json, conflict_strategy, status, created_at_unix_ms,
                             playlist_item_count, audio_only, write_automatic_subtitles,
                             write_thumbnail, write_info_json, embed_metadata,
-                            cookies_file_path, cookies_browser, cookie_access_confirmed, merge_container
+                            cookies_file_path, cookies_browser, cookie_access_confirmed, merge_container,
+                            keep_intermediate_files
                      FROM download_tasks WHERE task_id = ?1",
                     [task_id],
                     task_from_row,
@@ -173,7 +176,8 @@ impl DownloadTaskRepository {
                         subtitle_languages_json, conflict_strategy, status, created_at_unix_ms,
                         playlist_item_count, audio_only, write_automatic_subtitles,
                         write_thumbnail, write_info_json, embed_metadata,
-                        cookies_file_path, cookies_browser, cookie_access_confirmed, merge_container
+                        cookies_file_path, cookies_browser, cookie_access_confirmed, merge_container,
+                        keep_intermediate_files
                  FROM download_tasks ORDER BY created_at_unix_ms DESC",
             )?;
             let rows = statement.query_map([], task_from_row)?;
@@ -299,6 +303,7 @@ fn task_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<(DownloadTask, Dow
             write_thumbnail: row.get(12)?,
             write_info_json: row.get(13)?,
             embed_metadata: row.get(14)?,
+            keep_intermediate_files: row.get(19)?,
             cookies_file_path: row.get(15)?,
             cookies_browser: row
                 .get::<_, Option<String>>(16)?
@@ -469,6 +474,7 @@ mod tests {
             write_thumbnail: true,
             write_info_json: true,
             embed_metadata: true,
+            keep_intermediate_files: true,
             cookies_file_path: None,
             cookies_browser: Some(CookieBrowser::Firefox),
             cookie_access_confirmed: true,
@@ -495,6 +501,7 @@ mod tests {
         assert!(loaded_options.write_thumbnail);
         assert!(loaded_options.write_info_json);
         assert!(loaded_options.embed_metadata);
+        assert!(loaded_options.keep_intermediate_files);
         assert_eq!(loaded_options.cookies_file_path, None);
         assert_eq!(loaded_options.cookies_browser, Some(CookieBrowser::Firefox));
         assert!(loaded_options.cookie_access_confirmed);
@@ -527,6 +534,7 @@ mod tests {
             write_thumbnail: false,
             write_info_json: false,
             embed_metadata: false,
+            keep_intermediate_files: false,
             cookies_file_path: None,
             cookies_browser: None,
             cookie_access_confirmed: false,

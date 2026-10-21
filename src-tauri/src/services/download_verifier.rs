@@ -99,6 +99,7 @@ mod tests {
         let result = verify_download_outputs(
             ProcessOutput {
                 output_paths: vec![output.to_string_lossy().into_owned()],
+                ..Default::default()
             },
             "task-1",
             "Example",
@@ -119,7 +120,8 @@ mod tests {
         assert!(
             verify_download_outputs(
                 ProcessOutput {
-                    output_paths: vec![missing.to_string_lossy().into_owned()]
+                    output_paths: vec![missing.to_string_lossy().into_owned()],
+                    ..Default::default()
                 },
                 "task-1",
                 "Example",
@@ -133,7 +135,8 @@ mod tests {
         assert!(
             verify_download_outputs(
                 ProcessOutput {
-                    output_paths: vec![empty.to_string_lossy().into_owned()]
+                    output_paths: vec![empty.to_string_lossy().into_owned()],
+                    ..Default::default()
                 },
                 "task-1",
                 "Example",
@@ -147,7 +150,8 @@ mod tests {
         assert!(
             verify_download_outputs(
                 ProcessOutput {
-                    output_paths: vec![outside.to_string_lossy().into_owned()]
+                    output_paths: vec![outside.to_string_lossy().into_owned()],
+                    ..Default::default()
                 },
                 "task-1",
                 "Example",
@@ -174,6 +178,7 @@ mod tests {
                     .iter()
                     .map(|path| path.to_string_lossy().into_owned())
                     .collect(),
+                ..Default::default()
             },
             "series-task",
             "学习系列",
@@ -200,6 +205,7 @@ mod tests {
                         .to_string_lossy()
                         .into_owned(),
                 ],
+                ..Default::default()
             },
             "series-task",
             "系列",
