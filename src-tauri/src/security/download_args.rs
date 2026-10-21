@@ -3,7 +3,7 @@
 use std::{ffi::OsString, path::Path};
 
 use crate::domain::{
-    download::DownloadOptions,
+    download::{DownloadConflictStrategy, DownloadOptions},
     error::{AppError, ErrorCode},
 };
 
@@ -31,11 +31,15 @@ pub fn build_download_args(options: &DownloadOptions) -> Result<Vec<OsString>, A
         ));
     }
 
+    let conflict_arg = match options.conflict_strategy {
+        DownloadConflictStrategy::Skip => "--no-overwrites",
+        DownloadConflictStrategy::Overwrite => "--force-overwrites",
+    };
     let args = vec![
         "--ignore-config".into(),
         "--no-warnings".into(),
         "--no-playlist".into(),
-        "--no-overwrites".into(),
+        conflict_arg.into(),
         "--newline".into(),
         "--progress".into(),
         "--progress-template".into(),
@@ -129,6 +133,7 @@ mod tests {
             format_id: "bestvideo+bestaudio".into(),
             output_directory: directory.to_string_lossy().into_owned(),
             subtitle_languages: Vec::new(),
+            conflict_strategy: crate::domain::download::DownloadConflictStrategy::Skip,
         }
     }
 
@@ -159,6 +164,19 @@ mod tests {
         let mut download_options = options(&directory);
         download_options.format_id = "best;--exec=touch /tmp/pwned".into();
         assert!(build_download_args(&download_options).is_err());
+        let _ = fs::remove_dir_all(directory);
+    }
+
+    #[test]
+    fn selects_only_the_explicit_conflict_policy_flag() {
+        let directory = temp_directory();
+        let mut download_options = options(&directory);
+        download_options.conflict_strategy =
+            crate::domain::download::DownloadConflictStrategy::Overwrite;
+        let args = build_download_args(&download_options).unwrap();
+        let strings: Vec<_> = args.iter().map(|value| value.to_string_lossy()).collect();
+        assert!(strings.contains(&"--force-overwrites".into()));
+        assert!(!strings.contains(&"--no-overwrites".into()));
         let _ = fs::remove_dir_all(directory);
     }
 

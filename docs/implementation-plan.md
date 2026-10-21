@@ -171,7 +171,7 @@ chore(milestone): verify M4 single-download workflow
 - [x] M5-T3 实现顺序队列和可配置的有限并发。
 - [x] M5-T4 实现重启后的未完成任务恢复策略。
 - [x] M5-T5 实现历史搜索、打开文件和打开目录。
-- [ ] M5-T6 实现默认下载目录、冲突策略和并发设置。
+- [x] M5-T6 实现默认下载目录、冲突策略和并发设置。
 - [ ] M5-T7 实现数据库 migration 和 Repository 测试。
 
 验收标准：

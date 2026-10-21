@@ -94,6 +94,13 @@ export interface DownloadOptions {
   formatId: string;
   outputDirectory: string;
   subtitleLanguages: string[];
+  conflictStrategy: "skip" | "overwrite";
+}
+
+export interface DownloadPreferences {
+  outputDirectory: string;
+  maxConcurrent: number;
+  conflictStrategy: "skip" | "overwrite";
 }
 
 export interface DownloadProgress {

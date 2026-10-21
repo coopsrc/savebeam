@@ -83,6 +83,7 @@ export function DownloadPage() {
       formatId: selectedFormat,
       outputDirectory: "",
       subtitleLanguages: [],
+      conflictStrategy: "skip",
     };
     try {
       const task = await invokeCommand<DownloadTask>("start_download", { options });

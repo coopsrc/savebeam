@@ -1,10 +1,21 @@
 import { useCallback, useEffect, useState } from "react";
-import { Badge, Button, Group, Paper, Stack, Text, TextInput, Title } from "@mantine/core";
+import {
+  Badge,
+  Button,
+  Group,
+  NumberInput,
+  Paper,
+  Select,
+  Stack,
+  Text,
+  TextInput,
+  Title,
+} from "@mantine/core";
 import { IconRefresh } from "@tabler/icons-react";
 import { ErrorState, LoadingState } from "../../components/states/AppStates";
 import { usePlatformProfile } from "../../app/platform/profile";
 import { invokeCommand } from "../../ipc/client";
-import type { ComponentInstallation, ComponentKind } from "../../types/domain";
+import type { ComponentInstallation, ComponentKind, DownloadPreferences } from "../../types/domain";
 
 const componentNames: Record<ComponentKind, string> = {
   yt_dlp: "yt-dlp",
@@ -152,6 +163,7 @@ export function ComponentsSettings() {
   return (
     <main className="settings-page">
       <Stack gap="lg">
+        <DownloadPreferencesPanel />
         <Group justify="space-between" align="flex-start">
           <div>
             <Title order={2}>运行组件</Title>
@@ -293,5 +305,103 @@ export function ComponentsSettings() {
         </Text>
       </Stack>
     </main>
+  );
+}
+
+function DownloadPreferencesPanel() {
+  const [preferences, setPreferences] = useState<DownloadPreferences>({
+    outputDirectory: "",
+    maxConcurrent: 1,
+    conflictStrategy: "skip",
+  });
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    invokeCommand<DownloadPreferences>("get_download_preferences")
+      .then(setPreferences)
+      .catch((reason: unknown) =>
+        setError(reason instanceof Error ? reason.message : "无法读取下载设置。"),
+      );
+  }, []);
+
+  async function save() {
+    setSaving(true);
+    setError(null);
+    setSaved(false);
+    try {
+      setPreferences(
+        await invokeCommand<DownloadPreferences>("save_download_preferences", { preferences }),
+      );
+      setSaved(true);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "无法保存下载设置。");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Paper withBorder radius="md" p="md">
+      <Stack gap="sm">
+        <div>
+          <Text fw={650}>下载设置</Text>
+          <Text size="sm" c="dimmed" mt={3}>
+            目录必须已存在；留空时使用系统下载目录。并发数限制为 1–4。
+          </Text>
+        </div>
+        <TextInput
+          label="默认下载目录"
+          placeholder="留空使用系统下载目录"
+          value={preferences.outputDirectory}
+          onChange={(event) =>
+            setPreferences((value) => ({ ...value, outputDirectory: event.currentTarget.value }))
+          }
+        />
+        <Group grow align="end">
+          <NumberInput
+            label="最大并发任务数"
+            min={1}
+            max={4}
+            step={1}
+            value={preferences.maxConcurrent}
+            onChange={(value) =>
+              setPreferences((current) => ({
+                ...current,
+                maxConcurrent: typeof value === "number" ? value : 1,
+              }))
+            }
+          />
+          <Select
+            label="文件重名时"
+            value={preferences.conflictStrategy}
+            data={[
+              { value: "skip", label: "跳过已有文件" },
+              { value: "overwrite", label: "覆盖已有文件" },
+            ]}
+            onChange={(value) => {
+              if (value === "skip" || value === "overwrite")
+                setPreferences((current) => ({ ...current, conflictStrategy: value }));
+            }}
+          />
+        </Group>
+        {error && (
+          <Text size="sm" c="red" role="alert">
+            {error}
+          </Text>
+        )}
+        {saved && (
+          <Text size="sm" c="green" role="status">
+            设置已保存。
+          </Text>
+        )}
+        <Group justify="flex-end">
+          <Button onClick={() => void save()} loading={saving}>
+            保存下载设置
+          </Button>
+        </Group>
+      </Stack>
+    </Paper>
   );
 }

@@ -10,7 +10,7 @@ use rusqlite::{Connection, TransactionBehavior};
 
 use crate::domain::error::{AppError, ErrorCode};
 
-pub const CURRENT_SCHEMA_VERSION: u32 = 1;
+pub const CURRENT_SCHEMA_VERSION: u32 = 2;
 
 pub mod repositories;
 
@@ -40,6 +40,8 @@ const MIGRATIONS: &[(u32, &str)] = &[(
      );
      CREATE INDEX download_tasks_created_at_idx ON download_tasks(created_at_unix_ms DESC);
      CREATE INDEX download_history_completed_at_idx ON download_history(completed_at_unix_ms DESC);",
+), (2,
+    "ALTER TABLE download_tasks ADD COLUMN conflict_strategy TEXT NOT NULL DEFAULT 'skip';"
 )];
 
 #[derive(Debug, Clone)]

@@ -18,6 +18,15 @@ pub fn run() {
             let database_manager = app.state::<infrastructure::database::DatabaseManager>();
             database_manager.initialize(app_data.join("savebeam.sqlite3"));
             if let Ok(database) = database_manager.database() {
+                if let Ok(Some(preferences)) =
+                    infrastructure::database::repositories::SettingsRepository::new(
+                        database.clone(),
+                    )
+                    .get::<domain::download::DownloadPreferences>("download.preferences")
+                {
+                    app.state::<services::download_registry::DownloadTaskRegistry>()
+                        .set_max_concurrent(preferences.max_concurrent)?;
+                }
                 app.state::<services::download_registry::DownloadTaskRegistry>()
                     .initialize_from_database(database)?;
                 commands::downloads::resume_queued_downloads(app.handle().clone());
@@ -31,6 +40,8 @@ pub fn run() {
             commands::media::inspect_media,
             commands::downloads::start_download,
             commands::downloads::get_download_tasks,
+            commands::downloads::get_download_preferences,
+            commands::downloads::save_download_preferences,
             commands::downloads::get_download_history,
             commands::downloads::delete_download_history,
             commands::downloads::open_history_file,

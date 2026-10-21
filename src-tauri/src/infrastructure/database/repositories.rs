@@ -6,8 +6,8 @@ use serde::{Serialize, de::DeserializeOwned};
 use crate::{
     domain::{
         download::{
-            DownloadHistoryRecord, DownloadOptions, DownloadResult, DownloadTask,
-            DownloadTaskStatus,
+            DownloadConflictStrategy, DownloadHistoryRecord, DownloadOptions, DownloadResult,
+            DownloadTask, DownloadTaskStatus,
         },
         error::{AppError, ErrorCode},
     },
@@ -101,8 +101,9 @@ impl DownloadTaskRepository {
             connection.execute(
                 "INSERT INTO download_tasks(
                      task_id, url, title, format_id, output_directory,
-                     subtitle_languages_json, status, created_at_unix_ms, updated_at_unix_ms
-                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8)",
+                     subtitle_languages_json, status, created_at_unix_ms, updated_at_unix_ms,
+                     conflict_strategy
+                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8, ?9)",
                 params![
                     task.id,
                     options.url,
@@ -112,6 +113,7 @@ impl DownloadTaskRepository {
                     subtitle_languages,
                     status_name(task.status),
                     created_at,
+                    conflict_strategy_name(options.conflict_strategy),
                 ],
             )
         })?;
@@ -140,7 +142,7 @@ impl DownloadTaskRepository {
             connection
                 .query_row(
                     "SELECT task_id, url, title, format_id, output_directory,
-                            subtitle_languages_json, status, created_at_unix_ms
+                            subtitle_languages_json, conflict_strategy, status, created_at_unix_ms
                      FROM download_tasks WHERE task_id = ?1",
                     [task_id],
                     task_from_row,
@@ -153,7 +155,7 @@ impl DownloadTaskRepository {
         self.database.with_connection(|connection| {
             let mut statement = connection.prepare(
                 "SELECT task_id, url, title, format_id, output_directory,
-                        subtitle_languages_json, status, created_at_unix_ms
+                        subtitle_languages_json, conflict_strategy, status, created_at_unix_ms
                  FROM download_tasks ORDER BY created_at_unix_ms DESC",
             )?;
             let rows = statement.query_map([], task_from_row)?;
@@ -249,14 +251,14 @@ fn task_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<(DownloadTask, Dow
             Box::new(error),
         )
     })?;
-    let created_at: i64 = row.get(7)?;
+    let created_at: i64 = row.get(8)?;
     Ok((
         DownloadTask {
             id: row.get(0)?,
             url: row.get(1)?,
             title: row.get(2)?,
             format_id: row.get(3)?,
-            status: parse_status(&row.get::<_, String>(6)?)?,
+            status: parse_status(&row.get::<_, String>(7)?)?,
             created_at_unix_ms: from_sql_integer(created_at)?,
         },
         DownloadOptions {
@@ -265,8 +267,24 @@ fn task_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<(DownloadTask, Dow
             format_id: row.get(3)?,
             output_directory: row.get(4)?,
             subtitle_languages: subtitles,
+            conflict_strategy: parse_conflict_strategy(&row.get::<_, String>(6)?)?,
         },
     ))
+}
+
+fn conflict_strategy_name(strategy: DownloadConflictStrategy) -> &'static str {
+    match strategy {
+        DownloadConflictStrategy::Skip => "skip",
+        DownloadConflictStrategy::Overwrite => "overwrite",
+    }
+}
+
+fn parse_conflict_strategy(value: &str) -> rusqlite::Result<DownloadConflictStrategy> {
+    match value {
+        "skip" => Ok(DownloadConflictStrategy::Skip),
+        "overwrite" => Ok(DownloadConflictStrategy::Overwrite),
+        _ => Err(rusqlite::Error::InvalidQuery),
+    }
 }
 
 fn status_name(status: DownloadTaskStatus) -> &'static str {
@@ -325,7 +343,9 @@ fn from_sql_integer(value: i64) -> rusqlite::Result<u64> {
 #[cfg(test)]
 mod tests {
     use crate::{
-        domain::download::{DownloadOptions, DownloadResult, DownloadTaskStatus},
+        domain::download::{
+            DownloadConflictStrategy, DownloadOptions, DownloadResult, DownloadTaskStatus,
+        },
         infrastructure::database::Database,
     };
 
@@ -379,6 +399,7 @@ mod tests {
             format_id: task.format_id.clone(),
             output_directory: "/tmp/videos".into(),
             subtitle_languages: vec!["en".into()],
+            conflict_strategy: DownloadConflictStrategy::Overwrite,
         };
         tasks.insert(&task, &options).expect("task should persist");
         assert!(
@@ -392,6 +413,10 @@ mod tests {
             .expect("task exists");
         assert_eq!(loaded.status, DownloadTaskStatus::Downloading);
         assert_eq!(loaded_options.subtitle_languages, ["en"]);
+        assert_eq!(
+            loaded_options.conflict_strategy,
+            DownloadConflictStrategy::Overwrite
+        );
         assert_eq!(tasks.list().expect("list works").len(), 1);
     }
 
@@ -412,6 +437,7 @@ mod tests {
             format_id: task.format_id.clone(),
             output_directory: "/tmp".into(),
             subtitle_languages: Vec::new(),
+            conflict_strategy: DownloadConflictStrategy::Skip,
         };
         tasks.insert(&task, &options).expect("task should persist");
         let result = DownloadResult {

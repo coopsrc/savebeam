@@ -11,6 +11,34 @@ pub struct DownloadOptions {
     pub output_directory: String,
     #[serde(default)]
     pub subtitle_languages: Vec<String>,
+    #[serde(default)]
+    pub conflict_strategy: DownloadConflictStrategy,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DownloadConflictStrategy {
+    #[default]
+    Skip,
+    Overwrite,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DownloadPreferences {
+    pub output_directory: String,
+    pub max_concurrent: usize,
+    pub conflict_strategy: DownloadConflictStrategy,
+}
+
+impl Default for DownloadPreferences {
+    fn default() -> Self {
+        Self {
+            output_directory: String::new(),
+            max_concurrent: 1,
+            conflict_strategy: DownloadConflictStrategy::Skip,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]

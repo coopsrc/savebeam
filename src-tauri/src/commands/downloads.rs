@@ -19,10 +19,13 @@ use crate::{
     domain::{
         component::{ComponentInstallation, ComponentKind, ComponentStatus},
         download::DownloadHistoryRecord,
-        download::{DownloadOptions, DownloadTask, DownloadTaskStatus},
+        download::{DownloadOptions, DownloadPreferences, DownloadTask, DownloadTaskStatus},
         error::{AppError, ErrorCode},
     },
-    infrastructure::database::{DatabaseManager, repositories::HistoryRepository},
+    infrastructure::database::{
+        DatabaseManager,
+        repositories::{HistoryRepository, SettingsRepository},
+    },
     infrastructure::process_supervisor::ProcessSupervisor,
     security::download_args::build_download_args,
     services::{
@@ -38,18 +41,25 @@ pub fn start_download(
     mut options: DownloadOptions,
     components: State<'_, ComponentRegistry>,
     tasks: State<'_, DownloadTaskRegistry>,
+    database: State<'_, DatabaseManager>,
 ) -> CommandResult<DownloadTask> {
+    let preferences = get_preferences(database.inner())?;
     if options.output_directory.trim().is_empty() {
-        options.output_directory = app
-            .path()
-            .download_dir()
-            .map_err(|error| {
-                AppError::new(ErrorCode::InvalidPath, "无法获取系统下载目录。", false)
-                    .with_diagnostic(error.to_string())
-            })?
-            .to_string_lossy()
-            .into_owned();
+        options.output_directory = if preferences.output_directory.is_empty() {
+            app.path()
+                .download_dir()
+                .map_err(|error| {
+                    AppError::new(ErrorCode::InvalidPath, "无法获取系统下载目录。", false)
+                        .with_diagnostic(error.to_string())
+                })?
+                .to_string_lossy()
+                .into_owned()
+        } else {
+            preferences.output_directory.clone()
+        };
     }
+    options.conflict_strategy = preferences.conflict_strategy;
+    tasks.set_max_concurrent(preferences.max_concurrent)?;
     validate_task_options(&options)?;
     let task = tasks.create(options.clone())?;
     tasks.enqueue(&task.id)?;
@@ -59,6 +69,51 @@ pub fn start_download(
         tasks.inner().clone(),
     );
     Ok(task)
+}
+
+#[tauri::command]
+pub fn get_download_preferences(
+    database: State<'_, DatabaseManager>,
+) -> CommandResult<DownloadPreferences> {
+    get_preferences(database.inner())
+}
+
+#[tauri::command]
+pub fn save_download_preferences(
+    preferences: DownloadPreferences,
+    database: State<'_, DatabaseManager>,
+    tasks: State<'_, DownloadTaskRegistry>,
+) -> CommandResult<DownloadPreferences> {
+    if !(1..=4).contains(&preferences.max_concurrent) {
+        return Err(AppError::new(
+            ErrorCode::InvalidPath,
+            "并发任务数必须在 1 到 4 之间。",
+            false,
+        ));
+    }
+    if !preferences.output_directory.trim().is_empty() {
+        let path = Path::new(&preferences.output_directory);
+        if !path.is_absolute() || !path.is_dir() {
+            return Err(AppError::new(
+                ErrorCode::InvalidPath,
+                "下载目录必须是已存在的绝对路径。",
+                false,
+            ));
+        }
+    }
+    SettingsRepository::new(database.database()?).set(
+        "download.preferences",
+        &preferences,
+        unix_ms_now()?,
+    )?;
+    tasks.set_max_concurrent(preferences.max_concurrent)?;
+    Ok(preferences)
+}
+
+fn get_preferences(database: &DatabaseManager) -> CommandResult<DownloadPreferences> {
+    Ok(SettingsRepository::new(database.database()?)
+        .get("download.preferences")?
+        .unwrap_or_default())
 }
 
 #[tauri::command]
