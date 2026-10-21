@@ -196,7 +196,7 @@ chore(milestone): verify M4 single-download workflow
 - [x] M6-T5 实现安装、健康检查、原子切换和回滚。
 - [x] M6-T6a 实现组件来源/版本/许可证展示及应用管理组件删除。
 - [ ] M6-T6b 将已验签发行清单接入组件安装与更新 UI（需配置发布公钥和清单来源）。
-- [ ] M6-T7 建立 yt-dlp、FFmpeg、ffprobe 与受支持 JavaScript runtime 的兼容组合测试，至少覆盖应用管理的 Deno。
+- [x] M6-T7 建立 yt-dlp、FFmpeg、ffprobe 与受支持 JavaScript runtime 的兼容组合测试，至少覆盖应用管理的 Deno。
 
 验收标准：
 
@@ -204,6 +204,8 @@ chore(milestone): verify M4 single-download workflow
 - 校验失败的文件绝不进入可执行目录。
 - 更新失败自动继续使用上一版本。
 - 设置页准确显示实际构建提供者和许可证。
+
+M6 待决：T6b 的生产安装/更新交互尚未接入。实现依赖 Savebeam 清单签名公钥、对应签名私钥的受控保管及发布清单来源；仓库当前没有 Git remote 或发行仓库。不得使用测试密钥或未签名 URL 代替。
 
 ### M7：功能完善与安全加固
 

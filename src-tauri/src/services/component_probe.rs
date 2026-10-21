@@ -372,4 +372,61 @@ mod tests {
         assert_eq!(probed.executable_path, installation.executable_path);
         let _ = fs::remove_dir_all(path.parent().expect("test executable has parent"));
     }
+
+    #[cfg(unix)]
+    #[test]
+    fn app_managed_component_matrix_accepts_yt_dlp_ffmpeg_ffprobe_and_supported_deno() {
+        use std::os::unix::fs::PermissionsExt;
+
+        use crate::{
+            domain::component::ComponentKind,
+            services::{component_detector::ComponentDetector, component_paths::ComponentPaths},
+        };
+
+        let root = std::env::temp_dir().join(format!(
+            "savebeam-component-matrix-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let paths = ComponentPaths::from_app_data_dir(&root);
+        for (kind, name, output) in [
+            (ComponentKind::YtDlp, "yt-dlp", "2026.10.1"),
+            (ComponentKind::Ffmpeg, "ffmpeg", "ffmpeg version n8.0"),
+            (ComponentKind::Ffprobe, "ffprobe", "ffprobe version n8.0"),
+            (ComponentKind::JavaScriptRuntime, "deno", "deno 2.3.0"),
+        ] {
+            let directory = paths.ensure_component_dir(kind).unwrap();
+            let executable = directory.join(name);
+            std::fs::write(&executable, format!("#!/bin/sh\necho '{output}'\n")).unwrap();
+            std::fs::set_permissions(&executable, std::fs::Permissions::from_mode(0o755)).unwrap();
+        }
+
+        let detector = ComponentDetector::with_search_paths(paths, vec![], vec![]);
+        let installations =
+            super::probe_all(detector.detect_all(&std::collections::HashMap::new()));
+        assert!(
+            installations
+                .iter()
+                .all(|item| item.status == ComponentStatus::Available)
+        );
+        assert!(
+            installations
+                .iter()
+                .all(|item| item.source
+                    == Some(crate::domain::component::ComponentSource::AppManaged))
+        );
+        assert_eq!(
+            installations
+                .iter()
+                .find(|item| item.kind == ComponentKind::JavaScriptRuntime)
+                .unwrap()
+                .version
+                .as_deref(),
+            Some("2.3.0")
+        );
+        let _ = std::fs::remove_dir_all(root);
+    }
 }
