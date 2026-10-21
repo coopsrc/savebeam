@@ -47,22 +47,58 @@ pub fn start_download(
             .into_owned();
     }
     validate_task_options(&options)?;
-    let task = tasks.create(
-        options.url.clone(),
-        options.title.clone(),
-        options.format_id.clone(),
-    )?;
-    emit_task(&app, &task);
+    let task = tasks.create(options.clone())?;
+    launch_task(
+        app.clone(),
+        components.inner().clone(),
+        tasks.inner().clone(),
+        options,
+        task.clone(),
+    );
+    Ok(task)
+}
 
-    let registry = tasks.inner().clone();
-    let component_registry = components.inner().clone();
-    let app_handle = app.clone();
+#[tauri::command]
+pub fn cancel_download(
+    app: AppHandle,
+    task_id: String,
+    tasks: State<'_, DownloadTaskRegistry>,
+) -> CommandResult<DownloadTask> {
+    let task = tasks.cancel(&task_id)?;
+    emit_task(&app, &task);
+    Ok(task)
+}
+
+#[tauri::command]
+pub fn retry_download(
+    app: AppHandle,
+    task_id: String,
+    components: State<'_, ComponentRegistry>,
+    tasks: State<'_, DownloadTaskRegistry>,
+) -> CommandResult<DownloadTask> {
+    let (task, options) = tasks.retry(&task_id)?;
+    emit_task(&app, &task);
+    launch_task(
+        app.clone(),
+        components.inner().clone(),
+        tasks.inner().clone(),
+        options,
+        task.clone(),
+    );
+    Ok(task)
+}
+
+fn launch_task(
+    app: AppHandle,
+    components: ComponentRegistry,
+    tasks: DownloadTaskRegistry,
+    options: DownloadOptions,
+    task: DownloadTask,
+) {
     let task_id = task.id.clone();
     tauri::async_runtime::spawn_blocking(move || {
-        run_task(app_handle, registry, component_registry, options, task_id);
+        run_task(app, tasks, components, options, task_id);
     });
-
-    Ok(task)
 }
 
 fn validate_task_options(options: &DownloadOptions) -> CommandResult<()> {
@@ -83,10 +119,12 @@ fn run_task(
     options: DownloadOptions,
     task_id: String,
 ) {
-    let mut current_status = DownloadTaskStatus::Queued;
-    if let Some(task) = transition_and_emit(&app, &tasks, &task_id, DownloadTaskStatus::Preparing) {
-        current_status = task.status;
-    }
+    let Some(preparing_task) =
+        transition_and_emit(&app, &tasks, &task_id, DownloadTaskStatus::Preparing)
+    else {
+        return;
+    };
+    let mut current_status = preparing_task.status;
 
     let result = (|| {
         let app_data = app.path().app_data_dir().map_err(|error| {

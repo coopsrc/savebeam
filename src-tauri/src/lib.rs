@@ -1,3 +1,5 @@
+use tauri::Manager;
+
 pub mod commands;
 pub mod domain;
 pub mod infrastructure;
@@ -6,7 +8,7 @@ pub mod services;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .manage(commands::components::ComponentRegistry::default())
         .manage(services::download_registry::DownloadTaskRegistry::default())
@@ -16,7 +18,18 @@ pub fn run() {
             commands::components::clear_component_custom_path,
             commands::media::inspect_media,
             commands::downloads::start_download,
+            commands::downloads::cancel_download,
+            commands::downloads::retry_download,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application");
+
+    app.run(|handle, event| {
+        if matches!(event, tauri::RunEvent::ExitRequested { .. })
+            && let Some(tasks) =
+                handle.try_state::<services::download_registry::DownloadTaskRegistry>()
+        {
+            let _ = tasks.cancel_all();
+        }
+    });
 }

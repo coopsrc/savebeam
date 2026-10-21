@@ -1,5 +1,17 @@
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
-import { Alert, Badge, Group, Paper, Progress, Stack, Text, ThemeIcon, Title } from "@mantine/core";
+import { useState } from "react";
+import {
+  Alert,
+  Badge,
+  Button,
+  Group,
+  Paper,
+  Progress,
+  Stack,
+  Text,
+  ThemeIcon,
+  Title,
+} from "@mantine/core";
 import { IconDownload } from "@tabler/icons-react";
 import { usePlatformProfile } from "./app/platform/profile";
 import { EmptyState } from "./components/states/AppStates";
@@ -8,6 +20,8 @@ import { DownloadPage } from "./features/download/DownloadPage";
 import { useNavigate } from "react-router-dom";
 import { useAppStore } from "./stores/appStore";
 import { ComponentsSettings } from "./features/settings/ComponentsSettings";
+import { invokeCommand, IpcError } from "./ipc/client";
+import type { DownloadTask } from "./types/domain";
 import "./App.css";
 
 function FoundationPage() {
@@ -17,6 +31,9 @@ function FoundationPage() {
   const downloadTasks = useAppStore((state) => state.downloadTasks);
   const downloadProgress = useAppStore((state) => state.downloadProgress);
   const lastDownloadError = useAppStore((state) => state.lastDownloadError);
+  const upsertDownloadTask = useAppStore((state) => state.upsertDownloadTask);
+  const setLastDownloadError = useAppStore((state) => state.setLastDownloadError);
+  const [busyTaskId, setBusyTaskId] = useState<string | null>(null);
   const titleByRoute: Record<string, string> = {
     "/download": "下载",
     "/tasks": "任务",
@@ -24,6 +41,26 @@ function FoundationPage() {
     "/settings": "设置",
   };
   const title = titleByRoute[location.pathname] ?? "下载";
+
+  async function changeTask(taskId: string, action: "cancel" | "retry") {
+    setBusyTaskId(taskId);
+    setLastDownloadError(null);
+    try {
+      const task = await invokeCommand<DownloadTask>(
+        action === "cancel" ? "cancel_download" : "retry_download",
+        { taskId },
+      );
+      upsertDownloadTask(task);
+    } catch (error: unknown) {
+      setLastDownloadError({
+        code: error instanceof IpcError ? error.code : "unknown",
+        message: error instanceof Error ? error.message : "无法更新下载任务。",
+        retryable: error instanceof IpcError && error.retryable,
+      });
+    } finally {
+      setBusyTaskId(null);
+    }
+  }
 
   if (location.pathname === "/settings") {
     return <ComponentsSettings />;
@@ -82,6 +119,31 @@ function FoundationPage() {
                       >
                         {statusLabel[task.status]}
                       </Badge>
+                    </Group>
+                    <Group justify="flex-end">
+                      {["queued", "preparing", "downloading", "post_processing"].includes(
+                        task.status,
+                      ) && (
+                        <Button
+                          size="xs"
+                          variant="light"
+                          color="red"
+                          loading={busyTaskId === task.id}
+                          onClick={() => void changeTask(task.id, "cancel")}
+                        >
+                          取消
+                        </Button>
+                      )}
+                      {["failed", "cancelled"].includes(task.status) && (
+                        <Button
+                          size="xs"
+                          variant="light"
+                          loading={busyTaskId === task.id}
+                          onClick={() => void changeTask(task.id, "retry")}
+                        >
+                          重试
+                        </Button>
+                      )}
                     </Group>
                     {progress &&
                       (task.status === "downloading" || task.status === "post_processing") && (
