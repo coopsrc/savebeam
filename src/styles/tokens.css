@@ -16,6 +16,28 @@
   box-sizing: border-box;
 }
 
+:focus-visible {
+  outline: 3px solid var(--sb-color-accent);
+  outline-offset: 3px;
+}
+
+.skip-link {
+  position: fixed;
+  z-index: 1000;
+  top: 8px;
+  left: 8px;
+  padding: 10px 14px;
+  transform: translateY(-160%);
+  border-radius: var(--sb-radius-control);
+  color: white;
+  background: var(--sb-color-accent);
+  transition: transform 120ms ease;
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
 html,
 body,
 #root {
@@ -221,6 +243,10 @@ body {
   flex: 1;
 }
 
+.page-content:focus {
+  outline: none;
+}
+
 .status-bar {
   display: flex;
   min-height: 34px;
@@ -245,6 +271,12 @@ body {
   align-items: center;
   gap: 5px;
   margin-left: auto;
+}
+
+.shortcut-hint {
+  padding-left: 10px;
+  border-left: 1px solid var(--sb-color-border);
+  white-space: nowrap;
 }
 
 .is-compact .app-sidebar {
@@ -312,5 +344,9 @@ body {
   .page-toolbar {
     padding-right: 18px;
     padding-left: 18px;
+  }
+
+  .shortcut-hint {
+    display: none;
   }
 }
