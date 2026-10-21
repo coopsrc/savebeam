@@ -126,7 +126,7 @@ chore(milestone): verify M4 single-download workflow
 - [x] M3-T3 将 yt-dlp JSON 映射为内部稳定模型。
 - [x] M3-T4 实现超时、取消和错误分类。
 - [x] M3-T5 实现媒体卡片、封面、格式和字幕选择。
-- [ ] M3-T6 使用假可执行程序完成集成测试。
+- [x] M3-T6 使用假可执行程序完成集成测试。
 
 验收标准：
 

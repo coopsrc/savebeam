@@ -60,6 +60,15 @@ impl YtDlpProcessEngine {
         url: &str,
         cancellation: &CancellationToken,
     ) -> Result<Value, AppError> {
+        self.inspect_with_timeout(url, cancellation, INSPECT_TIMEOUT)
+    }
+
+    fn inspect_with_timeout(
+        &self,
+        url: &str,
+        cancellation: &CancellationToken,
+        timeout: Duration,
+    ) -> Result<Value, AppError> {
         if url.len() > 4096 || !(url.starts_with("http://") || url.starts_with("https://")) {
             return Err(AppError::new(
                 ErrorCode::InvalidUrl,
@@ -112,7 +121,7 @@ impl YtDlpProcessEngine {
                     false,
                 ));
             }
-            if started_at.elapsed() >= INSPECT_TIMEOUT {
+            if started_at.elapsed() >= timeout {
                 let _ = child.kill();
                 let _ = child.wait();
                 let _ = stdout_reader.join();
@@ -258,6 +267,7 @@ mod tests {
     };
 
     use crate::domain::error::ErrorCode;
+    use crate::services::media_mapper::map_media_info;
 
     use super::{CancellationToken, YtDlpProcessEngine, classify_process_error};
 
@@ -347,6 +357,29 @@ mod tests {
         );
     }
 
+    #[cfg(unix)]
+    #[test]
+    fn inspection_timeout_terminates_the_child_and_returns_network_error() {
+        let executable = write_script("yt-dlp", "exec sleep 5");
+        let engine = YtDlpProcessEngine::new(&executable, None);
+        let started_at = std::time::Instant::now();
+        let error = engine
+            .inspect_with_timeout(
+                "https://example.com/video",
+                &CancellationToken::default(),
+                std::time::Duration::from_millis(75),
+            )
+            .expect_err("slow inspection should time out");
+
+        assert_eq!(error.code, ErrorCode::NetworkFailure);
+        assert!(started_at.elapsed() < std::time::Duration::from_secs(2));
+        let _ = fs::remove_dir_all(
+            executable
+                .parent()
+                .expect("fake executable has a directory"),
+        );
+    }
+
     #[test]
     fn classifies_authentication_network_and_unavailable_errors_without_echoing_stderr() {
         assert_eq!(
@@ -359,6 +392,46 @@ mod tests {
         assert_eq!(
             classify_process_error(b"No formats found").code,
             ErrorCode::VideoUnavailable
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn fake_executable_json_maps_to_the_stable_media_model() {
+        let executable = write_script(
+            "yt-dlp",
+            "[ \"$1\" = \"--ignore-config\" ] || exit 10\n[ \"$7\" = \"https://example.com/watch?v=demo\" ] || exit 11\nprintf '%s' '{\"id\":\"demo\",\"title\":\"Integration video\",\"webpage_url\":\"https://example.com/watch?v=demo\",\"formats\":[{\"format_id\":\"18\",\"ext\":\"mp4\",\"height\":720,\"vcodec\":\"avc1\",\"acodec\":\"mp4a\"}],\"subtitles\":{\"en\":[{\"ext\":\"vtt\"}]}}'",
+        );
+        let url = "https://example.com/watch?v=demo";
+        let raw = YtDlpProcessEngine::new(&executable, None)
+            .inspect(url)
+            .expect("fake yt-dlp should return JSON");
+        let media = map_media_info(&raw, url).expect("fake JSON should map");
+
+        assert_eq!(media.id, "demo");
+        assert_eq!(media.title, "Integration video");
+        assert_eq!(media.formats[0].resolution.as_deref(), Some("720p"));
+        assert_eq!(media.subtitles[0].language, "en");
+        let _ = fs::remove_dir_all(
+            executable
+                .parent()
+                .expect("fake executable has a directory"),
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn fake_executable_error_output_is_classified() {
+        let executable = write_script("yt-dlp", "echo 'This video is private' >&2\nexit 1");
+        let error = YtDlpProcessEngine::new(&executable, None)
+            .inspect("https://example.com/private")
+            .expect_err("private media should fail inspection");
+
+        assert_eq!(error.code, ErrorCode::PrivateContent);
+        let _ = fs::remove_dir_all(
+            executable
+                .parent()
+                .expect("fake executable has a directory"),
         );
     }
 }
