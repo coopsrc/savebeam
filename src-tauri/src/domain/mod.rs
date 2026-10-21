@@ -3,4 +3,5 @@
 //! This module stays independent from Tauri, child processes, databases, and
 //! operating-system APIs.
 
+pub mod component;
 pub mod error;
