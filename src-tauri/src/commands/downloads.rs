@@ -286,6 +286,13 @@ fn validate_task_options(options: &DownloadOptions) -> CommandResult<()> {
             false,
         ));
     }
+    if options.write_automatic_subtitles && options.subtitle_languages.is_empty() {
+        return Err(AppError::new(
+            ErrorCode::InvalidPath,
+            "选择自动字幕前，请先指定至少一种字幕语言。",
+            false,
+        ));
+    }
     Ok(())
 }
 
@@ -318,6 +325,9 @@ fn run_task(
         let installations = probe_all(detector.detect_all(&custom_paths));
         let ytdlp = required_component(&installations, ComponentKind::YtDlp)?;
         let ffmpeg = required_component(&installations, ComponentKind::Ffmpeg)?;
+        if options.audio_only {
+            required_component(&installations, ComponentKind::Ffprobe)?;
+        }
         let mut args = build_download_args(&options)?;
         append_option_before_url(&mut args, "--ffmpeg-location", Path::new(ffmpeg))?;
         let executable = PathBuf::from(ytdlp);

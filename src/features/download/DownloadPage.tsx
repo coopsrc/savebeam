@@ -5,6 +5,7 @@ import {
   Checkbox,
   Group,
   Image,
+  MultiSelect,
   Paper,
   Select,
   Stack,
@@ -39,6 +40,12 @@ export function DownloadPage() {
   const [mediaInfo, setMediaInfo] = useState<MediaInfo | null>(null);
   const [selectedFormat, setSelectedFormat] = useState<string | null>(null);
   const [playlistConfirmed, setPlaylistConfirmed] = useState(false);
+  const [audioOnly, setAudioOnly] = useState(false);
+  const [subtitleLanguages, setSubtitleLanguages] = useState<string[]>([]);
+  const [writeAutomaticSubtitles, setWriteAutomaticSubtitles] = useState(false);
+  const [writeThumbnail, setWriteThumbnail] = useState(false);
+  const [writeInfoJson, setWriteInfoJson] = useState(false);
+  const [embedMetadata, setEmbedMetadata] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
   const upsertDownloadTask = useAppStore((state) => state.upsertDownloadTask);
   const navigate = useNavigate();
@@ -53,6 +60,12 @@ export function DownloadPage() {
     setMediaInfo(null);
     setSelectedFormat(null);
     setPlaylistConfirmed(false);
+    setAudioOnly(false);
+    setSubtitleLanguages([]);
+    setWriteAutomaticSubtitles(false);
+    setWriteThumbnail(false);
+    setWriteInfoJson(false);
+    setEmbedMetadata(false);
 
     const checked = validateMediaUrl(url);
     if (!checked.valid) return;
@@ -78,16 +91,22 @@ export function DownloadPage() {
   }
 
   async function handleStartDownload() {
-    if (!mediaInfo || (mediaInfo.playlist ? !playlistConfirmed : !selectedFormat)) return;
+    if (!mediaInfo || (mediaInfo.playlist ? !playlistConfirmed : !selectedFormat && !audioOnly))
+      return;
     setRequestError(null);
     setIsStartingDownload(true);
     const options: DownloadOptions = {
       title: mediaInfo.title,
       url: mediaInfo.webpageUrl,
-      formatId: mediaInfo.playlist ? "best" : selectedFormat!,
+      formatId: audioOnly ? "bestaudio/best" : mediaInfo.playlist ? "best" : selectedFormat!,
       outputDirectory: "",
-      subtitleLanguages: [],
       playlistItemCount: mediaInfo.playlist?.downloadCount ?? null,
+      audioOnly,
+      subtitleLanguages,
+      writeAutomaticSubtitles,
+      writeThumbnail,
+      writeInfoJson,
+      embedMetadata,
       conflictStrategy: "skip",
     };
     try {
@@ -106,6 +125,14 @@ export function DownloadPage() {
       value: format.formatId,
       label: formatLabel(format),
     })) ?? [];
+  const subtitleOptions = mediaInfo
+    ? Array.from(new Map(mediaInfo.subtitles.map((track) => [track.language, track])).values()).map(
+        (track) => ({
+          value: track.language,
+          label: `${track.language}${track.name ? ` — ${track.name}` : ""}`,
+        }),
+      )
+    : [];
   return (
     <main className="download-page">
       <Paper className="download-card" shadow="sm" radius="lg" withBorder>
@@ -198,7 +225,7 @@ export function DownloadPage() {
                           <Text size="sm">
                             {mediaInfo.playlist.truncated
                               ? `播放列表超过安全上限，将只下载前 ${mediaInfo.playlist.downloadCount} 项。`
-                              : `检测到 ${mediaInfo.playlist.downloadCount} 项，将按默认最佳格式下载。`}
+                              : `检测到 ${mediaInfo.playlist.downloadCount} 项，将按${audioOnly ? "仅音频 MP3" : "默认最佳格式"}下载。`}
                           </Text>
                           <Checkbox
                             checked={playlistConfirmed}
@@ -207,27 +234,82 @@ export function DownloadPage() {
                           />
                         </Stack>
                       </Alert>
-                    ) : formatOptions.length > 0 ? (
+                    ) : !audioOnly && formatOptions.length > 0 ? (
                       <Select
                         label="可用格式"
                         data={formatOptions}
                         value={selectedFormat}
                         onChange={setSelectedFormat}
                         allowDeselect={false}
+                        disabled={audioOnly}
                       />
-                    ) : (
+                    ) : !audioOnly ? (
                       <Alert color="yellow" title="没有可选格式">
                         网站没有返回可供下载的媒体格式。
                       </Alert>
-                    )}
+                    ) : null}
+                    <Stack gap="xs">
+                      <Checkbox
+                        checked={audioOnly}
+                        onChange={(event) => setAudioOnly(event.currentTarget.checked)}
+                        label="仅下载音频（MP3）"
+                        description="需要 FFmpeg 和 ffprobe 进行音频提取与转换。"
+                      />
+                      {subtitleOptions.length > 0 && (
+                        <>
+                          <MultiSelect
+                            label="下载字幕"
+                            placeholder="不下载字幕"
+                            data={subtitleOptions}
+                            value={subtitleLanguages}
+                            onChange={setSubtitleLanguages}
+                            searchable
+                            clearable
+                          />
+                          {subtitleLanguages.length > 0 &&
+                            mediaInfo.subtitles.some(
+                              (track) =>
+                                track.automatic && subtitleLanguages.includes(track.language),
+                            ) && (
+                              <Checkbox
+                                checked={writeAutomaticSubtitles}
+                                onChange={(event) =>
+                                  setWriteAutomaticSubtitles(event.currentTarget.checked)
+                                }
+                                label="同时下载自动生成的字幕"
+                              />
+                            )}
+                        </>
+                      )}
+                      <Checkbox
+                        checked={writeThumbnail}
+                        onChange={(event) => setWriteThumbnail(event.currentTarget.checked)}
+                        label="另存缩略图文件"
+                      />
+                      <Checkbox
+                        checked={writeInfoJson}
+                        onChange={(event) => setWriteInfoJson(event.currentTarget.checked)}
+                        label="另存媒体信息 JSON"
+                      />
+                      <Checkbox
+                        checked={embedMetadata}
+                        onChange={(event) => setEmbedMetadata(event.currentTarget.checked)}
+                        label="将媒体元数据写入文件"
+                      />
+                    </Stack>
                     <Text size="xs" c="dimmed">
-                      保存位置：系统“下载”目录。字幕下载将在后续里程碑接入。
+                      保存位置：系统“下载”目录。部分后处理选项需要 FFmpeg。
                     </Text>
                     <Group justify="flex-end">
                       <Button
                         onClick={handleStartDownload}
                         loading={isStartingDownload}
-                        disabled={mediaInfo.playlist ? !playlistConfirmed : !selectedFormat}
+                        disabled={
+                          (mediaInfo.playlist
+                            ? !playlistConfirmed
+                            : !selectedFormat && !audioOnly) ||
+                          (writeAutomaticSubtitles && subtitleLanguages.length === 0)
+                        }
                       >
                         开始下载
                       </Button>

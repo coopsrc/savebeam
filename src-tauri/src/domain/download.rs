@@ -17,6 +17,16 @@ pub struct DownloadOptions {
     pub conflict_strategy: DownloadConflictStrategy,
     #[serde(default)]
     pub playlist_item_count: Option<u8>,
+    #[serde(default)]
+    pub audio_only: bool,
+    #[serde(default)]
+    pub write_automatic_subtitles: bool,
+    #[serde(default)]
+    pub write_thumbnail: bool,
+    #[serde(default)]
+    pub write_info_json: bool,
+    #[serde(default)]
+    pub embed_metadata: bool,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, Serialize)]
@@ -119,6 +129,11 @@ mod tests {
         assert_eq!(options.title, "Example");
         assert_eq!(options.subtitle_languages, ["en"]);
         assert_eq!(options.playlist_item_count, None);
+        assert!(!options.audio_only);
+        assert!(!options.write_automatic_subtitles);
+        assert!(!options.write_thumbnail);
+        assert!(!options.write_info_json);
+        assert!(!options.embed_metadata);
     }
 
     #[test]

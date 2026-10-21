@@ -121,6 +121,11 @@ export interface DownloadOptions {
   outputDirectory: string;
   subtitleLanguages: string[];
   playlistItemCount: number | null;
+  audioOnly: boolean;
+  writeAutomaticSubtitles: boolean;
+  writeThumbnail: boolean;
+  writeInfoJson: boolean;
+  embedMetadata: boolean;
   conflictStrategy: "skip" | "overwrite";
 }
 

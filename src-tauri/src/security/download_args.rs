@@ -17,7 +17,17 @@ const DOWNLOAD_PROGRESS_TEMPLATE: &str = concat!(
 /// Builds a fixed, shell-free argv for a single media item.
 pub fn build_download_args(options: &DownloadOptions) -> Result<Vec<OsString>, AppError> {
     validate_url(&options.url)?;
-    validate_format_selector(&options.format_id)?;
+    if !options.audio_only {
+        validate_format_selector(&options.format_id)?;
+    }
+    validate_subtitle_languages(&options.subtitle_languages)?;
+    if options.write_automatic_subtitles && options.subtitle_languages.is_empty() {
+        return Err(AppError::new(
+            ErrorCode::InvalidPath,
+            "选择自动字幕前，请先指定至少一种字幕语言。",
+            false,
+        ));
+    }
     let playlist_arguments = match options.playlist_item_count {
         Some(count) if (1..=MAX_PLAYLIST_ITEMS).contains(&count) => vec![
             OsString::from("--yes-playlist"),
@@ -61,7 +71,11 @@ pub fn build_download_args(options: &DownloadOptions) -> Result<Vec<OsString>, A
         "--progress-template".into(),
         "postprocess:SB_PROGRESS:post_processing".into(),
         "--format".into(),
-        options.format_id.clone().into(),
+        if options.audio_only {
+            "bestaudio/best".into()
+        } else {
+            options.format_id.clone().into()
+        },
         "--paths".into(),
         format!("home:{}", options.output_directory).into(),
         "--output".into(),
@@ -74,18 +88,59 @@ pub fn build_download_args(options: &DownloadOptions) -> Result<Vec<OsString>, A
     let mut args = args;
     args.splice(2..2, playlist_arguments);
 
-    if options
-        .subtitle_languages
-        .iter()
-        .any(|language| !language.trim().is_empty())
-    {
-        return Err(AppError::new(
-            ErrorCode::Unknown,
-            "当前版本尚未启用字幕下载选项。",
-            false,
-        ));
+    if !options.subtitle_languages.is_empty() {
+        args.splice(
+            2..2,
+            [
+                OsString::from("--write-subs"),
+                OsString::from("--sub-langs"),
+            ],
+        );
+        args.insert(4, options.subtitle_languages.join(",").into());
+    }
+    if options.write_automatic_subtitles {
+        args.splice(2..2, [OsString::from("--write-auto-subs")]);
+    }
+    if options.write_thumbnail {
+        args.splice(2..2, [OsString::from("--write-thumbnail")]);
+    }
+    if options.write_info_json {
+        args.splice(2..2, [OsString::from("--write-info-json")]);
+    }
+    if options.embed_metadata {
+        args.splice(2..2, [OsString::from("--embed-metadata")]);
+    }
+    if options.audio_only {
+        args.splice(
+            2..2,
+            [
+                OsString::from("--extract-audio"),
+                OsString::from("--audio-format"),
+                OsString::from("mp3"),
+            ],
+        );
     }
     Ok(args)
+}
+
+fn validate_subtitle_languages(languages: &[String]) -> Result<(), AppError> {
+    let valid = languages.len() <= 10
+        && languages.iter().all(|language| {
+            !language.is_empty()
+                && language.len() <= 64
+                && language
+                    .bytes()
+                    .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'.' | b'-'))
+        });
+    if valid {
+        Ok(())
+    } else {
+        Err(AppError::new(
+            ErrorCode::InvalidPath,
+            "字幕语言选项无效，请重新解析并选择可用语言。",
+            false,
+        ))
+    }
 }
 
 fn validate_url(url: &str) -> Result<(), AppError> {
@@ -151,6 +206,11 @@ mod tests {
             subtitle_languages: Vec::new(),
             conflict_strategy: crate::domain::download::DownloadConflictStrategy::Skip,
             playlist_item_count: None,
+            audio_only: false,
+            write_automatic_subtitles: false,
+            write_thumbnail: false,
+            write_info_json: false,
+            embed_metadata: false,
         }
     }
 
@@ -210,6 +270,40 @@ mod tests {
         assert!(!strings.contains(&"--no-playlist".into()));
 
         download_options.playlist_item_count = Some(51);
+        assert!(build_download_args(&download_options).is_err());
+        let _ = fs::remove_dir_all(directory);
+    }
+
+    #[test]
+    fn builds_audio_subtitle_thumbnail_and_metadata_options_without_shell_parsing() {
+        let directory = temp_directory();
+        let mut download_options = options(&directory);
+        download_options.audio_only = true;
+        download_options.subtitle_languages = vec!["en-US".into(), "zh-Hans".into()];
+        download_options.write_automatic_subtitles = true;
+        download_options.write_thumbnail = true;
+        download_options.write_info_json = true;
+        download_options.embed_metadata = true;
+
+        let args = build_download_args(&download_options).unwrap();
+        let strings: Vec<_> = args.iter().map(|value| value.to_string_lossy()).collect();
+        for flag in [
+            "--extract-audio",
+            "--audio-format",
+            "--write-subs",
+            "--write-auto-subs",
+            "--sub-langs",
+            "--write-thumbnail",
+            "--write-info-json",
+            "--embed-metadata",
+        ] {
+            assert!(strings.contains(&flag.into()), "missing {flag}");
+        }
+        assert!(strings.contains(&"bestaudio/best".into()));
+        assert!(strings.contains(&"mp3".into()));
+        assert!(strings.contains(&"en-US,zh-Hans".into()));
+
+        download_options.subtitle_languages = vec!["en,all".into()];
         assert!(build_download_args(&download_options).is_err());
         let _ = fs::remove_dir_all(directory);
     }

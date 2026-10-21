@@ -10,7 +10,7 @@ use rusqlite::{Connection, TransactionBehavior};
 
 use crate::domain::error::{AppError, ErrorCode};
 
-pub const CURRENT_SCHEMA_VERSION: u32 = 3;
+pub const CURRENT_SCHEMA_VERSION: u32 = 4;
 
 pub mod repositories;
 
@@ -44,6 +44,12 @@ const MIGRATIONS: &[(u32, &str)] = &[(
     "ALTER TABLE download_tasks ADD COLUMN conflict_strategy TEXT NOT NULL DEFAULT 'skip';"
 ), (3,
     "ALTER TABLE download_tasks ADD COLUMN playlist_item_count INTEGER;"
+), (4,
+    "ALTER TABLE download_tasks ADD COLUMN audio_only INTEGER NOT NULL DEFAULT 0;
+     ALTER TABLE download_tasks ADD COLUMN write_automatic_subtitles INTEGER NOT NULL DEFAULT 0;
+     ALTER TABLE download_tasks ADD COLUMN write_thumbnail INTEGER NOT NULL DEFAULT 0;
+     ALTER TABLE download_tasks ADD COLUMN write_info_json INTEGER NOT NULL DEFAULT 0;
+     ALTER TABLE download_tasks ADD COLUMN embed_metadata INTEGER NOT NULL DEFAULT 0;"
 )];
 
 #[derive(Debug, Clone)]
@@ -252,16 +258,41 @@ mod tests {
         let version: u32 = connection
             .pragma_query_value(None, "user_version", |row| row.get(0))
             .unwrap();
-        let migrated: (String, String, Option<i64>) = connection
+        let migrated: (String, String, Option<i64>, bool, bool, bool, bool, bool) = connection
             .query_row(
-                "SELECT task_id, conflict_strategy, playlist_item_count FROM download_tasks WHERE task_id = 'old-task'",
+                "SELECT task_id, conflict_strategy, playlist_item_count, audio_only,
+                        write_automatic_subtitles, write_thumbnail, write_info_json, embed_metadata
+                 FROM download_tasks WHERE task_id = 'old-task'",
                 [],
-                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+                |row| {
+                    Ok((
+                        row.get(0)?,
+                        row.get(1)?,
+                        row.get(2)?,
+                        row.get(3)?,
+                        row.get(4)?,
+                        row.get(5)?,
+                        row.get(6)?,
+                        row.get(7)?,
+                    ))
+                },
             )
             .unwrap();
 
         assert_eq!(version, CURRENT_SCHEMA_VERSION);
-        assert_eq!(migrated, ("old-task".into(), "skip".into(), None));
+        assert_eq!(
+            migrated,
+            (
+                "old-task".into(),
+                "skip".into(),
+                None,
+                false,
+                false,
+                false,
+                false,
+                false,
+            )
+        );
     }
 
     #[test]

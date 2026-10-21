@@ -280,6 +280,8 @@ Linux 使用中性桌面风格：
 - 应用启动时不自动读取剪贴板；只有用户点击“粘贴”后才读取一次。
 - 粘贴 URL 后不自动发起网络解析，用户点击“解析”或按 Enter 明确触发。
 - 普通用户优先看到“最佳质量、1080p、720p、仅音频”，原始 format ID 放入高级格式列表。
+- 下载选项可选择 MP3-only、已解析出的字幕语言、自动字幕、另存缩略图、另存媒体信息 JSON 和嵌入元数据；MP3-only 使用 FFmpeg 与 ffprobe 后处理。
+- 下载选项和列表下载范围随任务持久化，任务恢复或重试时不得丢失用户选择。
 - 组件缺失不阻止进入应用；在用户首次解析或下载时展示安装引导。
 - 缺少 yt-dlp 时阻止解析；缺少 FFmpeg 或 JS runtime 时按实际能力降级并给出说明。
 - 任务阶段分别显示准备、下载、后处理和完成；FFmpeg 合并阶段不能继续显示为“下载中”。
@@ -630,7 +632,7 @@ MVP 不读取浏览器 Cookie。后续首先支持用户显式选择 `cookies.tx
 
 - M2：各平台最低组件版本及系统路径清单。
 - M4：默认格式为媒体解析后的推荐格式；冲突默认为跳过，可在设置中显式覆盖；并发上限为 4。
-- M5：使用 Rust `rusqlite`（`bundled` SQLite），数据库位于 Tauri app-data；schema 通过 `PRAGMA user_version` 做事务式版本迁移，当前 v2 在任务记录中保存冲突策略。数据库由 Rust Repository 独占访问，前端不直接连接 SQLite。
+- M5：使用 Rust `rusqlite`（`bundled` SQLite），数据库位于 Tauri app-data；schema 通过 `PRAGMA user_version` 做事务式版本迁移，当前 v4 在任务记录中保存冲突策略、播放列表数量和下载选项。数据库由 Rust Repository 独占访问，前端不直接连接 SQLite。
 - M6：各平台 FFmpeg 构建提供者和签名/哈希信任链。
 - M8：应用签名主体、正式发行渠道和更新服务位置。
 
