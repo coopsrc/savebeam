@@ -6,7 +6,7 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { usePlatformProfile } from "../app/platform/profile";
 import { Sidebar } from "./Sidebar";
 import { IPC_EVENTS, listenToEvent } from "../ipc/events";
-import type { AppError, DownloadProgress, DownloadTask } from "../types/domain";
+import type { AppError, DownloadProgress, DownloadResult, DownloadTask } from "../types/domain";
 import { useAppStore } from "../stores/appStore";
 
 const routeTitles: Record<string, string> = {
@@ -68,6 +68,9 @@ export function AppShell() {
       }),
       listenToEvent<AppError>(IPC_EVENTS.downloadError, (error) => {
         useAppStore.getState().setLastDownloadError(error);
+      }),
+      listenToEvent<DownloadResult>(IPC_EVENTS.downloadResult, (result) => {
+        useAppStore.getState().setDownloadResult(result);
       }),
     ])
       .then((listeners) => {

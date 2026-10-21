@@ -11,7 +11,7 @@ use crate::{
     commands::{
         components::ComponentRegistry,
         ipc::{
-            CommandResult, DOWNLOAD_ERROR_EVENT, DOWNLOAD_PROGRESS_EVENT,
+            CommandResult, DOWNLOAD_ERROR_EVENT, DOWNLOAD_PROGRESS_EVENT, DOWNLOAD_RESULT_EVENT,
             DOWNLOAD_STATE_CHANGED_EVENT, EventPayload,
         },
     },
@@ -20,11 +20,12 @@ use crate::{
         download::{DownloadOptions, DownloadTask, DownloadTaskStatus},
         error::{AppError, ErrorCode},
     },
-    infrastructure::process_supervisor::{ProcessOutput, ProcessSupervisor},
+    infrastructure::process_supervisor::ProcessSupervisor,
     security::download_args::build_download_args,
     services::{
         component_detector::ComponentDetector, component_paths::ComponentPaths,
         component_probe::probe_all, download_registry::DownloadTaskRegistry,
+        download_verifier::verify_download_outputs,
     },
 };
 
@@ -155,11 +156,17 @@ fn run_task(
                 }
                 let _ = app.emit(DOWNLOAD_PROGRESS_EVENT, EventPayload::new(progress));
             })?;
-        Ok::<ProcessOutput, AppError>(process_output)
+        verify_download_outputs(
+            process_output,
+            &task_id,
+            &options.title,
+            Path::new(&options.output_directory),
+        )
     })();
 
     match result {
-        Ok(_output) => {
+        Ok(result) => {
+            let _ = app.emit(DOWNLOAD_RESULT_EVENT, EventPayload::new(result));
             if current_status == DownloadTaskStatus::Preparing {
                 let _ =
                     transition_and_emit(&app, &tasks, &task_id, DownloadTaskStatus::Downloading);

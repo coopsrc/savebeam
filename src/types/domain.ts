@@ -105,3 +105,10 @@ export interface DownloadProgress {
   etaSeconds: number | null;
   postProcessing: boolean;
 }
+
+export interface DownloadResult {
+  taskId: string;
+  title: string;
+  outputPaths: string[];
+  totalBytes: number;
+}

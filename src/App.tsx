@@ -30,6 +30,7 @@ function FoundationPage() {
   const profile = usePlatformProfile();
   const downloadTasks = useAppStore((state) => state.downloadTasks);
   const downloadProgress = useAppStore((state) => state.downloadProgress);
+  const downloadResults = useAppStore((state) => state.downloadResults);
   const lastDownloadError = useAppStore((state) => state.lastDownloadError);
   const upsertDownloadTask = useAppStore((state) => state.upsertDownloadTask);
   const setLastDownloadError = useAppStore((state) => state.setLastDownloadError);
@@ -83,6 +84,7 @@ function FoundationPage() {
             )}
             {downloadTasks.map((task) => {
               const progress = downloadProgress[task.id];
+              const result = downloadResults[task.id];
               const percent =
                 progress?.totalBytes && progress.downloadedBytes != null
                   ? Math.min(100, (progress.downloadedBytes / progress.totalBytes) * 100)
@@ -172,6 +174,11 @@ function FoundationPage() {
                           </Group>
                         </Stack>
                       )}
+                    {result && (
+                      <Text size="xs" c="dimmed" className="validated-url">
+                        已保存：{result.outputPaths.join("、")} · {formatBytes(result.totalBytes)}
+                      </Text>
+                    )}
                   </Stack>
                 </Paper>
               );
