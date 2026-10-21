@@ -195,7 +195,7 @@ chore(milestone): verify M4 single-download workflow
 - [x] M6-T4 实现哈希/签名验证及安全解压。
 - [x] M6-T5 实现安装、健康检查、原子切换和回滚。
 - [x] M6-T6a 实现组件来源/版本/许可证展示及应用管理组件删除。
-- [ ] M6-T6b 将已验签发行清单接入组件安装与更新 UI（需配置发布公钥和清单来源）。
+- [x] M6-T6b 将已验签发行清单接入组件安装与更新 UI（清单从 Savebeam GitHub Releases 获取；公钥固定在应用中）。
 - [x] M6-T7 建立 yt-dlp、FFmpeg、ffprobe 与受支持 JavaScript runtime 的兼容组合测试，至少覆盖应用管理的 Deno。
 
 验收标准：
@@ -205,7 +205,7 @@ chore(milestone): verify M4 single-download workflow
 - 更新失败自动继续使用上一版本。
 - 设置页准确显示实际构建提供者和许可证。
 
-M6 待决：T6b 的生产安装/更新交互尚未接入。实现依赖 Savebeam 清单签名公钥、对应签名私钥的受控保管及发布清单来源；仓库当前没有 Git remote 或发行仓库。不得使用测试密钥或未签名 URL 代替。
+M6 待决：T6b 的应用侧安装/更新交互已实现，但 Savebeam 仓库尚无签名组件清单 Release 资产，真实发行二进制安装和端到端更新仍未验收。仓库地址为 `git@github.com:coopsrc/savebeam.git`；清单地址固定为 `https://github.com/coopsrc/savebeam/releases/latest/download/components.json`。对应签名私钥已保存到 GitHub Actions Secret `SAVEBEAM_COMPONENT_MANIFEST_SIGNING_KEY`，应用公钥见 `src-tauri/src/services/component_catalog.rs`。不得在清单发布前声称组件安装链路生产可用。
 
 当前状态：M6 未验收，细节见 [`docs/verification/M6.md`](verification/M6.md)；完成 T6b 前不得进入 M7。
 

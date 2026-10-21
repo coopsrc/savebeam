@@ -7,6 +7,7 @@ use crate::domain::error::AppError;
 pub const EVENT_SCHEMA_VERSION: u16 = 1;
 
 pub const COMPONENT_STATE_CHANGED_EVENT: &str = "component://state-changed";
+pub const COMPONENT_INSTALL_PROGRESS_EVENT: &str = "component://install-progress";
 pub const DOWNLOAD_STATE_CHANGED_EVENT: &str = "download://state-changed";
 pub const DOWNLOAD_PROGRESS_EVENT: &str = "download://progress";
 pub const DOWNLOAD_LOG_EVENT: &str = "download://log";

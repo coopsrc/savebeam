@@ -6,16 +6,19 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 
 use crate::{
-    commands::ipc::CommandResult,
+    commands::ipc::{COMPONENT_INSTALL_PROGRESS_EVENT, CommandResult, EventPayload},
     domain::{
         component::{ComponentInstallation, ComponentKind},
+        component_manifest::ComponentRelease,
         error::{AppError, ErrorCode},
     },
     services::{
         component_detector::{ComponentDetector, is_usable_file},
+        component_install_flow::{available_releases, install_from_catalog},
+        component_install_registry::ComponentInstallRegistry,
         component_paths::ComponentPaths,
         component_probe::probe_all,
     },
@@ -24,6 +27,60 @@ use crate::{
 #[derive(Clone, Default)]
 pub struct ComponentRegistry {
     pub(crate) custom_paths: Arc<Mutex<HashMap<ComponentKind, PathBuf>>>,
+}
+
+#[tauri::command]
+pub async fn get_component_releases() -> CommandResult<Vec<ComponentRelease>> {
+    tauri::async_runtime::spawn_blocking(available_releases)
+        .await
+        .map_err(|error| {
+            AppError::new(ErrorCode::Unknown, "读取组件发行目录时发生错误。", true)
+                .with_diagnostic(error.to_string())
+        })?
+}
+
+#[tauri::command]
+pub async fn install_component_from_release(
+    app: AppHandle,
+    kind: ComponentKind,
+    installs: State<'_, ComponentInstallRegistry>,
+) -> CommandResult<ComponentInstallation> {
+    let app_data_dir = app.path().app_data_dir().map_err(|error| {
+        AppError::new(ErrorCode::Unknown, "无法访问应用数据目录。", false)
+            .with_diagnostic(error.to_string())
+    })?;
+    let paths = ComponentPaths::from_app_data_dir(app_data_dir);
+    let registry = installs.inner().clone();
+    let cancellation = registry.begin(kind)?;
+    let worker_cancellation = cancellation.clone();
+    let worker_app = app.clone();
+    let result = tauri::async_runtime::spawn_blocking(move || {
+        install_from_catalog(kind, &paths, &worker_cancellation, |progress| {
+            let _ = worker_app.emit(
+                COMPONENT_INSTALL_PROGRESS_EVENT,
+                EventPayload::new(progress),
+            );
+        })
+    })
+    .await
+    .map_err(|error| {
+        AppError::new(ErrorCode::Unknown, "组件安装任务意外终止。", true)
+            .with_diagnostic(error.to_string())
+    });
+    let finish_result = registry.finish(kind);
+    match (result, finish_result) {
+        (Ok(installation), Ok(())) => installation,
+        (Err(error), _) => Err(error),
+        (Ok(_), Err(error)) => Err(error),
+    }
+}
+
+#[tauri::command]
+pub fn cancel_component_install(
+    kind: ComponentKind,
+    installs: State<'_, ComponentInstallRegistry>,
+) -> CommandResult<()> {
+    installs.cancel(kind)
 }
 
 #[tauri::command]

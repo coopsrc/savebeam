@@ -425,6 +425,9 @@ Custom      用户选择已有可执行文件
 - FFmpeg：使用 FFmpeg 官网各平台下载入口列出的可信构建提供者。
 - 下载地址和哈希来自受签名保护的组件清单。
 - 清单使用带 schema 版本的 JSON，Ed25519 签名覆盖稳定结构化 payload；发行公钥固定在应用中。正式发行前必须配置发行私钥及轮换流程，开发测试密钥不能用于生产。
+- Savebeam 清单以 `components.json` 作为 `coopsrc/savebeam` GitHub Release 资产，客户端固定读取 `https://github.com/coopsrc/savebeam/releases/latest/download/components.json`；仅接受 HTTPS 和 GitHub Release 资产主机重定向，清单上限 256 KiB。
+- Release 检查在用户打开组件设置页时执行，也可手动重试；安装与更新由用户逐个点击启动，展示下载进度并允许取消。清单不可用时保留手动安装指引。
+- Ed25519 私钥仅保存在 GitHub Actions Secret `SAVEBEAM_COMPONENT_MANIFEST_SIGNING_KEY`，绝不进入应用包或源代码；应用只包含公钥。密钥轮换时先发布包含新公钥的应用版本，再切换清单签名密钥。
 - 下载到临时文件，校验通过后再原子移动到组件目录。
 - 新版本通过 `--version` 和基本能力测试后才切换为当前版本。
 - 至少保留一个上一版本用于回滚。

@@ -6,6 +6,7 @@ export const IPC_EVENT_SCHEMA_VERSION = 1;
 
 export const IPC_EVENTS = {
   componentStateChanged: "component://state-changed",
+  componentInstallProgress: "component://install-progress",
   downloadStateChanged: "download://state-changed",
   downloadProgress: "download://progress",
   downloadLog: "download://log",

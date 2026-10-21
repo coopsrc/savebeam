@@ -5,6 +5,7 @@ import {
   Group,
   NumberInput,
   Paper,
+  Progress,
   Select,
   Stack,
   Text,
@@ -15,7 +16,14 @@ import { IconRefresh, IconTrash } from "@tabler/icons-react";
 import { ErrorState, LoadingState } from "../../components/states/AppStates";
 import { usePlatformProfile } from "../../app/platform/profile";
 import { invokeCommand } from "../../ipc/client";
-import type { ComponentInstallation, ComponentKind, DownloadPreferences } from "../../types/domain";
+import type {
+  ComponentInstallation,
+  ComponentInstallProgress,
+  ComponentKind,
+  ComponentRelease,
+  DownloadPreferences,
+} from "../../types/domain";
+import { IPC_EVENTS, listenToEvent } from "../../ipc/events";
 
 const componentNames: Record<ComponentKind, string> = {
   yt_dlp: "yt-dlp",
@@ -82,6 +90,11 @@ export function ComponentsSettings() {
   const [error, setError] = useState<string | null>(null);
   const [copiedKind, setCopiedKind] = useState<ComponentKind | null>(null);
   const [removingKind, setRemovingKind] = useState<ComponentKind | null>(null);
+  const [releases, setReleases] = useState<ComponentRelease[]>([]);
+  const [checkingReleases, setCheckingReleases] = useState(false);
+  const [releaseError, setReleaseError] = useState<string | null>(null);
+  const [installingKind, setInstallingKind] = useState<ComponentKind | null>(null);
+  const [installProgress, setInstallProgress] = useState<ComponentInstallProgress | null>(null);
 
   const acceptComponents = useCallback((result: ComponentInstallation[]) => {
     setComponents(result);
@@ -126,6 +139,66 @@ export function ComponentsSettings() {
       active = false;
     };
   }, [acceptComponents]);
+
+  const refreshReleases = useCallback(async () => {
+    setCheckingReleases(true);
+    setReleaseError(null);
+    try {
+      setReleases(await invokeCommand<ComponentRelease[]>("get_component_releases"));
+    } catch (cause) {
+      setReleaseError(cause instanceof Error ? cause.message : "读取组件发行目录失败。");
+    } finally {
+      setCheckingReleases(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void invokeCommand<ComponentRelease[]>("get_component_releases")
+      .then(setReleases)
+      .catch((cause: unknown) =>
+        setReleaseError(cause instanceof Error ? cause.message : "读取组件发行目录失败。"),
+      );
+    let unlisten: (() => void) | undefined;
+    let active = true;
+    void listenToEvent<ComponentInstallProgress>(
+      IPC_EVENTS.componentInstallProgress,
+      (progress) => {
+        if (active) setInstallProgress(progress);
+      },
+    )
+      .then((stop) => {
+        if (active) unlisten = stop;
+        else stop();
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+      unlisten?.();
+    };
+  }, [refreshReleases]);
+
+  async function installRelease(kind: ComponentKind) {
+    setInstallingKind(kind);
+    setInstallProgress(null);
+    setError(null);
+    try {
+      await invokeCommand<ComponentInstallation>("install_component_from_release", { kind });
+      await refresh();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "安装组件失败。");
+    } finally {
+      setInstallingKind(null);
+      setInstallProgress(null);
+    }
+  }
+
+  async function cancelInstall(kind: ComponentKind) {
+    try {
+      await invokeCommand<void>("cancel_component_install", { kind });
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "无法取消组件安装。");
+    }
+  }
 
   async function saveCustomPath(kind: ComponentKind) {
     const path = customPaths[kind]?.trim();
@@ -191,18 +264,33 @@ export function ComponentsSettings() {
               Savebeam 不会覆盖系统或自定义组件。组件检测只运行固定的版本参数。
             </Text>
           </div>
-          <Button
-            variant="light"
-            leftSection={<IconRefresh size={16} />}
-            onClick={() => void refresh()}
-            loading={loading}
-          >
-            重新检测
-          </Button>
+          <Group>
+            <Button
+              variant="light"
+              leftSection={<IconRefresh size={16} />}
+              onClick={() => void refresh()}
+              loading={loading}
+            >
+              重新检测
+            </Button>
+            <Button
+              variant="light"
+              onClick={() => void refreshReleases()}
+              loading={checkingReleases}
+              disabled={installingKind !== null}
+            >
+              检查组件更新
+            </Button>
+          </Group>
         </Group>
 
         {error && (
           <ErrorState title="组件操作失败" description={error} onAction={() => void refresh()} />
+        )}
+        {releaseError && (
+          <Text role="alert" c="orange" size="sm">
+            暂时无法检查应用管理组件：{releaseError} 可使用下方手动安装建议，或稍后重试。
+          </Text>
         )}
         {loading ? (
           <LoadingState label="正在检测组件…" />
@@ -242,6 +330,59 @@ export function ComponentsSettings() {
                   <Text size="xs" c="dimmed">
                     许可证：{licenseSummary(component.kind)}
                   </Text>
+                  {(() => {
+                    const release = releases.find((item) => item.kind === component.kind);
+                    if (!release) return null;
+                    const isInstalling = installingKind === component.kind;
+                    const progressPercent =
+                      installProgress && installProgress.totalBytes > 0
+                        ? Math.min(
+                            100,
+                            (installProgress.downloadedBytes / installProgress.totalBytes) * 100,
+                          )
+                        : 0;
+                    return (
+                      <Stack gap="xs">
+                        <Text size="sm" c="dimmed">
+                          GitHub Releases：{release.version} · {release.provider}
+                        </Text>
+                        {isInstalling ? (
+                          <Group align="end" wrap="nowrap">
+                            <Progress
+                              flex={1}
+                              value={progressPercent}
+                              aria-label={`正在下载 ${componentNames[component.kind]}`}
+                            />
+                            <Text size="xs" c="dimmed" miw={72} ta="right">
+                              {progressPercent.toFixed(0)}%
+                            </Text>
+                            <Button
+                              size="xs"
+                              color="red"
+                              variant="subtle"
+                              onClick={() => void cancelInstall(component.kind)}
+                            >
+                              取消
+                            </Button>
+                          </Group>
+                        ) : (
+                          <Group justify="flex-end">
+                            <Button
+                              size="sm"
+                              variant="light"
+                              loading={checkingReleases}
+                              disabled={installingKind !== null}
+                              onClick={() => void installRelease(component.kind)}
+                            >
+                              {component.version === release.version
+                                ? "安装此版本"
+                                : `安装 / 更新到 ${release.version}`}
+                            </Button>
+                          </Group>
+                        )}
+                      </Stack>
+                    );
+                  })()}
                   {component.source === "app_managed" && (
                     <Group justify="flex-end">
                       <Button
@@ -337,7 +478,8 @@ export function ComponentsSettings() {
         </Paper>
 
         <Text size="xs" c="dimmed">
-          自定义路径仅保存在本次运行内存中；持久化设置将在后续任务中接入。当前不提供组件下载或更新。
+          自定义路径仅保存在本次运行内存中。应用管理组件只从已验签的 Savebeam GitHub Releases
+          清单安装；下载文件通过 SHA-256 校验后才会解压和启用。
         </Text>
       </Stack>
     </main>

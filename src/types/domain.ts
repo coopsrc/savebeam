@@ -40,6 +40,25 @@ export interface ComponentInstallation {
   version: string | null;
 }
 
+export interface ComponentRelease {
+  kind: ComponentKind;
+  version: string;
+  targetOs: "mac_os" | "windows" | "linux";
+  architecture: "aarch64" | "x86_64";
+  provider: string;
+  url: string;
+  sha256: string;
+  sizeBytes: number;
+  archive: "raw" | "zip" | "tar_gz" | "tar_xz";
+  executableName: string;
+}
+
+export interface ComponentInstallProgress {
+  component: string;
+  downloadedBytes: number;
+  totalBytes: number;
+}
+
 export interface MediaFormat {
   formatId: string;
   extension: string;

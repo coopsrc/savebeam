@@ -11,6 +11,7 @@ pub fn run() {
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .manage(commands::components::ComponentRegistry::default())
+        .manage(services::component_install_registry::ComponentInstallRegistry::default())
         .manage(services::download_registry::DownloadTaskRegistry::default())
         .manage(infrastructure::database::DatabaseManager::default())
         .setup(|app| {
@@ -35,6 +36,9 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::components::get_component_status,
+            commands::components::get_component_releases,
+            commands::components::install_component_from_release,
+            commands::components::cancel_component_install,
             commands::components::set_component_custom_path,
             commands::components::clear_component_custom_path,
             commands::components::remove_managed_component,
