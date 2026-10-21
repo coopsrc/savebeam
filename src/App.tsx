@@ -81,6 +81,7 @@ function FoundationPage() {
               <Alert
                 color="red"
                 title="下载任务失败"
+                role="alert"
                 onClose={() => useAppStore.getState().setLastDownloadError(null)}
                 withCloseButton
               >
@@ -115,6 +116,8 @@ function FoundationPage() {
                         </Text>
                       </Stack>
                       <Badge
+                        role="status"
+                        aria-label={`下载任务状态：${statusLabel[task.status]}`}
                         variant="light"
                         color={
                           task.status === "failed"
@@ -155,7 +158,16 @@ function FoundationPage() {
                     {progress &&
                       (task.status === "downloading" || task.status === "post_processing") && (
                         <Stack gap={4}>
-                          <Progress value={percent} animated={task.status === "downloading"} />
+                          <Progress
+                            value={percent}
+                            animated={task.status === "downloading"}
+                            role="progressbar"
+                            aria-valuemin={0}
+                            aria-valuemax={100}
+                            aria-valuenow={Math.round(percent)}
+                            aria-label={`${task.title} 下载进度`}
+                            aria-valuetext={`${Math.round(percent)}%`}
+                          />
                           <Group justify="space-between">
                             <Text size="xs" c="dimmed">
                               {progress.downloadedBytes == null

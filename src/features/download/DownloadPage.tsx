@@ -212,7 +212,8 @@ export function DownloadPage() {
                   color="red"
                   icon={<IconAlertCircle size={18} />}
                   title="无法解析"
-                  aria-live="polite"
+                  role="alert"
+                  aria-live="assertive"
                 >
                   {requestError}
                 </Alert>

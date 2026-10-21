@@ -582,6 +582,8 @@ Unknown
 - 不执行从 yt-dlp 输出、媒体标题或远端元数据中得到的命令。
 - Tauri CSP 默认仅允许打包本地资源、Tauri IPC 与本地 Vite 开发服务器；不加载远程脚本，内联样式仅因 Mantine/React 动态样式保留 `unsafe-inline`。
 - 主窗口 capability 只允许事件监听/取消监听和确实使用的原生文件/消息对话框；不启用 shell、filesystem、process 或前端 opener 通用权限。
+- React 错误提示使用稳定错误码对应的 locale catalog，当前界面仍默认简体中文；新增语言时扩展 `src/i18n/`，无需改 IPC 错误结构。
+- 任务状态和下载进度提供屏幕阅读器语义；异步错误通过 alert 区域播报，操作状态通过 status 区域播报。
 
 ## 12. 开源许可证与内容合规
 

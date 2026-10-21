@@ -79,7 +79,7 @@ export function HistoryPage() {
           <Button onClick={() => void load()}>搜索</Button>
         </Group>
         {error && (
-          <Alert color="red" title="历史操作失败">
+          <Alert color="red" title="历史操作失败" role="alert">
             {error}
           </Alert>
         )}

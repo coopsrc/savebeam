@@ -1,5 +1,6 @@
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import type { AppError, AppErrorCode } from "../types/domain";
+import { getLocalizedErrorMessage } from "../i18n/errorMessages";
 
 const ERROR_CODES: ReadonlySet<string> = new Set([
   "invalid_url",
@@ -25,7 +26,7 @@ export class IpcError extends Error implements AppError {
   readonly diagnostic?: string;
 
   constructor(error: AppError) {
-    super(error.message);
+    super(getLocalizedErrorMessage(error, "zh-CN"));
     this.name = "IpcError";
     this.code = error.code;
     this.retryable = error.retryable;
