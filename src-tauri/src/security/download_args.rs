@@ -14,13 +14,13 @@ const DOWNLOAD_PROGRESS_TEMPLATE: &str = concat!(
     "\"speed\":\"%(progress.speed)s\",\"eta\":\"%(progress.eta)s\"}"
 );
 
-const SINGLE_OUTPUT_TEMPLATE: &str = "%(title)s.%(ext)s";
+const SINGLE_OUTPUT_TEMPLATE: &str = "%(title)s%(id& [{}]|)s.%(ext)s";
 // Project only per-stream naming metadata, never media URLs or authentication headers.
 const INTERMEDIATE_TEMPLATE: &str = concat!(
     "after_move:SB_PARTS:{\"output\":%(filepath)j,\"streams\":",
     "%(requested_formats.:.{filepath,format_id,ext,vcodec,acodec,width,height,resolution,tbr,vbr,abr}|null)j}"
 );
-const SERIES_OUTPUT_TEMPLATE: &str = "%(playlist_title,series,playlist|未命名系列)s/%(playlist_index,episode_number|1)d-%(title)s.%(ext)s";
+const SERIES_OUTPUT_TEMPLATE: &str = "%(playlist_title,series,playlist|未命名系列)s%(playlist_id,series_id& [{}]|)s/%(playlist_index,episode_number|1)d-%(title)s%(id& [{}]|)s.%(ext)s";
 
 /// Builds fixed, shell-free argv for a download task.
 pub fn build_download_args(

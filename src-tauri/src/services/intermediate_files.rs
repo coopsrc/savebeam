@@ -98,14 +98,27 @@ fn retained_name(title: &str, stream: &IntermediateStream) -> Option<String> {
         .map(|value| format!("{value:.0}kbps"))
         .unwrap_or_else(|| "bitrate-unknown".into());
     // Leave room for technical fields under common 255-byte filename limits.
-    let mut end = title.len().min(120);
+    Some(format!(
+        "{}.{kind}.f{id}.{codec}.{resolution}.{bitrate}.{ext}",
+        bounded_title(title, 120)
+    ))
+}
+
+fn bounded_title(title: &str, max: usize) -> String {
+    if title.len() <= max {
+        return title.to_owned();
+    }
+    // The output template appends the public video ID. Preserve that suffix
+    // when shortening long titles to make room for technical stream metadata.
+    let suffix_start = title
+        .rfind(" [")
+        .filter(|start| title.ends_with(']') && title.len() - start < max);
+    let suffix = suffix_start.map(|start| &title[start..]).unwrap_or("");
+    let mut end = max - suffix.len();
     while !title.is_char_boundary(end) {
         end -= 1;
     }
-    Some(format!(
-        "{}.{kind}.f{id}.{codec}.{resolution}.{bitrate}.{ext}",
-        &title[..end]
-    ))
+    format!("{}{suffix}", &title[..end])
 }
 
 fn token(value: &str, max: usize) -> Option<String> {
@@ -160,6 +173,16 @@ mod tests {
     }
 
     #[test]
+    fn retained_streams_keep_public_video_id_even_when_long_titles_are_shortened() {
+        let title = format!("{} [BV19wee6BEeP]", "长标题".repeat(60));
+        let name = retained_name(&title, &video()).unwrap();
+        assert!(name.contains(" [BV19wee6BEeP].video.f30120."));
+        assert!(name.len() <= 255);
+        let short = "标题 [BV19wee6BEeP]";
+        assert_eq!(bounded_title(short, 120), short);
+    }
+
+    #[test]
     fn unknown_bitrate_is_not_fabricated_and_long_unicode_titles_are_bounded() {
         let mut stream = video();
         stream.vbr = None;
@@ -180,15 +203,15 @@ mod tests {
                 .unwrap()
                 .as_nanos()
         ));
-        let series = root.join("系列");
+        let series = root.join("系列 [playlist-123]");
         fs::create_dir_all(&series).unwrap();
-        let final_path = series.join("1-标题.mp4");
+        let final_path = series.join("1-标题 [BV19wee6BEeP].mp4");
         fs::write(&final_path, b"merged").unwrap();
-        let source = series.join("1-标题.f30120.mp4");
+        let source = series.join("1-标题 [BV19wee6BEeP].f30120.mp4");
         fs::write(&source, b"video").unwrap();
         let mut stream = video();
         stream.filepath = Some(source.to_string_lossy().into_owned());
-        let target = series.join(retained_name("1-标题", &stream).unwrap());
+        let target = series.join(retained_name("1-标题 [BV19wee6BEeP]", &stream).unwrap());
         fs::write(&target, b"existing").unwrap();
         let groups = [IntermediateFiles {
             output: final_path.to_string_lossy().into_owned(),

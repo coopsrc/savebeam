@@ -410,9 +410,9 @@ export function DownloadPage() {
                     </Text>
                     <Text size="xs" c="dimmed">
                       {mediaInfo.playlist
-                        ? "保存结构：系列名称/序号-视频标题.扩展名"
-                        : "保存结构：视频标题.扩展名"}
-                      。字幕、封面和 JSON 使用相同标题。
+                        ? "保存结构：系列名称 [系列ID]/序号-视频标题 [视频ID].扩展名"
+                        : "保存结构：视频标题 [视频ID].扩展名"}
+                      。字幕、封面和 JSON 使用相同前缀；缺失的 ID 将省略。
                     </Text>
                     {selection && (
                       <Paper
