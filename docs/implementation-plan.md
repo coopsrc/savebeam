@@ -192,7 +192,7 @@ chore(milestone): verify M4 single-download workflow
 - [x] M6-T1 定义版本化、签名的组件清单格式。
 - [x] M6-T2 实现平台和 CPU 架构匹配。
 - [x] M6-T3 实现带进度的安全下载和取消。
-- [ ] M6-T4 实现哈希/签名验证及安全解压。
+- [x] M6-T4 实现哈希/签名验证及安全解压。
 - [ ] M6-T5 实现安装、健康检查、原子切换和回滚。
 - [ ] M6-T6 实现组件更新、删除和许可证详情 UI。
 - [ ] M6-T7 建立 yt-dlp、FFmpeg、ffprobe 与受支持 JavaScript runtime 的兼容组合测试，至少覆盖应用管理的 Deno。

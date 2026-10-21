@@ -2,6 +2,7 @@
 //!
 //! Services coordinate use cases without depending on Tauri's IPC transport.
 
+pub mod component_archive;
 pub mod component_detector;
 pub mod component_download;
 pub mod component_paths;
