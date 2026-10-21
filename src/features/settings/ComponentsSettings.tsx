@@ -409,12 +409,13 @@ export function ComponentsSettings() {
                       label="自定义可执行文件路径"
                       placeholder="输入完整路径，例如 /opt/homebrew/bin/yt-dlp"
                       value={customPaths[component.kind] ?? ""}
-                      onChange={(event) =>
+                      onChange={(event) => {
+                        const path = event.currentTarget.value;
                         setCustomPaths((previous) => ({
                           ...previous,
-                          [component.kind]: event.currentTarget.value,
-                        }))
-                      }
+                          [component.kind]: path,
+                        }));
+                      }}
                     />
                     <Button variant="light" onClick={() => void saveCustomPath(component.kind)}>
                       使用此路径
@@ -711,9 +712,10 @@ function CookiePreferencesPanel() {
                 (source === "browser" && !preferences.cookiesBrowser)
               }
               onChange={(event) => {
+                const accessConfirmed = event.currentTarget.checked;
                 setPreferences((value) => ({
                   ...value,
-                  accessConfirmed: event.currentTarget.checked,
+                  accessConfirmed,
                 }));
                 setSaved(false);
               }}
@@ -788,9 +790,10 @@ function DownloadPreferencesPanel() {
           label="默认下载目录"
           placeholder="留空使用系统下载目录"
           value={preferences.outputDirectory}
-          onChange={(event) =>
-            setPreferences((value) => ({ ...value, outputDirectory: event.currentTarget.value }))
-          }
+          onChange={(event) => {
+            const outputDirectory = event.currentTarget.value;
+            setPreferences((value) => ({ ...value, outputDirectory }));
+          }}
         />
         <Group grow align="end">
           <NumberInput
