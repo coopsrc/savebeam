@@ -1,11 +1,23 @@
 import { useState, type FormEvent } from "react";
-import { Alert, Button, Paper, Stack, Text, TextInput, Title } from "@mantine/core";
+import { useNavigate } from "react-router-dom";
+import { Alert, Button, Group, Paper, Select, Stack, Text, TextInput, Title } from "@mantine/core";
 import { IconCheck, IconLink, IconSearch } from "@tabler/icons-react";
+import { useAppStore } from "../../stores/appStore";
 import { getMediaUrlError, validateMediaUrl } from "./validateMediaUrl";
+
+const mockFormats = [
+  { value: "best", label: "最佳画质（模拟）" },
+  { value: "1080p", label: "1080p（模拟）" },
+  { value: "audio", label: "仅音频（模拟）" },
+];
 
 export function DownloadPage() {
   const [url, setUrl] = useState("");
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [showMockMedia, setShowMockMedia] = useState(false);
+  const [selectedFormat, setSelectedFormat] = useState("best");
+  const addMockTask = useAppStore((state) => state.addMockTask);
+  const navigate = useNavigate();
   const validation = hasSubmitted ? validateMediaUrl(url) : null;
   const error = validation && !validation.valid ? getMediaUrlError(validation.reason) : undefined;
 
@@ -16,6 +28,21 @@ export function DownloadPage() {
 
   function handleChange(value: string) {
     setUrl(value);
+    setShowMockMedia(false);
+  }
+
+  function createMockTask() {
+    if (!validation?.valid) return;
+    const formatLabel = mockFormats.find((format) => format.value === selectedFormat)?.label;
+    addMockTask({
+      id: `mock-${Date.now()}`,
+      title: "示例视频（模拟任务）",
+      url: validation.normalizedUrl,
+      formatLabel: formatLabel ?? "最佳画质（模拟）",
+      status: "queued",
+      createdAt: Date.now(),
+    });
+    navigate("/tasks");
   }
 
   return (
@@ -66,9 +93,42 @@ export function DownloadPage() {
                     {validation.normalizedUrl}
                   </Text>
                   <Text size="sm" mt={4}>
-                    媒体解析与下载引擎尚未接入；本次没有发起网络请求。
+                    当前仅完成格式检查，没有联网解析。可以使用模拟数据预览后续交互。
                   </Text>
+                  <Group mt="sm">
+                    <Button size="xs" variant="light" onClick={() => setShowMockMedia(true)}>
+                      使用模拟媒体信息
+                    </Button>
+                  </Group>
                 </Alert>
+              )}
+
+              {showMockMedia && validation?.valid && (
+                <Paper className="mock-media-card" withBorder radius="md" p="md">
+                  <Stack gap="md">
+                    <div>
+                      <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
+                        模拟媒体信息
+                      </Text>
+                      <Title order={3} mt={4}>
+                        示例视频
+                      </Title>
+                      <Text size="sm" c="dimmed">
+                        此处为原型数据，不代表该网址的真实媒体信息。
+                      </Text>
+                    </div>
+                    <Select
+                      label="下载格式"
+                      data={mockFormats}
+                      value={selectedFormat}
+                      onChange={(value) => value && setSelectedFormat(value)}
+                      allowDeselect={false}
+                    />
+                    <Group justify="flex-end">
+                      <Button onClick={createMockTask}>创建模拟任务</Button>
+                    </Group>
+                  </Stack>
+                </Paper>
               )}
             </Stack>
           </form>

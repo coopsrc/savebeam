@@ -78,6 +78,7 @@ chore(milestone): verify M4 single-download workflow
 - [x] M1-T5 建立前端领域类型和 IPC client 封装。
 - [x] M1-T6 完成键盘导航、焦点状态、平台快捷键和基础无障碍检查。
 - [x] M1-T7 实现 macOS、Windows、Linux profile 的开发环境强制切换与视觉检查。
+- [x] M1-T8 使用模拟数据完成“输入 URL → 选择格式 → 创建假任务”原型闭环。
 
 验收标准：
 

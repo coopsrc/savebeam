@@ -81,6 +81,15 @@ body {
   padding: clamp(24px, 4vw, 40px);
 }
 
+.mock-media-card {
+  background: var(--sb-color-surface);
+}
+
+.task-list-page {
+  min-height: 100%;
+  padding: var(--sb-space-page);
+}
+
 .download-heading-icon {
   display: grid;
   width: 40px;

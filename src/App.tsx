@@ -1,17 +1,19 @@
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
-import { Badge, Group, Paper, Stack, Text, ThemeIcon, Title } from "@mantine/core";
+import { Alert, Badge, Group, Paper, Stack, Text, ThemeIcon, Title } from "@mantine/core";
 import { IconDownload } from "@tabler/icons-react";
 import { usePlatformProfile } from "./app/platform/profile";
 import { EmptyState } from "./components/states/AppStates";
 import { AppShell } from "./layout/AppShell";
 import { DownloadPage } from "./features/download/DownloadPage";
 import { useNavigate } from "react-router-dom";
+import { useAppStore } from "./stores/appStore";
 import "./App.css";
 
 function FoundationPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const profile = usePlatformProfile();
+  const mockTasks = useAppStore((state) => state.mockTasks);
   const titleByRoute: Record<string, string> = {
     "/download": "下载",
     "/tasks": "任务",
@@ -21,6 +23,34 @@ function FoundationPage() {
   const title = titleByRoute[location.pathname] ?? "下载";
 
   if (location.pathname === "/tasks") {
+    if (mockTasks.length > 0) {
+      return (
+        <main className="task-list-page">
+          <Stack gap="md">
+            <Alert color="blue" title="原型演示">
+              这些是假任务，仅用于验证界面流程，不会启动下载或写入历史。
+            </Alert>
+            {mockTasks.map((task) => (
+              <Paper key={task.id} withBorder radius="md" p="md">
+                <Group justify="space-between" align="flex-start">
+                  <Stack gap={4}>
+                    <Text fw={600}>{task.title}</Text>
+                    <Text size="sm" c="dimmed" className="validated-url">
+                      {task.url}
+                    </Text>
+                    <Text size="xs" c="dimmed">
+                      {task.formatLabel}
+                    </Text>
+                  </Stack>
+                  <Badge variant="light">排队中（模拟）</Badge>
+                </Group>
+              </Paper>
+            ))}
+          </Stack>
+        </main>
+      );
+    }
+
     return (
       <EmptyState
         title="还没有下载任务"
