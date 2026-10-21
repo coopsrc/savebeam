@@ -1,0 +1,223 @@
+//! Bounded version and basic capability checks for discovered executables.
+
+use std::{
+    io::Read,
+    path::Path,
+    process::{Command, Stdio},
+    thread,
+    time::{Duration, Instant},
+};
+
+use crate::domain::component::{ComponentInstallation, ComponentKind, ComponentStatus};
+
+const PROBE_TIMEOUT: Duration = Duration::from_secs(5);
+const MAX_CAPTURE_BYTES: usize = 16 * 1024;
+
+pub fn probe_installation(installation: &ComponentInstallation) -> ComponentInstallation {
+    let Some(executable_path) = installation.executable_path.as_deref() else {
+        return installation.clone();
+    };
+
+    let Some(argument) = version_command(installation.kind, Path::new(executable_path)) else {
+        return unhealthy(installation);
+    };
+
+    match run_bounded_version_command(Path::new(executable_path), argument) {
+        Ok(output) => match extract_version(&output) {
+            Some(version) => ComponentInstallation {
+                status: ComponentStatus::Available,
+                version: Some(version),
+                ..installation.clone()
+            },
+            None => unhealthy(installation),
+        },
+        Err(_) => unhealthy(installation),
+    }
+}
+
+pub fn probe_all(
+    installations: impl IntoIterator<Item = ComponentInstallation>,
+) -> Vec<ComponentInstallation> {
+    installations
+        .into_iter()
+        .map(|installation| probe_installation(&installation))
+        .collect()
+}
+
+fn unhealthy(installation: &ComponentInstallation) -> ComponentInstallation {
+    ComponentInstallation {
+        status: ComponentStatus::Unhealthy,
+        version: None,
+        ..installation.clone()
+    }
+}
+
+fn version_command(kind: ComponentKind, path: &Path) -> Option<&'static str> {
+    let executable = path.file_name()?.to_string_lossy().to_ascii_lowercase();
+    let executable = executable.strip_suffix(".exe").unwrap_or(&executable);
+
+    match (kind, executable) {
+        (ComponentKind::YtDlp, "yt-dlp") => Some("--version"),
+        (ComponentKind::Ffmpeg, "ffmpeg") => Some("-version"),
+        (ComponentKind::Ffprobe, "ffprobe") => Some("-version"),
+        (ComponentKind::JavaScriptRuntime, "deno") => Some("--version"),
+        (ComponentKind::JavaScriptRuntime, "node") => Some("--version"),
+        (ComponentKind::JavaScriptRuntime, "bun") => Some("--version"),
+        (ComponentKind::JavaScriptRuntime, "qjs") => Some("-v"),
+        _ => None,
+    }
+}
+
+fn run_bounded_version_command(executable: &Path, argument: &str) -> std::io::Result<String> {
+    let mut child = Command::new(executable)
+        .arg(argument)
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()?;
+
+    let stdout = child.stdout.take().expect("stdout is piped");
+    let stderr = child.stderr.take().expect("stderr is piped");
+    let stdout_reader = thread::spawn(move || read_bounded(stdout));
+    let stderr_reader = thread::spawn(move || read_bounded(stderr));
+
+    let started_at = Instant::now();
+    let exit_status = loop {
+        if let Some(status) = child.try_wait()? {
+            break status;
+        }
+        if started_at.elapsed() >= PROBE_TIMEOUT {
+            let _ = child.kill();
+            let _ = child.wait();
+            let _ = stdout_reader.join();
+            let _ = stderr_reader.join();
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::TimedOut,
+                "component version probe timed out",
+            ));
+        }
+        thread::sleep(Duration::from_millis(25));
+    };
+
+    let mut output = stdout_reader
+        .join()
+        .map_err(|_| std::io::Error::other("stdout reader failed"))?;
+    let stderr_output = stderr_reader
+        .join()
+        .map_err(|_| std::io::Error::other("stderr reader failed"))?;
+    output.extend(stderr_output);
+
+    if !exit_status.success() {
+        return Err(std::io::Error::other("component version command failed"));
+    }
+
+    Ok(String::from_utf8_lossy(&output).into_owned())
+}
+
+fn read_bounded(mut reader: impl Read) -> Vec<u8> {
+    let mut retained = Vec::new();
+    let mut chunk = [0_u8; 1024];
+
+    loop {
+        match reader.read(&mut chunk) {
+            Ok(0) | Err(_) => break,
+            Ok(read) => {
+                let remaining = MAX_CAPTURE_BYTES.saturating_sub(retained.len());
+                retained.extend_from_slice(&chunk[..read.min(remaining)]);
+            }
+        }
+    }
+    retained
+}
+
+fn extract_version(output: &str) -> Option<String> {
+    output.lines().find_map(|line| {
+        line.split_whitespace().find_map(|token| {
+            let token = token.trim_matches(|character: char| {
+                !(character.is_ascii_alphanumeric() || matches!(character, '.' | '-' | '+' | '_'))
+            });
+            (token.chars().any(|character| character.is_ascii_digit())
+                && token.chars().any(|character| {
+                    character.is_ascii_alphabetic() || matches!(character, '.' | '-' | '+' | '_')
+                }))
+            .then(|| token.to_owned())
+        })
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{
+        fs,
+        path::PathBuf,
+        time::{SystemTime, UNIX_EPOCH},
+    };
+
+    use super::{ComponentInstallation, probe_installation};
+    use crate::domain::component::{ComponentKind, ComponentSource, ComponentStatus};
+
+    fn test_executable_name(name: &str) -> PathBuf {
+        let root = std::env::temp_dir().join(format!(
+            "savebeam-probe-test-{}-{}",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("clock should be valid")
+                .as_nanos()
+        ));
+        fs::create_dir_all(&root).expect("test directory should exist");
+        #[cfg(unix)]
+        let path = root.join(name);
+        #[cfg(windows)]
+        let path = root.join(format!("{name}.cmd"));
+        path
+    }
+
+    #[cfg(unix)]
+    fn write_fake_executable(path: &PathBuf, body: &str) {
+        use std::os::unix::fs::PermissionsExt;
+        fs::write(path, format!("#!/bin/sh\n{body}\n")).expect("test command should be written");
+        fs::set_permissions(path, fs::Permissions::from_mode(0o755))
+            .expect("test command should be executable");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn probes_version_with_the_component_specific_fixed_argument() {
+        let path = test_executable_name("yt-dlp");
+        write_fake_executable(&path, "printf '2026.10.21\\n'");
+        let installation = ComponentInstallation {
+            kind: ComponentKind::YtDlp,
+            source: Some(ComponentSource::Custom),
+            status: ComponentStatus::Available,
+            executable_path: Some(path.to_string_lossy().into_owned()),
+            version: None,
+        };
+
+        let probed = probe_installation(&installation);
+
+        assert_eq!(probed.status, ComponentStatus::Available);
+        assert_eq!(probed.version.as_deref(), Some("2026.10.21"));
+        let _ = fs::remove_dir_all(path.parent().expect("test executable has parent"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn marks_a_failed_version_command_unhealthy() {
+        let path = test_executable_name("node");
+        write_fake_executable(&path, "exit 7");
+        let installation = ComponentInstallation {
+            kind: ComponentKind::JavaScriptRuntime,
+            source: Some(ComponentSource::System),
+            status: ComponentStatus::Available,
+            executable_path: Some(path.to_string_lossy().into_owned()),
+            version: None,
+        };
+
+        let probed = probe_installation(&installation);
+
+        assert_eq!(probed.status, ComponentStatus::Unhealthy);
+        assert_eq!(probed.executable_path, installation.executable_path);
+        let _ = fs::remove_dir_all(path.parent().expect("test executable has parent"));
+    }
+}
