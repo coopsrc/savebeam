@@ -189,7 +189,7 @@ chore(milestone): verify M4 single-download workflow
 
 任务：
 
-- [ ] M6-T1 定义版本化、签名的组件清单格式。
+- [x] M6-T1 定义版本化、签名的组件清单格式。
 - [ ] M6-T2 实现平台和 CPU 架构匹配。
 - [ ] M6-T3 实现带进度的安全下载和取消。
 - [ ] M6-T4 实现哈希/签名验证及安全解压。
