@@ -580,8 +580,8 @@ Unknown
 - 下载组件时验证 TLS、固定来源、架构和哈希/签名。
 - 解压组件时防御 Zip Slip 和符号链接逃逸。
 - 不执行从 yt-dlp 输出、媒体标题或远端元数据中得到的命令。
-- Tauri CSP 在进入正式 UI 阶段启用，不保留 `csp: null` 到发布版本。
-- 发布前审计 Tauri capability，删除未使用权限。
+- Tauri CSP 默认仅允许打包本地资源、Tauri IPC 与本地 Vite 开发服务器；不加载远程脚本，内联样式仅因 Mantine/React 动态样式保留 `unsafe-inline`。
+- 主窗口 capability 只允许事件监听/取消监听和确实使用的原生文件/消息对话框；不启用 shell、filesystem、process 或前端 opener 通用权限。
 
 ## 12. 开源许可证与内容合规
 
