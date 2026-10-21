@@ -135,6 +135,8 @@ chore(milestone): verify M4 single-download workflow
 - 前端不依赖 yt-dlp 原始 JSON 字段细节。
 - 输入内容不能注入额外命令参数。
 
+验收状态：自动化验收通过，证据见 [`docs/verification/M3.md`](verification/M3.md)。真实站点交互及 Windows/Linux 运行仍列为后续发布前验证项。
+
 ### M4：单任务下载闭环
 
 **目标**：可靠完成一个视频的本地下载。
