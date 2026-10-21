@@ -79,6 +79,23 @@ export type DownloadTaskStatus =
   | "cancelling"
   | "cancelled";
 
+export interface DownloadTask {
+  id: string;
+  url: string;
+  title: string;
+  formatId: string;
+  status: DownloadTaskStatus;
+  createdAtUnixMs: number;
+}
+
+export interface DownloadOptions {
+  title: string;
+  url: string;
+  formatId: string;
+  outputDirectory: string;
+  subtitleLanguages: string[];
+}
+
 export interface DownloadProgress {
   taskId: string;
   status: DownloadTaskStatus;
@@ -86,4 +103,5 @@ export interface DownloadProgress {
   totalBytes: number | null;
   speedBytesPerSecond: number | null;
   etaSeconds: number | null;
+  postProcessing: boolean;
 }

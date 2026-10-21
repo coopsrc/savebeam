@@ -1,9 +1,13 @@
 import { useMediaQuery } from "@mantine/hooks";
 import { IconDeviceDesktop } from "@tabler/icons-react";
+import { isTauri } from "@tauri-apps/api/core";
 import { useEffect } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { usePlatformProfile } from "../app/platform/profile";
 import { Sidebar } from "./Sidebar";
+import { IPC_EVENTS, listenToEvent } from "../ipc/events";
+import type { AppError, DownloadProgress, DownloadTask } from "../types/domain";
+import { useAppStore } from "../stores/appStore";
 
 const routeTitles: Record<string, string> = {
   "/download": "下载",
@@ -51,6 +55,38 @@ export function AppShell() {
     return () => window.removeEventListener("keydown", handleShortcut);
   }, [navigate, profile.modifierKey]);
 
+  useEffect(() => {
+    if (!isTauri()) return;
+    let disposed = false;
+    let unlisten: Array<() => void> = [];
+    void Promise.all([
+      listenToEvent<DownloadTask>(IPC_EVENTS.downloadStateChanged, (task) => {
+        useAppStore.getState().upsertDownloadTask(task);
+      }),
+      listenToEvent<DownloadProgress>(IPC_EVENTS.downloadProgress, (progress) => {
+        useAppStore.getState().updateDownloadProgress(progress);
+      }),
+      listenToEvent<AppError>(IPC_EVENTS.downloadError, (error) => {
+        useAppStore.getState().setLastDownloadError(error);
+      }),
+    ])
+      .then((listeners) => {
+        if (disposed) listeners.forEach((stop) => stop());
+        else unlisten = listeners;
+      })
+      .catch(() => {
+        useAppStore.getState().setLastDownloadError({
+          code: "unknown",
+          message: "无法订阅下载进度事件，请重新启动应用。",
+          retryable: true,
+        });
+      });
+    return () => {
+      disposed = true;
+      unlisten.forEach((stop) => stop());
+    };
+  }, []);
+
   return (
     <div className={`app-shell${compact ? " is-compact" : ""}`}>
       <a
@@ -85,7 +121,7 @@ export function AppShell() {
           <span className="status-separator" aria-hidden="true">
             ·
           </span>
-          <span>下载组件将在后续里程碑接入</span>
+          <span>任务与媒体文件仅在本机处理</span>
           <span className="status-platform">
             <IconDeviceDesktop size={14} stroke={1.8} aria-hidden="true" />
             桌面版

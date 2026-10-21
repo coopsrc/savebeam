@@ -1,25 +1,31 @@
 import { create } from "zustand";
 import type { PlatformKind } from "../app/platform/profile";
-
-export interface MockDownloadTask {
-  id: string;
-  title: string;
-  url: string;
-  formatLabel: string;
-  status: "queued";
-  createdAt: number;
-}
+import type { AppError, DownloadProgress, DownloadTask } from "../types/domain";
 
 interface AppState {
   platformOverride: PlatformKind | null;
   setPlatformOverride: (platform: PlatformKind | null) => void;
-  mockTasks: MockDownloadTask[];
-  addMockTask: (task: MockDownloadTask) => void;
+  downloadTasks: DownloadTask[];
+  downloadProgress: Record<string, DownloadProgress>;
+  lastDownloadError: AppError | null;
+  upsertDownloadTask: (task: DownloadTask) => void;
+  updateDownloadProgress: (progress: DownloadProgress) => void;
+  setLastDownloadError: (error: AppError | null) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
   platformOverride: null,
   setPlatformOverride: (platformOverride) => set({ platformOverride }),
-  mockTasks: [],
-  addMockTask: (task) => set((state) => ({ mockTasks: [task, ...state.mockTasks] })),
+  downloadTasks: [],
+  downloadProgress: {},
+  lastDownloadError: null,
+  upsertDownloadTask: (task) =>
+    set((state) => ({
+      downloadTasks: [task, ...state.downloadTasks.filter((item) => item.id !== task.id)],
+    })),
+  updateDownloadProgress: (progress) =>
+    set((state) => ({
+      downloadProgress: { ...state.downloadProgress, [progress.taskId]: progress },
+    })),
+  setLastDownloadError: (lastDownloadError) => set({ lastDownloadError }),
 }));

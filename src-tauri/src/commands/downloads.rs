@@ -31,10 +31,21 @@ use crate::{
 #[tauri::command]
 pub fn start_download(
     app: AppHandle,
-    options: DownloadOptions,
+    mut options: DownloadOptions,
     components: State<'_, ComponentRegistry>,
     tasks: State<'_, DownloadTaskRegistry>,
 ) -> CommandResult<DownloadTask> {
+    if options.output_directory.trim().is_empty() {
+        options.output_directory = app
+            .path()
+            .download_dir()
+            .map_err(|error| {
+                AppError::new(ErrorCode::InvalidPath, "无法获取系统下载目录。", false)
+                    .with_diagnostic(error.to_string())
+            })?
+            .to_string_lossy()
+            .into_owned();
+    }
     validate_task_options(&options)?;
     let task = tasks.create(
         options.url.clone(),

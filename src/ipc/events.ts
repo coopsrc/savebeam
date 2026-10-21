@@ -9,6 +9,7 @@ export const IPC_EVENTS = {
   downloadStateChanged: "download://state-changed",
   downloadProgress: "download://progress",
   downloadLog: "download://log",
+  downloadError: "download://error",
 } as const;
 
 function unwrapEvent<T>(event: Event<EventEnvelope<T>>): T {

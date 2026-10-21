@@ -4,7 +4,6 @@ import {
   Button,
   Group,
   Image,
-  MultiSelect,
   Paper,
   Select,
   Stack,
@@ -14,7 +13,10 @@ import {
 } from "@mantine/core";
 import { IconAlertCircle, IconLink, IconSearch } from "@tabler/icons-react";
 import { IpcError } from "../../ipc/client";
-import type { MediaInfo } from "../../types/domain";
+import type { DownloadOptions, DownloadTask, MediaInfo } from "../../types/domain";
+import { useNavigate } from "react-router-dom";
+import { invokeCommand } from "../../ipc/client";
+import { useAppStore } from "../../stores/appStore";
 import { inspectMedia } from "./mediaApi";
 import { getMediaUrlError, validateMediaUrl } from "./validateMediaUrl";
 
@@ -32,10 +34,12 @@ export function DownloadPage() {
   const [url, setUrl] = useState("");
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [isInspecting, setIsInspecting] = useState(false);
+  const [isStartingDownload, setIsStartingDownload] = useState(false);
   const [mediaInfo, setMediaInfo] = useState<MediaInfo | null>(null);
   const [selectedFormat, setSelectedFormat] = useState<string | null>(null);
-  const [selectedSubtitles, setSelectedSubtitles] = useState<string[]>([]);
   const [requestError, setRequestError] = useState<string | null>(null);
+  const upsertDownloadTask = useAppStore((state) => state.upsertDownloadTask);
+  const navigate = useNavigate();
   const validation = hasSubmitted ? validateMediaUrl(url) : null;
   const validationError =
     validation && !validation.valid ? getMediaUrlError(validation.reason) : undefined;
@@ -46,7 +50,6 @@ export function DownloadPage() {
     setRequestError(null);
     setMediaInfo(null);
     setSelectedFormat(null);
-    setSelectedSubtitles([]);
 
     const checked = validateMediaUrl(url);
     if (!checked.valid) return;
@@ -70,17 +73,33 @@ export function DownloadPage() {
     setHasSubmitted(false);
   }
 
+  async function handleStartDownload() {
+    if (!mediaInfo || !selectedFormat) return;
+    setRequestError(null);
+    setIsStartingDownload(true);
+    const options: DownloadOptions = {
+      title: mediaInfo.title,
+      url: mediaInfo.webpageUrl,
+      formatId: selectedFormat,
+      outputDirectory: "",
+      subtitleLanguages: [],
+    };
+    try {
+      const task = await invokeCommand<DownloadTask>("start_download", { options });
+      upsertDownloadTask(task);
+      navigate("/tasks");
+    } catch (error: unknown) {
+      setRequestError(error instanceof IpcError ? error.message : "无法创建下载任务。");
+    } finally {
+      setIsStartingDownload(false);
+    }
+  }
+
   const formatOptions =
     mediaInfo?.formats.map((format) => ({
       value: format.formatId,
       label: formatLabel(format),
     })) ?? [];
-  const subtitleOptions =
-    mediaInfo?.subtitles.map((subtitle, index) => ({
-      value: `${index}:${subtitle.language}:${subtitle.extension ?? ""}`,
-      label: `${subtitle.name ?? subtitle.language} (${subtitle.language})${subtitle.automatic ? " · 自动字幕" : ""}${subtitle.extension ? ` · ${subtitle.extension}` : ""}`,
-    })) ?? [];
-
   return (
     <main className="download-page">
       <Paper className="download-card" shadow="sm" radius="lg" withBorder>
@@ -180,20 +199,18 @@ export function DownloadPage() {
                         网站没有返回可供下载的媒体格式。
                       </Alert>
                     )}
-                    {subtitleOptions.length > 0 && (
-                      <MultiSelect
-                        label="字幕（可选）"
-                        placeholder="不下载字幕"
-                        data={subtitleOptions}
-                        value={selectedSubtitles}
-                        onChange={setSelectedSubtitles}
-                        searchable
-                        clearable
-                      />
-                    )}
                     <Text size="xs" c="dimmed">
-                      当前仅完成媒体信息解析和选项展示；下载队列将在后续里程碑接入。
+                      保存位置：系统“下载”目录。字幕下载将在后续里程碑接入。
                     </Text>
+                    <Group justify="flex-end">
+                      <Button
+                        onClick={handleStartDownload}
+                        loading={isStartingDownload}
+                        disabled={!selectedFormat}
+                      >
+                        开始下载
+                      </Button>
+                    </Group>
                   </Stack>
                 </Paper>
               )}

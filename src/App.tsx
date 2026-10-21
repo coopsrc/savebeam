@@ -1,5 +1,5 @@
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
-import { Alert, Badge, Group, Paper, Stack, Text, ThemeIcon, Title } from "@mantine/core";
+import { Alert, Badge, Group, Paper, Progress, Stack, Text, ThemeIcon, Title } from "@mantine/core";
 import { IconDownload } from "@tabler/icons-react";
 import { usePlatformProfile } from "./app/platform/profile";
 import { EmptyState } from "./components/states/AppStates";
@@ -14,7 +14,9 @@ function FoundationPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const profile = usePlatformProfile();
-  const mockTasks = useAppStore((state) => state.mockTasks);
+  const downloadTasks = useAppStore((state) => state.downloadTasks);
+  const downloadProgress = useAppStore((state) => state.downloadProgress);
+  const lastDownloadError = useAppStore((state) => state.lastDownloadError);
   const titleByRoute: Record<string, string> = {
     "/download": "下载",
     "/tasks": "任务",
@@ -28,29 +30,90 @@ function FoundationPage() {
   }
 
   if (location.pathname === "/tasks") {
-    if (mockTasks.length > 0) {
+    if (downloadTasks.length > 0) {
       return (
         <main className="task-list-page">
           <Stack gap="md">
-            <Alert color="blue" title="原型演示">
-              这些是假任务，仅用于验证界面流程，不会启动下载或写入历史。
-            </Alert>
-            {mockTasks.map((task) => (
-              <Paper key={task.id} withBorder radius="md" p="md">
-                <Group justify="space-between" align="flex-start">
-                  <Stack gap={4}>
-                    <Text fw={600}>{task.title}</Text>
-                    <Text size="sm" c="dimmed" className="validated-url">
-                      {task.url}
-                    </Text>
-                    <Text size="xs" c="dimmed">
-                      {task.formatLabel}
-                    </Text>
+            {lastDownloadError && (
+              <Alert
+                color="red"
+                title="下载任务失败"
+                onClose={() => useAppStore.getState().setLastDownloadError(null)}
+                withCloseButton
+              >
+                {lastDownloadError.message}
+              </Alert>
+            )}
+            {downloadTasks.map((task) => {
+              const progress = downloadProgress[task.id];
+              const percent =
+                progress?.totalBytes && progress.downloadedBytes != null
+                  ? Math.min(100, (progress.downloadedBytes / progress.totalBytes) * 100)
+                  : 0;
+              const statusLabel: Record<typeof task.status, string> = {
+                queued: "排队中",
+                preparing: "准备中",
+                downloading: "下载中",
+                post_processing: "后处理中",
+                completed: "已完成",
+                failed: "失败",
+                cancelling: "正在取消",
+                cancelled: "已取消",
+              };
+              return (
+                <Paper key={task.id} withBorder radius="md" p="md">
+                  <Stack gap="sm">
+                    <Group justify="space-between" align="flex-start">
+                      <Stack gap={4}>
+                        <Text fw={600}>{task.title}</Text>
+                        <Text size="xs" c="dimmed">
+                          格式：{task.formatId}
+                        </Text>
+                      </Stack>
+                      <Badge
+                        variant="light"
+                        color={
+                          task.status === "failed"
+                            ? "red"
+                            : task.status === "completed"
+                              ? "green"
+                              : "blue"
+                        }
+                      >
+                        {statusLabel[task.status]}
+                      </Badge>
+                    </Group>
+                    {progress &&
+                      (task.status === "downloading" || task.status === "post_processing") && (
+                        <Stack gap={4}>
+                          <Progress value={percent} animated={task.status === "downloading"} />
+                          <Group justify="space-between">
+                            <Text size="xs" c="dimmed">
+                              {progress.downloadedBytes == null
+                                ? "正在准备传输"
+                                : `${formatBytes(progress.downloadedBytes)}${progress.totalBytes ? ` / ${formatBytes(progress.totalBytes)}` : ""}`}
+                            </Text>
+                            <Text size="xs" c="dimmed">
+                              {progress.postProcessing
+                                ? "正在合并媒体流"
+                                : [
+                                    progress.speedBytesPerSecond
+                                      ? `${formatBytes(progress.speedBytesPerSecond)}/s`
+                                      : null,
+                                    progress.etaSeconds != null
+                                      ? `剩余 ${formatDuration(progress.etaSeconds)}`
+                                      : null,
+                                  ]
+                                    .filter(Boolean)
+                                    .join(" · ")}
+                            </Text>
+                          </Group>
+                        </Stack>
+                      )}
                   </Stack>
-                  <Badge variant="light">排队中（模拟）</Badge>
-                </Group>
-              </Paper>
-            ))}
+                </Paper>
+              );
+            })}
           </Stack>
         </main>
       );
@@ -59,7 +122,7 @@ function FoundationPage() {
     return (
       <EmptyState
         title="还没有下载任务"
-        description="添加视频链接并通过后续解析后，下载任务会显示在这里。"
+        description="解析视频信息并开始下载后，任务进度会显示在这里。"
         actionLabel="添加视频链接"
         onAction={() => navigate("/download")}
       />
@@ -103,6 +166,25 @@ function FoundationPage() {
       </Paper>
     </main>
   );
+}
+
+function formatBytes(value: number): string {
+  if (value < 1024) return `${Math.round(value)} B`;
+  const units = ["KB", "MB", "GB", "TB"];
+  let size = value / 1024;
+  let index = 0;
+  while (size >= 1024 && index < units.length - 1) {
+    size /= 1024;
+    index += 1;
+  }
+  return `${size.toFixed(1)} ${units[index]}`;
+}
+
+function formatDuration(seconds: number): string {
+  const rounded = Math.max(0, Math.round(seconds));
+  const minutes = Math.floor(rounded / 60);
+  const remainder = rounded % 60;
+  return minutes > 0 ? `${minutes}分${remainder}秒` : `${remainder}秒`;
 }
 
 function App() {
