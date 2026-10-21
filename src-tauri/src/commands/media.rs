@@ -17,6 +17,7 @@ use crate::{
     services::{
         component_detector::ComponentDetector, component_paths::ComponentPaths,
         component_probe::probe_all, media_mapper::map_media_info,
+        thumbnail_preview::load_thumbnail,
     },
 };
 
@@ -77,7 +78,17 @@ pub async fn inspect_media(
             .map(PathBuf::from);
         let raw = YtDlpProcessEngine::new(executable, runtime_path)
             .inspect_with_cookies(&url, &cookies)?;
-        map_media_info(&raw, &url)
+        let mut media = map_media_info(&raw, &url)?;
+        media.thumbnail_data_url = media.thumbnail_url.as_deref().and_then(|thumbnail| {
+            load_thumbnail(
+                thumbnail,
+                &media.webpage_url,
+                raw.get("http_headers")
+                    .and_then(|headers| headers.get("User-Agent"))
+                    .and_then(serde_json::Value::as_str),
+            )
+        });
+        Ok(media)
     })
     .await
     .map_err(|error| {

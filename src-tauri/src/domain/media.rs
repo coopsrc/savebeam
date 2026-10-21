@@ -9,6 +9,7 @@ pub struct MediaInfo {
     pub title: String,
     pub webpage_url: String,
     pub thumbnail_url: Option<String>,
+    pub thumbnail_data_url: Option<String>,
     pub duration_seconds: Option<f64>,
     pub uploader: Option<String>,
     pub formats: Vec<FormatOption>,
@@ -61,6 +62,7 @@ mod tests {
             title: "Example".into(),
             webpage_url: "https://example.com/watch/abc".into(),
             thumbnail_url: None,
+            thumbnail_data_url: None,
             duration_seconds: Some(12.5),
             uploader: Some("Uploader".into()),
             formats: vec![FormatOption {

@@ -85,6 +85,15 @@ body {
   background: var(--sb-color-surface);
 }
 
+.media-thumbnail-placeholder {
+  width: 180px;
+  height: 102px;
+  flex-shrink: 0;
+  border-radius: var(--mantine-radius-sm);
+  color: var(--sb-color-muted);
+  background: var(--sb-color-canvas);
+}
+
 .task-list-page {
   min-height: 100%;
   padding: var(--sb-space-page);

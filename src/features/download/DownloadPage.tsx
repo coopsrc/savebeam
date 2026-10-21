@@ -13,7 +13,7 @@ import {
   TextInput,
   Title,
 } from "@mantine/core";
-import { IconAlertCircle, IconLink, IconSearch } from "@tabler/icons-react";
+import { IconAlertCircle, IconLink, IconPhotoOff, IconSearch } from "@tabler/icons-react";
 import { IpcError } from "../../ipc/client";
 import type { DownloadOptions, DownloadTask, MediaInfo } from "../../types/domain";
 import { useNavigate } from "react-router-dom";
@@ -38,6 +38,7 @@ export function DownloadPage() {
   const [isInspecting, setIsInspecting] = useState(false);
   const [isStartingDownload, setIsStartingDownload] = useState(false);
   const [mediaInfo, setMediaInfo] = useState<MediaInfo | null>(null);
+  const [thumbnailFailed, setThumbnailFailed] = useState(false);
   const [selectedFormat, setSelectedFormat] = useState<string | null>(null);
   const [playlistConfirmed, setPlaylistConfirmed] = useState(false);
   const [audioOnly, setAudioOnly] = useState(false);
@@ -58,6 +59,7 @@ export function DownloadPage() {
     setHasSubmitted(true);
     setRequestError(null);
     setMediaInfo(null);
+    setThumbnailFailed(false);
     setSelectedFormat(null);
     setPlaylistConfirmed(false);
     setAudioOnly(false);
@@ -190,15 +192,27 @@ export function DownloadPage() {
                 <Paper className="media-info-card" withBorder radius="md" p="md">
                   <Stack gap="md">
                     <Group align="flex-start" wrap="nowrap">
-                      {mediaInfo.thumbnailUrl && (
+                      {mediaInfo.thumbnailDataUrl && !thumbnailFailed ? (
                         <Image
-                          src={mediaInfo.thumbnailUrl}
+                          src={mediaInfo.thumbnailDataUrl}
                           alt="视频封面"
                           w={180}
                           h={102}
                           radius="sm"
                           fit="cover"
+                          style={{ flexShrink: 0 }}
+                          onError={() => setThumbnailFailed(true)}
                         />
+                      ) : (
+                        <Stack
+                          className="media-thumbnail-placeholder"
+                          gap={4}
+                          align="center"
+                          justify="center"
+                        >
+                          <IconPhotoOff size={24} aria-hidden="true" />
+                          <Text size="xs">封面暂不可用</Text>
+                        </Stack>
                       )}
                       <div>
                         <Text size="xs" c="dimmed" tt="uppercase" fw={700}>

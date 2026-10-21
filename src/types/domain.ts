@@ -82,6 +82,7 @@ export interface MediaInfo {
   title: string;
   webpageUrl: string;
   thumbnailUrl: string | null;
+  thumbnailDataUrl: string | null;
   durationSeconds: number | null;
   uploader: string | null;
   formats: MediaFormat[];

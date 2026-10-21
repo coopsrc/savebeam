@@ -14,3 +14,4 @@ pub mod component_probe;
 pub mod download_registry;
 pub mod download_verifier;
 pub mod media_mapper;
+pub mod thumbnail_preview;

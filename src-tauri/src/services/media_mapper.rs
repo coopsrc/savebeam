@@ -26,7 +26,8 @@ pub fn map_media_info(raw: &Value, requested_url: &str) -> Result<MediaInfo, App
         id,
         title,
         webpage_url,
-        thumbnail_url: nonempty_string(raw.get("thumbnail")),
+        thumbnail_url: thumbnail_url(raw),
+        thumbnail_data_url: None,
         duration_seconds: positive_number(raw.get("duration")),
         uploader: nonempty_string(raw.get("uploader"))
             .or_else(|| nonempty_string(raw.get("channel"))),
@@ -68,7 +69,8 @@ fn map_playlist_info(raw: &Value, requested_url: &str) -> Result<MediaInfo, AppE
         webpage_url: nonempty_string(raw.get("webpage_url"))
             .or_else(|| nonempty_string(raw.get("original_url")))
             .unwrap_or_else(|| requested_url.to_owned()),
-        thumbnail_url: nonempty_string(raw.get("thumbnail")),
+        thumbnail_url: thumbnail_url(raw),
+        thumbnail_data_url: None,
         duration_seconds: None,
         uploader: nonempty_string(raw.get("uploader"))
             .or_else(|| nonempty_string(raw.get("channel"))),
@@ -79,6 +81,16 @@ fn map_playlist_info(raw: &Value, requested_url: &str) -> Result<MediaInfo, AppE
             total_count,
             truncated,
         }),
+    })
+}
+
+fn thumbnail_url(raw: &Value) -> Option<String> {
+    nonempty_string(raw.get("thumbnail")).or_else(|| {
+        raw.get("thumbnails")?
+            .as_array()?
+            .iter()
+            .rev()
+            .find_map(|item| nonempty_string(item.get("url")))
     })
 }
 
