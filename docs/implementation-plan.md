@@ -113,6 +113,8 @@ chore(milestone): verify M4 single-download workflow
 - 不会覆盖系统或自定义组件。
 - 从 Finder 启动的 macOS 应用仍能发现常见 Homebrew 路径。
 
+验收状态：已通过，证据见 [`docs/verification/M2.md`](verification/M2.md)。
+
 ### M3：媒体信息解析
 
 **目标**：输入 URL 后获得稳定、可展示的媒体信息。
