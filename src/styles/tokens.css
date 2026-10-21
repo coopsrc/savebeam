@@ -80,6 +80,20 @@ body {
   font-family: var(--mantine-font-family-monospace);
 }
 
+.state-view {
+  display: grid;
+  min-height: min(440px, 60vh);
+  place-items: center;
+  padding: var(--sb-space-page);
+}
+
+.state-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--sb-color-muted);
+}
+
 .eyebrow {
   margin: 0 0 2px;
   color: var(--sb-color-muted);

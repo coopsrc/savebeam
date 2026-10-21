@@ -2,12 +2,15 @@ import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Badge, Group, Paper, Stack, Text, ThemeIcon, Title } from "@mantine/core";
 import { IconDownload } from "@tabler/icons-react";
 import { usePlatformProfile } from "./app/platform/profile";
+import { EmptyState } from "./components/states/AppStates";
 import { AppShell } from "./layout/AppShell";
 import { DownloadPage } from "./features/download/DownloadPage";
+import { useNavigate } from "react-router-dom";
 import "./App.css";
 
 function FoundationPage() {
   const location = useLocation();
+  const navigate = useNavigate();
   const profile = usePlatformProfile();
   const titleByRoute: Record<string, string> = {
     "/download": "下载",
@@ -16,6 +19,28 @@ function FoundationPage() {
     "/settings": "设置",
   };
   const title = titleByRoute[location.pathname] ?? "下载";
+
+  if (location.pathname === "/tasks") {
+    return (
+      <EmptyState
+        title="还没有下载任务"
+        description="添加视频链接并通过后续解析后，下载任务会显示在这里。"
+        actionLabel="添加视频链接"
+        onAction={() => navigate("/download")}
+      />
+    );
+  }
+
+  if (location.pathname === "/history") {
+    return (
+      <EmptyState
+        title="暂无下载记录"
+        description="已完成的下载会保存在本机，并显示在这里。"
+        actionLabel="开始添加链接"
+        onAction={() => navigate("/download")}
+      />
+    );
+  }
 
   return (
     <main className="foundation-page">
