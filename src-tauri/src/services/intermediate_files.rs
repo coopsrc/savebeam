@@ -99,7 +99,7 @@ fn retained_name(title: &str, stream: &IntermediateStream) -> Option<String> {
         .unwrap_or_else(|| "bitrate-unknown".into());
     // Leave room for technical fields under common 255-byte filename limits.
     Some(format!(
-        "{}.{kind}.f{id}.{codec}.{resolution}.{bitrate}.{ext}",
+        "{}-{kind}-f{id}-{codec}-{resolution}-{bitrate}.{ext}",
         bounded_title(title, 120)
     ))
 }
@@ -156,7 +156,7 @@ mod tests {
     fn uses_each_streams_actual_id_codec_resolution_and_bitrate() {
         assert_eq!(
             retained_name("标题", &video()).unwrap(),
-            "标题.video.f30120.avc1.640033.3840x2160.5500kbps.mp4"
+            "标题-video-f30120-avc1.640033-3840x2160-5500kbps.mp4"
         );
         let audio = IntermediateStream {
             format_id: Some("30280".into()),
@@ -168,7 +168,7 @@ mod tests {
         };
         assert_eq!(
             retained_name("标题", &audio).unwrap(),
-            "标题.audio.f30280.mp4a.40.2.audio-only.152kbps.m4a"
+            "标题-audio-f30280-mp4a.40.2-audio-only-152kbps.m4a"
         );
     }
 
@@ -176,10 +176,24 @@ mod tests {
     fn retained_streams_keep_public_video_id_even_when_long_titles_are_shortened() {
         let title = format!("{} [BV19wee6BEeP]", "长标题".repeat(60));
         let name = retained_name(&title, &video()).unwrap();
-        assert!(name.contains(" [BV19wee6BEeP].video.f30120."));
+        assert!(name.contains(" [BV19wee6BEeP]-video-f30120-"));
         assert!(name.len() <= 255);
         let short = "标题 [BV19wee6BEeP]";
         assert_eq!(bounded_title(short, 120), short);
+    }
+
+    #[test]
+    fn joins_fields_with_hyphens_without_changing_title_codec_or_extension_dots() {
+        let stream = IntermediateStream {
+            format_id: Some("30121".into()),
+            vcodec: Some("hvc1.1.6.L153.90".into()),
+            vbr: Some(2959.0),
+            ..video()
+        };
+        assert_eq!(
+            retained_name("标题.v1 [BV19wee6BEeP]", &stream).unwrap(),
+            "标题.v1 [BV19wee6BEeP]-video-f30121-hvc1.1.6.L153.90-3840x2160-2959kbps.mp4"
+        );
     }
 
     #[test]
