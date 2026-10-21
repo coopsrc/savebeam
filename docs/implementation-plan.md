@@ -89,6 +89,8 @@ chore(milestone): verify M4 single-download workflow
 - UI 不直接依赖 shell 插件。
 - 使用模拟数据可走完“输入 URL → 选择格式 → 创建假任务”流程。
 
+验收状态：已通过，证据见 [`docs/verification/M1.md`](verification/M1.md)。
+
 ### M2：组件检测与设置页
 
 **目标**：可靠发现和验证 yt-dlp、FFmpeg、ffprobe，以及 Deno/Node.js/Bun/QuickJS 中可用的 JavaScript runtime。
