@@ -566,7 +566,11 @@ Unknown
 
 - `Cookie`、`Authorization` 等 header。
 - URL query 中的 token、signature、key 等字段。
-- 用户主目录的完整路径，可在用户主动导出诊断包时选择保留。
+- 用户主目录的完整路径；当前版本始终脱敏，不提供保留路径的选项。
+
+目前错误诊断统一经 `security::redaction` 脱敏后才进入 IPC；敏感 header 整行移除，敏感 query 参数值替换为 `[REDACTED]`，当前用户主目录替换为 `~`。yt-dlp 原始 stdout/stderr 不写入持久日志或诊断文件。
+
+设置页的“导出诊断信息”必须经用户确认和系统保存对话框。当前导出为本地 JSON 报告，只包含应用版本、OS、CPU 架构和任务状态计数，不包含 URL、标题、Cookie、错误原始输出或任何文件路径，也不会自动上传。用户选定位置后应用才写入文件。
 
 ## 11. 安全设计
 

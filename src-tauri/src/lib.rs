@@ -44,6 +44,7 @@ pub fn run() {
             commands::components::clear_component_custom_path,
             commands::components::remove_managed_component,
             commands::media::inspect_media,
+            commands::diagnostics::export_diagnostics,
             commands::downloads::start_download,
             commands::downloads::get_download_tasks,
             commands::downloads::get_download_preferences,

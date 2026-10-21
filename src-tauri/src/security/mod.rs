@@ -4,3 +4,4 @@
 //! services, and infrastructure adapters.
 
 pub mod download_args;
+pub mod redaction;

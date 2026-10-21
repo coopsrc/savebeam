@@ -45,7 +45,9 @@ impl AppError {
     }
 
     pub fn with_diagnostic(mut self, diagnostic: impl Into<String>) -> Self {
-        self.diagnostic = Some(diagnostic.into());
+        self.diagnostic = Some(crate::security::redaction::redact_diagnostic(
+            &diagnostic.into(),
+        ));
         self
     }
 }

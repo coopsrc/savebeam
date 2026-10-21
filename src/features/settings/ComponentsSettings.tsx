@@ -13,6 +13,7 @@ import {
   Title,
 } from "@mantine/core";
 import { IconRefresh, IconTrash } from "@tabler/icons-react";
+import { confirm, save } from "@tauri-apps/plugin-dialog";
 import { ErrorState, LoadingState } from "../../components/states/AppStates";
 import { usePlatformProfile } from "../../app/platform/profile";
 import { invokeCommand } from "../../ipc/client";
@@ -257,6 +258,7 @@ export function ComponentsSettings() {
     <main className="settings-page">
       <Stack gap="lg">
         <DownloadPreferencesPanel />
+        <DiagnosticsPanel />
         <Group justify="space-between" align="flex-start">
           <div>
             <Title order={2}>运行组件</Title>
@@ -491,6 +493,67 @@ function licenseSummary(kind: ComponentKind): string {
     return "yt-dlp 源码为 Unlicense；独立可执行文件还包含第三方依赖，须按对应发行包附带 notices 展示。";
   if (kind === "javascript_runtime") return "Deno 使用 MIT 许可；具体发布包仍需核对其 notices。";
   return "FFmpeg 构建许可取决于构建方启用的组件与编译选项；未确定构建前不推断为 LGPL 或 GPL。";
+}
+
+function DiagnosticsPanel() {
+  const [exporting, setExporting] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function exportReport() {
+    setMessage(null);
+    setError(null);
+    setExporting(true);
+    try {
+      const approved = await confirm(
+        "诊断文件只包含 Savebeam 版本、操作系统、CPU 架构和下载任务状态计数；不包含链接、标题、Cookie、日志或文件路径。文件只保存在你选择的位置，不会自动发送。是否继续？",
+        { title: "导出诊断信息", kind: "info", okLabel: "继续", cancelLabel: "取消" },
+      );
+      if (!approved) return;
+
+      const destination = await save({
+        title: "保存 Savebeam 诊断信息",
+        defaultPath: "savebeam-diagnostics.json",
+        filters: [{ name: "JSON", extensions: ["json"] }],
+      });
+      if (!destination) return;
+
+      await invokeCommand("export_diagnostics", { destination });
+      setMessage("诊断文件已保存到所选位置。");
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "无法导出诊断文件。");
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  return (
+    <Paper withBorder radius="md" p="md">
+      <Stack gap="sm">
+        <div>
+          <Text fw={650}>隐私与诊断</Text>
+          <Text size="sm" c="dimmed" mt={3}>
+            仅在你确认并选择保存位置后生成本地 JSON 报告；不会自动上传。
+          </Text>
+        </div>
+        {error && (
+          <Text size="sm" c="red" role="alert">
+            {error}
+          </Text>
+        )}
+        {message && (
+          <Text size="sm" c="green" role="status">
+            {message}
+          </Text>
+        )}
+        <Group justify="flex-end">
+          <Button variant="light" loading={exporting} onClick={() => void exportReport()}>
+            导出诊断信息
+          </Button>
+        </Group>
+      </Stack>
+    </Paper>
+  );
 }
 
 function DownloadPreferencesPanel() {
