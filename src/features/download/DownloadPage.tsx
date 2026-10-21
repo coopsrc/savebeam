@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import {
   Alert,
   Button,
+  Checkbox,
   Group,
   Image,
   Paper,
@@ -37,6 +38,7 @@ export function DownloadPage() {
   const [isStartingDownload, setIsStartingDownload] = useState(false);
   const [mediaInfo, setMediaInfo] = useState<MediaInfo | null>(null);
   const [selectedFormat, setSelectedFormat] = useState<string | null>(null);
+  const [playlistConfirmed, setPlaylistConfirmed] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
   const upsertDownloadTask = useAppStore((state) => state.upsertDownloadTask);
   const navigate = useNavigate();
@@ -50,6 +52,7 @@ export function DownloadPage() {
     setRequestError(null);
     setMediaInfo(null);
     setSelectedFormat(null);
+    setPlaylistConfirmed(false);
 
     const checked = validateMediaUrl(url);
     if (!checked.valid) return;
@@ -69,20 +72,22 @@ export function DownloadPage() {
   function handleChange(value: string) {
     setUrl(value);
     setMediaInfo(null);
+    setPlaylistConfirmed(false);
     setRequestError(null);
     setHasSubmitted(false);
   }
 
   async function handleStartDownload() {
-    if (!mediaInfo || !selectedFormat) return;
+    if (!mediaInfo || (mediaInfo.playlist ? !playlistConfirmed : !selectedFormat)) return;
     setRequestError(null);
     setIsStartingDownload(true);
     const options: DownloadOptions = {
       title: mediaInfo.title,
       url: mediaInfo.webpageUrl,
-      formatId: selectedFormat,
+      formatId: mediaInfo.playlist ? "best" : selectedFormat!,
       outputDirectory: "",
       subtitleLanguages: [],
+      playlistItemCount: mediaInfo.playlist?.downloadCount ?? null,
       conflictStrategy: "skip",
     };
     try {
@@ -187,7 +192,22 @@ export function DownloadPage() {
                         )}
                       </div>
                     </Group>
-                    {formatOptions.length > 0 ? (
+                    {mediaInfo.playlist ? (
+                      <Alert color="orange" title="播放列表下载数量确认" aria-live="polite">
+                        <Stack gap="sm">
+                          <Text size="sm">
+                            {mediaInfo.playlist.truncated
+                              ? `播放列表超过安全上限，将只下载前 ${mediaInfo.playlist.downloadCount} 项。`
+                              : `检测到 ${mediaInfo.playlist.downloadCount} 项，将按默认最佳格式下载。`}
+                          </Text>
+                          <Checkbox
+                            checked={playlistConfirmed}
+                            onChange={(event) => setPlaylistConfirmed(event.currentTarget.checked)}
+                            label={`我确认创建 ${mediaInfo.playlist.downloadCount} 项的播放列表下载任务`}
+                          />
+                        </Stack>
+                      </Alert>
+                    ) : formatOptions.length > 0 ? (
                       <Select
                         label="可用格式"
                         data={formatOptions}
@@ -207,7 +227,7 @@ export function DownloadPage() {
                       <Button
                         onClick={handleStartDownload}
                         loading={isStartingDownload}
-                        disabled={!selectedFormat}
+                        disabled={mediaInfo.playlist ? !playlistConfirmed : !selectedFormat}
                       >
                         开始下载
                       </Button>

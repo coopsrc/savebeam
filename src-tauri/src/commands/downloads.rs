@@ -19,7 +19,10 @@ use crate::{
     domain::{
         component::{ComponentInstallation, ComponentKind, ComponentStatus},
         download::DownloadHistoryRecord,
-        download::{DownloadOptions, DownloadPreferences, DownloadTask, DownloadTaskStatus},
+        download::{
+            DownloadOptions, DownloadPreferences, DownloadTask, DownloadTaskStatus,
+            MAX_PLAYLIST_ITEMS,
+        },
         error::{AppError, ErrorCode},
     },
     infrastructure::database::{
@@ -270,6 +273,16 @@ fn validate_task_options(options: &DownloadOptions) -> CommandResult<()> {
         return Err(AppError::new(
             ErrorCode::InvalidUrl,
             "无法读取有效的视频标题，请重新解析链接。",
+            false,
+        ));
+    }
+    if options
+        .playlist_item_count
+        .is_some_and(|count| !(1..=MAX_PLAYLIST_ITEMS).contains(&count))
+    {
+        return Err(AppError::new(
+            ErrorCode::InvalidPath,
+            "播放列表下载数量必须在 1 到 50 之间。",
             false,
         ));
     }

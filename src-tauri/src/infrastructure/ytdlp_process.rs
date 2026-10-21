@@ -86,7 +86,9 @@ impl YtDlpProcessEngine {
             "--ignore-config",
             "--no-warnings",
             "--no-progress",
-            "--no-playlist",
+            "--flat-playlist",
+            "--playlist-end",
+            "51",
             "--dump-single-json",
             "--skip-download",
         ]);
@@ -296,7 +298,7 @@ mod tests {
     fn inspect_passes_fixed_flags_and_url_as_a_single_argument() {
         let executable = write_script(
             "yt-dlp",
-            "[ \"$1\" = \"--ignore-config\" ] || exit 11\n[ \"$5\" = \"--dump-single-json\" ] || exit 12\n[ \"$7\" = \"https://example.com/watch?v=one&x=two\" ] || exit 13\nprintf '{\\\"id\\\":\\\"demo\\\",\\\"title\\\":\\\"Example\\\"}'",
+            "[ \"$1\" = \"--ignore-config\" ] || exit 11\n[ \"$4\" = \"--flat-playlist\" ] || exit 12\n[ \"$5\" = \"--playlist-end\" ] || exit 13\n[ \"$6\" = \"51\" ] || exit 14\n[ \"$7\" = \"--dump-single-json\" ] || exit 15\n[ \"$9\" = \"https://example.com/watch?v=one&x=two\" ] || exit 16\nprintf '{\\\"id\\\":\\\"demo\\\",\\\"title\\\":\\\"Example\\\"}'",
         );
         let engine = YtDlpProcessEngine::new(&executable, None);
 
@@ -400,7 +402,7 @@ mod tests {
     fn fake_executable_json_maps_to_the_stable_media_model() {
         let executable = write_script(
             "yt-dlp",
-            "[ \"$1\" = \"--ignore-config\" ] || exit 10\n[ \"$7\" = \"https://example.com/watch?v=demo\" ] || exit 11\nprintf '%s' '{\"id\":\"demo\",\"title\":\"Integration video\",\"webpage_url\":\"https://example.com/watch?v=demo\",\"formats\":[{\"format_id\":\"18\",\"ext\":\"mp4\",\"height\":720,\"vcodec\":\"avc1\",\"acodec\":\"mp4a\"}],\"subtitles\":{\"en\":[{\"ext\":\"vtt\"}]}}'",
+            "[ \"$1\" = \"--ignore-config\" ] || exit 10\n[ \"$9\" = \"https://example.com/watch?v=demo\" ] || exit 11\nprintf '%s' '{\"id\":\"demo\",\"title\":\"Integration video\",\"webpage_url\":\"https://example.com/watch?v=demo\",\"formats\":[{\"format_id\":\"18\",\"ext\":\"mp4\",\"height\":720,\"vcodec\":\"avc1\",\"acodec\":\"mp4a\"}],\"subtitles\":{\"en\":[{\"ext\":\"vtt\"}]}}'",
         );
         let url = "https://example.com/watch?v=demo";
         let raw = YtDlpProcessEngine::new(&executable, None)

@@ -102,8 +102,8 @@ impl DownloadTaskRepository {
                 "INSERT INTO download_tasks(
                      task_id, url, title, format_id, output_directory,
                      subtitle_languages_json, status, created_at_unix_ms, updated_at_unix_ms,
-                     conflict_strategy
-                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8, ?9)",
+                     conflict_strategy, playlist_item_count
+                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8, ?9, ?10)",
                 params![
                     task.id,
                     options.url,
@@ -114,6 +114,7 @@ impl DownloadTaskRepository {
                     status_name(task.status),
                     created_at,
                     conflict_strategy_name(options.conflict_strategy),
+                    options.playlist_item_count.map(i64::from),
                 ],
             )
         })?;
@@ -142,7 +143,8 @@ impl DownloadTaskRepository {
             connection
                 .query_row(
                     "SELECT task_id, url, title, format_id, output_directory,
-                            subtitle_languages_json, conflict_strategy, status, created_at_unix_ms
+                            subtitle_languages_json, conflict_strategy, status, created_at_unix_ms,
+                            playlist_item_count
                      FROM download_tasks WHERE task_id = ?1",
                     [task_id],
                     task_from_row,
@@ -155,7 +157,8 @@ impl DownloadTaskRepository {
         self.database.with_connection(|connection| {
             let mut statement = connection.prepare(
                 "SELECT task_id, url, title, format_id, output_directory,
-                        subtitle_languages_json, conflict_strategy, status, created_at_unix_ms
+                        subtitle_languages_json, conflict_strategy, status, created_at_unix_ms,
+                        playlist_item_count
                  FROM download_tasks ORDER BY created_at_unix_ms DESC",
             )?;
             let rows = statement.query_map([], task_from_row)?;
@@ -268,6 +271,7 @@ fn task_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<(DownloadTask, Dow
             output_directory: row.get(4)?,
             subtitle_languages: subtitles,
             conflict_strategy: parse_conflict_strategy(&row.get::<_, String>(6)?)?,
+            playlist_item_count: row.get(9)?,
         },
     ))
 }
@@ -424,6 +428,7 @@ mod tests {
             output_directory: "/tmp/videos".into(),
             subtitle_languages: vec!["en".into()],
             conflict_strategy: DownloadConflictStrategy::Overwrite,
+            playlist_item_count: Some(3),
         };
         tasks.insert(&task, &options).expect("task should persist");
         assert!(
@@ -441,6 +446,7 @@ mod tests {
             loaded_options.conflict_strategy,
             DownloadConflictStrategy::Overwrite
         );
+        assert_eq!(loaded_options.playlist_item_count, Some(3));
         assert_eq!(tasks.list().expect("list works").len(), 1);
     }
 
@@ -462,6 +468,7 @@ mod tests {
             output_directory: "/tmp".into(),
             subtitle_languages: Vec::new(),
             conflict_strategy: DownloadConflictStrategy::Skip,
+            playlist_item_count: None,
         };
         tasks.insert(&task, &options).expect("task should persist");
         let result = DownloadResult {

@@ -525,6 +525,7 @@ mod tests {
             output_directory: "/tmp".into(),
             subtitle_languages: Vec::new(),
             conflict_strategy: crate::domain::download::DownloadConflictStrategy::Skip,
+            playlist_item_count: None,
         }
     }
 }

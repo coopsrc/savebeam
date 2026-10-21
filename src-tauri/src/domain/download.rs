@@ -2,6 +2,8 @@
 
 use serde::{Deserialize, Serialize};
 
+pub const MAX_PLAYLIST_ITEMS: u8 = 50;
+
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DownloadOptions {
@@ -13,6 +15,8 @@ pub struct DownloadOptions {
     pub subtitle_languages: Vec<String>,
     #[serde(default)]
     pub conflict_strategy: DownloadConflictStrategy,
+    #[serde(default)]
+    pub playlist_item_count: Option<u8>,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, Serialize)]
@@ -114,6 +118,7 @@ mod tests {
         assert_eq!(options.format_id, "bestvideo+bestaudio");
         assert_eq!(options.title, "Example");
         assert_eq!(options.subtitle_languages, ["en"]);
+        assert_eq!(options.playlist_item_count, None);
     }
 
     #[test]

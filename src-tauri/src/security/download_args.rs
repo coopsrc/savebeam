@@ -3,7 +3,7 @@
 use std::{ffi::OsString, path::Path};
 
 use crate::domain::{
-    download::{DownloadConflictStrategy, DownloadOptions},
+    download::{DownloadConflictStrategy, DownloadOptions, MAX_PLAYLIST_ITEMS},
     error::{AppError, ErrorCode},
 };
 
@@ -18,6 +18,21 @@ const DOWNLOAD_PROGRESS_TEMPLATE: &str = concat!(
 pub fn build_download_args(options: &DownloadOptions) -> Result<Vec<OsString>, AppError> {
     validate_url(&options.url)?;
     validate_format_selector(&options.format_id)?;
+    let playlist_arguments = match options.playlist_item_count {
+        Some(count) if (1..=MAX_PLAYLIST_ITEMS).contains(&count) => vec![
+            OsString::from("--yes-playlist"),
+            OsString::from("--playlist-items"),
+            OsString::from(format!("1-{count}")),
+        ],
+        Some(_) => {
+            return Err(AppError::new(
+                ErrorCode::InvalidPath,
+                "播放列表下载数量超出安全上限。",
+                false,
+            ));
+        }
+        None => vec![OsString::from("--no-playlist")],
+    };
 
     let output_directory = Path::new(&options.output_directory);
     if !output_directory.is_absolute()
@@ -38,7 +53,6 @@ pub fn build_download_args(options: &DownloadOptions) -> Result<Vec<OsString>, A
     let args = vec![
         "--ignore-config".into(),
         "--no-warnings".into(),
-        "--no-playlist".into(),
         conflict_arg.into(),
         "--newline".into(),
         "--progress".into(),
@@ -57,6 +71,8 @@ pub fn build_download_args(options: &DownloadOptions) -> Result<Vec<OsString>, A
         "--".into(),
         options.url.clone().into(),
     ];
+    let mut args = args;
+    args.splice(2..2, playlist_arguments);
 
     if options
         .subtitle_languages
@@ -134,6 +150,7 @@ mod tests {
             output_directory: directory.to_string_lossy().into_owned(),
             subtitle_languages: Vec::new(),
             conflict_strategy: crate::domain::download::DownloadConflictStrategy::Skip,
+            playlist_item_count: None,
         }
     }
 
@@ -177,6 +194,23 @@ mod tests {
         let strings: Vec<_> = args.iter().map(|value| value.to_string_lossy()).collect();
         assert!(strings.contains(&"--force-overwrites".into()));
         assert!(!strings.contains(&"--no-overwrites".into()));
+        let _ = fs::remove_dir_all(directory);
+    }
+
+    #[test]
+    fn playlist_download_is_explicit_and_limited_to_confirmed_item_count() {
+        let directory = temp_directory();
+        let mut download_options = options(&directory);
+        download_options.playlist_item_count = Some(50);
+        let args = build_download_args(&download_options).unwrap();
+        let strings: Vec<_> = args.iter().map(|value| value.to_string_lossy()).collect();
+        assert!(strings.contains(&"--yes-playlist".into()));
+        assert!(strings.contains(&"--playlist-items".into()));
+        assert!(strings.contains(&"1-50".into()));
+        assert!(!strings.contains(&"--no-playlist".into()));
+
+        download_options.playlist_item_count = Some(51);
+        assert!(build_download_args(&download_options).is_err());
         let _ = fs::remove_dir_all(directory);
     }
 

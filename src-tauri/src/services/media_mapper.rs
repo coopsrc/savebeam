@@ -6,10 +6,15 @@ use serde_json::Value;
 
 use crate::domain::{
     error::{AppError, ErrorCode},
-    media::{FormatOption, MediaInfo, SubtitleTrack},
+    media::{FormatOption, MediaInfo, PlaylistInfo, SubtitleTrack},
 };
 
+use crate::domain::download::MAX_PLAYLIST_ITEMS;
+
 pub fn map_media_info(raw: &Value, requested_url: &str) -> Result<MediaInfo, AppError> {
+    if raw.get("_type").and_then(Value::as_str) == Some("playlist") {
+        return map_playlist_info(raw, requested_url);
+    }
     let id = nonempty_string(raw.get("id")).ok_or_else(|| invalid_metadata("缺少媒体标识"))?;
     let title =
         nonempty_string(raw.get("title")).ok_or_else(|| invalid_metadata("缺少媒体标题"))?;
@@ -30,6 +35,50 @@ pub fn map_media_info(raw: &Value, requested_url: &str) -> Result<MediaInfo, App
             .into_iter()
             .chain(map_subtitles(raw.get("automatic_captions"), true))
             .collect(),
+        playlist: None,
+    })
+}
+
+fn map_playlist_info(raw: &Value, requested_url: &str) -> Result<MediaInfo, AppError> {
+    let entries = raw
+        .get("entries")
+        .and_then(Value::as_array)
+        .ok_or_else(|| invalid_metadata("播放列表缺少条目列表"))?;
+    if entries.is_empty() {
+        return Err(invalid_metadata("播放列表没有可下载条目"));
+    }
+
+    let observed_count = entries.len() as u64;
+    let total_count = raw
+        .get("playlist_count")
+        .and_then(Value::as_u64)
+        .filter(|count| *count > 0)
+        .map(|count| count.max(observed_count))
+        .or((observed_count <= u64::from(MAX_PLAYLIST_ITEMS)).then_some(observed_count));
+    let truncated = total_count
+        .map(|count| count > u64::from(MAX_PLAYLIST_ITEMS))
+        .unwrap_or(observed_count > u64::from(MAX_PLAYLIST_ITEMS));
+    let download_count = total_count
+        .unwrap_or(observed_count)
+        .min(u64::from(MAX_PLAYLIST_ITEMS)) as u8;
+
+    Ok(MediaInfo {
+        id: nonempty_string(raw.get("id")).unwrap_or_else(|| requested_url.to_owned()),
+        title: nonempty_string(raw.get("title")).unwrap_or_else(|| "播放列表".into()),
+        webpage_url: nonempty_string(raw.get("webpage_url"))
+            .or_else(|| nonempty_string(raw.get("original_url")))
+            .unwrap_or_else(|| requested_url.to_owned()),
+        thumbnail_url: nonempty_string(raw.get("thumbnail")),
+        duration_seconds: None,
+        uploader: nonempty_string(raw.get("uploader"))
+            .or_else(|| nonempty_string(raw.get("channel"))),
+        formats: Vec::new(),
+        subtitles: Vec::new(),
+        playlist: Some(PlaylistInfo {
+            download_count,
+            total_count,
+            truncated,
+        }),
     })
 }
 
@@ -163,6 +212,7 @@ mod tests {
         assert_eq!(media.subtitles.len(), 2);
         assert!(!media.subtitles[0].automatic);
         assert!(media.subtitles[1].automatic);
+        assert!(media.playlist.is_none());
     }
 
     #[test]
@@ -180,5 +230,42 @@ mod tests {
             .expect_err("id should be required");
         assert_eq!(error.code, ErrorCode::Unknown);
         assert!(error.diagnostic.is_some());
+    }
+
+    #[test]
+    fn maps_playlist_count_and_caps_downloadable_items() {
+        let raw = json!({
+            "_type": "playlist",
+            "id": "playlist-1",
+            "title": "Example list",
+            "webpage_url": "https://example.com/list",
+            "playlist_count": 73,
+            "entries": (0..51).map(|index| json!({"id": index.to_string()})).collect::<Vec<_>>()
+        });
+
+        let result = map_media_info(&raw, "https://example.com/list").unwrap();
+        let playlist = result.playlist.unwrap();
+        assert_eq!(playlist.download_count, 50);
+        assert_eq!(playlist.total_count, Some(73));
+        assert!(playlist.truncated);
+        assert!(result.formats.is_empty());
+    }
+
+    #[test]
+    fn maps_small_playlist_as_exact_and_rejects_empty_playlist() {
+        let raw = json!({
+            "_type": "playlist",
+            "id": "playlist-1",
+            "title": "Small list",
+            "entries": [{"id": "one"}, {"id": "two"}]
+        });
+        let result = map_media_info(&raw, "https://example.com/list").unwrap();
+        let playlist = result.playlist.unwrap();
+        assert_eq!(playlist.download_count, 2);
+        assert_eq!(playlist.total_count, Some(2));
+        assert!(!playlist.truncated);
+
+        let empty = json!({"_type": "playlist", "entries": []});
+        assert!(map_media_info(&empty, "https://example.com/list").is_err());
     }
 }

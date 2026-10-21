@@ -86,6 +86,13 @@ export interface MediaInfo {
   uploader: string | null;
   formats: MediaFormat[];
   subtitles: SubtitleTrack[];
+  playlist?: PlaylistInfo | null;
+}
+
+export interface PlaylistInfo {
+  downloadCount: number;
+  totalCount: number | null;
+  truncated: boolean;
 }
 
 export type DownloadTaskStatus =
@@ -113,6 +120,7 @@ export interface DownloadOptions {
   formatId: string;
   outputDirectory: string;
   subtitleLanguages: string[];
+  playlistItemCount: number | null;
   conflictStrategy: "skip" | "overwrite";
 }
 

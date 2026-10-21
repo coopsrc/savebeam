@@ -13,6 +13,19 @@ pub struct MediaInfo {
     pub uploader: Option<String>,
     pub formats: Vec<FormatOption>,
     pub subtitles: Vec<SubtitleTrack>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub playlist: Option<PlaylistInfo>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlaylistInfo {
+    /// Number of first items Savebeam will allow in one playlist task (always at most 50).
+    pub download_count: u8,
+    /// Exact upstream count, when yt-dlp reports one.
+    pub total_count: Option<u64>,
+    /// True when the playlist is known or observed to exceed the safe per-task limit.
+    pub truncated: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -66,6 +79,7 @@ mod tests {
                 extension: Some("vtt".into()),
                 automatic: false,
             }],
+            playlist: None,
         };
 
         let value = serde_json::to_value(media).expect("media should serialize");
