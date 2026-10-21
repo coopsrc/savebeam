@@ -422,7 +422,7 @@ Custom      用户选择已有可执行文件
 
 - yt-dlp：使用其官方 GitHub Releases。
 - JavaScript runtime：应用管理方式默认安装 Deno，并使用其官方 Releases；系统或自定义方式可复用 Node.js、Bun、QuickJS。
-- FFmpeg：使用 FFmpeg 官网各平台下载入口列出的可信构建提供者。
+- FFmpeg：Windows/Linux 使用 FFmpeg 官网各平台下载入口列出的可信构建提供者；macOS 不提供应用管理下载，使用 Homebrew/system installation，或由用户指定 `ffmpeg` 与 `ffprobe` 可执行文件路径。
 - 下载地址和哈希来自受签名保护的组件清单。
 - 清单使用带 schema 版本的 JSON，Ed25519 签名覆盖稳定结构化 payload；发行公钥固定在应用中。正式发行前必须配置发行私钥及轮换流程，开发测试密钥不能用于生产。
 - Savebeam 清单以 `components.json` 作为 `coopsrc/savebeam` GitHub Release 资产，客户端固定读取 `https://github.com/coopsrc/savebeam/releases/latest/download/components.json`；仅接受 HTTPS 和 GitHub Release 资产主机重定向，清单上限 256 KiB。
@@ -432,13 +432,13 @@ Custom      用户选择已有可执行文件
 - 新版本通过 `--version` 和基本能力测试后才切换为当前版本。
 - 至少保留一个上一版本用于回滚。
 
-FFmpeg 页面入口：
+FFmpeg 页面入口（用于 Windows/Linux 应用管理候选及各平台手动安装指引）：
 
 - Linux：<https://ffmpeg.org/download.html#build-linux>
 - Windows：<https://ffmpeg.org/download.html#build-windows>
 - macOS：<https://ffmpeg.org/download.html#build-mac>
 
-UI 应表述为“从 FFmpeg 官网列出的构建来源下载”，并展示实际构建提供者，不应把第三方构建描述成 FFmpeg 项目官方编译的二进制。
+Windows/Linux UI 应表述为“从 FFmpeg 官网列出的构建来源下载”，并展示实际构建提供者，不应把第三方构建描述成 FFmpeg 项目官方编译的二进制。macOS 仅检测 Homebrew/system 安装或用户指定路径，不从 Savebeam 组件清单下载 FFmpeg/ffprobe。
 
 ### 8.4 系统包管理器
 

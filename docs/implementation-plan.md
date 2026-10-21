@@ -208,7 +208,7 @@ chore(milestone): verify M4 single-download workflow
 
 M6 待决：T6b 应用侧交互及 T8 本地准备已完成，但 Savebeam 仓库尚无签名组件清单 Release 资产，真实发行二进制安装和端到端更新仍未验收。候选矩阵、来源审查事项与手动签名流程见 [`docs/releases/component-catalog.md`](releases/component-catalog.md)。仓库地址为 `git@github.com:coopsrc/savebeam.git`；清单地址固定为 `https://github.com/coopsrc/savebeam/releases/latest/download/components.json`。对应签名私钥已保存到 GitHub Actions Secret `SAVEBEAM_COMPONENT_MANIFEST_SIGNING_KEY`，应用公钥见 `src-tauri/src/services/component_catalog.rs`。不得在清单发布前声称组件安装链路生产可用。
 
-当前状态：M6 未验收，细节见 [`docs/verification/M6.md`](verification/M6.md)；必须通过整个 M6 验收门禁后才能进入 M7。
+当前状态：M6 未验收，细节见 [`docs/verification/M6.md`](verification/M6.md)。macOS FFmpeg/ffprobe 的策略已确定为 Homebrew/system 安装或用户指定路径，不进入应用管理下载清单；其余 M6 验收门禁仍须通过后才能正式验收 M6。
 
 ### M7：功能完善与安全加固
 

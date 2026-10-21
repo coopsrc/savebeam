@@ -13,7 +13,7 @@ This document tracks the candidate component matrix and the release controls. Th
 | yt-dlp           | 2026.08.19        | macOS x64/arm64, Windows x64/arm64, Linux x64/arm64 | [yt-dlp official GitHub Release](https://github.com/yt-dlp/yt-dlp/releases/tag/2026.08.19) | Candidate URLs, asset sizes and SHA-256 values recorded; archive contents and runtime smoke tests remain to be done.                                                                                                                                                                                    |
 | Deno             | 2.9.7             | macOS, Windows, Linux; x64/arm64                    | [Deno official GitHub Release](https://github.com/denoland/deno/releases/tag/v2.9.7)       | Candidate URLs, asset sizes and SHA-256 values recorded; extract layout and runtime smoke tests remain to be done.                                                                                                                                                                                      |
 | FFmpeg / ffprobe | FFmpeg 9.0 branch | Windows x64/arm64, Linux x64/arm64                  | [BtbN FFmpeg Builds](https://github.com/BtbN/FFmpeg-Builds/releases), LGPL static variant  | Provisional only: `latest` is a floating URL; pin an immutable release asset and re-verify its digest before signing. Review the exact build configuration, included dependencies, notices and source-offer obligations.                                                                                |
-| FFmpeg / ffprobe | —                 | macOS x64/arm64                                     | No candidate selected                                                                      | Open platform gap. The official FFmpeg download page points to third-party build providers; the researched evermeet package is Intel-only, and Apple Silicon support via Rosetta cannot be assumed. Keep Homebrew/manual installation available unless a suitable native build is selected and audited. |
+| FFmpeg / ffprobe | —                 | macOS x64/arm64                                     | System installation or user-selected executable path                                       | Intentional policy: do not offer app-managed macOS FFmpeg downloads. Detect Homebrew/system installations and let users set custom executable paths. The supplied evermeet URL and its mirror are Intel-only and its build enables GPL/version3 components; they are not selected for the managed catalog. |
 
 The candidate SHA-256 and byte counts are copied from GitHub Release asset metadata queried on 2026-10-21. They must be checked again against the exact immutable URLs used for the eventual signed catalog. In particular, a digest attached to a floating URL does not make that URL reproducible: once the upstream asset changes, the app must reject it, and the catalog needs a new reviewed digest.
 
@@ -22,7 +22,7 @@ The candidate SHA-256 and byte counts are copied from GitHub Release asset metad
 - FFmpeg's [download page](https://www.ffmpeg.org/download.html) distributes source and links to external build providers; third-party binaries are not FFmpeg-official builds. The UI must name the actual provider.
 - BtbN describes its builds as daily automatic builds. The LGPL variant omits GPL-only libraries (notably x264/x265), but the exact binary's configuration and notices still need review. This is not a legal conclusion or a substitute for a distribution compliance review.
 - Do not substitute [Gyan's Windows builds](https://www.gyan.dev/ffmpeg/builds/) without updating the license review: its build page identifies those builds as GPLv3.
-- The researched [evermeet macOS package](https://evermeet.cx/ffmpeg/) is Intel-only; its [Apple Silicon note](https://evermeet.cx/ffserver/apple-silicon-arm) does not provide a native ARM package.
+- The researched [evermeet macOS package](https://evermeet.cx/ffmpeg/) and its mirror are Intel-only; its [Apple Silicon note](https://evermeet.cx/ffmpeg/apple-silicon-arm) says it does not provide a native ARM build. The package also enables GPL, x264/x265 and version3 components. Savebeam therefore uses Homebrew/system detection or a user-selected executable path on macOS instead of an app-managed download.
 - Keep source links and the applicable license/notice bundle with any eventual Savebeam Release. Have counsel or the project license owner review obligations before distributing binaries.
 
 ## Local signing workflow
@@ -44,7 +44,7 @@ Do not use the real signing key for routine tests. A temporary test key should o
 ## Before any public catalog release
 
 1. Replace every floating asset URL with an immutable, reviewed URL; verify version, architecture, archive contents, asset size and SHA-256 from the downloaded bytes.
-2. Close the macOS FFmpeg/ffprobe target gap or explicitly revise the supported managed-install matrix and UX so macOS users are directed to a supported manual package manager path.
+2. Keep macOS FFmpeg/ffprobe outside the app-managed download matrix by design; validate Homebrew/system detection and custom executable paths on macOS.
 3. Smoke-test each real binary on its target OS/architecture, including Deno-backed yt-dlp extraction and FFmpeg/ffprobe health checks; verify archive path behavior and cancellation/retry/update/rollback.
 4. Complete a dependency/build-configuration, license and notices review for each binary; publish source/offer materials where required.
 5. Protect the GitHub Environment, verify the configured private key corresponds to the public key shipped by the application, and review the exact catalog diff before signing.
@@ -52,4 +52,4 @@ Do not use the real signing key for routine tests. A temporary test key should o
 
 ## Current gate
 
-No GitHub Release was created or modified for this preparation. M6 remains in progress: there is no signed catalog asset, real binary installation has not been tested end to end, and macOS managed FFmpeg remains unresolved. See [`../verification/M6.md`](../verification/M6.md) and [`../implementation-plan.md`](../implementation-plan.md).
+No GitHub Release was created or modified for this preparation. M6 remains in progress: there is no signed catalog asset and app-managed binary installation has not been tested end to end. macOS FFmpeg/ffprobe are intentionally provided through Homebrew/system detection or a user-selected executable path, not the managed catalog. See [`../verification/M6.md`](../verification/M6.md) and [`../implementation-plan.md`](../implementation-plan.md).
