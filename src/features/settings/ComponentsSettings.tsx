@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import {
+  ActionIcon,
   Alert,
   Badge,
   Button,
@@ -13,8 +14,9 @@ import {
   Text,
   TextInput,
   Title,
+  Tooltip,
 } from "@mantine/core";
-import { IconRefresh, IconTrash } from "@tabler/icons-react";
+import { IconFolderOpen, IconRefresh, IconTrash } from "@tabler/icons-react";
 import { confirm, open, save } from "@tauri-apps/plugin-dialog";
 import { ErrorState, LoadingState } from "../../components/states/AppStates";
 import { usePlatformProfile } from "../../app/platform/profile";
@@ -752,6 +754,7 @@ function DownloadPreferencesPanel() {
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [selectingDirectory, setSelectingDirectory] = useState(false);
 
   useEffect(() => {
     invokeCommand<DownloadPreferences>("get_download_preferences")
@@ -777,6 +780,28 @@ function DownloadPreferencesPanel() {
     }
   }
 
+  async function chooseDirectory() {
+    setSelectingDirectory(true);
+    setError(null);
+    try {
+      const selected = await open({
+        title: "选择默认下载目录",
+        directory: true,
+        multiple: false,
+        defaultPath: preferences.outputDirectory.trim() ? preferences.outputDirectory : undefined,
+        fileAccessMode: "scoped",
+      });
+      if (typeof selected === "string") {
+        setPreferences((current) => ({ ...current, outputDirectory: selected }));
+        setSaved(false);
+      }
+    } catch {
+      setError("无法打开系统文件夹选择器，请手动填写目录或稍后重试。");
+    } finally {
+      setSelectingDirectory(false);
+    }
+  }
+
   return (
     <Paper withBorder radius="md" p="md">
       <Stack gap="sm">
@@ -790,9 +815,30 @@ function DownloadPreferencesPanel() {
           label="默认下载目录"
           placeholder="留空使用系统下载目录"
           value={preferences.outputDirectory}
+          disabled={saving || selectingDirectory}
+          rightSectionWidth={44}
+          rightSectionPointerEvents="auto"
+          rightSection={
+            <Tooltip label="选择文件夹">
+              <ActionIcon
+                type="button"
+                variant="subtle"
+                color="gray"
+                size={32}
+                aria-label="选择下载文件夹"
+                loading={selectingDirectory}
+                disabled={saving || selectingDirectory}
+                onClick={() => void chooseDirectory()}
+              >
+                <IconFolderOpen size={20} aria-hidden="true" />
+              </ActionIcon>
+            </Tooltip>
+          }
           onChange={(event) => {
             const outputDirectory = event.currentTarget.value;
             setPreferences((value) => ({ ...value, outputDirectory }));
+            setSaved(false);
+            setError(null);
           }}
         />
         <Group grow align="end">
@@ -833,7 +879,7 @@ function DownloadPreferencesPanel() {
           </Text>
         )}
         <Group justify="flex-end">
-          <Button onClick={() => void save()} loading={saving}>
+          <Button onClick={() => void save()} loading={saving} disabled={selectingDirectory}>
             保存下载设置
           </Button>
         </Group>
