@@ -13,6 +13,7 @@ pub fn run() {
             commands::components::get_component_status,
             commands::components::set_component_custom_path,
             commands::components::clear_component_custom_path,
+            commands::media::inspect_media,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -48,15 +48,25 @@ export interface MediaFormat {
   videoCodec: string | null;
   audioCodec: string | null;
   fileSizeBytes: number | null;
+  approximateFileSizeBytes: number | null;
+}
+
+export interface SubtitleTrack {
+  language: string;
+  name: string | null;
+  extension: string | null;
+  automatic: boolean;
 }
 
 export interface MediaInfo {
+  id: string;
   title: string;
   webpageUrl: string;
   thumbnailUrl: string | null;
   durationSeconds: number | null;
   uploader: string | null;
   formats: MediaFormat[];
+  subtitles: SubtitleTrack[];
 }
 
 export type DownloadTaskStatus =

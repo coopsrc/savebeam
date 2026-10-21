@@ -19,7 +19,7 @@ use crate::{
 
 #[derive(Default)]
 pub struct ComponentRegistry {
-    custom_paths: Mutex<HashMap<ComponentKind, PathBuf>>,
+    pub(crate) custom_paths: Mutex<HashMap<ComponentKind, PathBuf>>,
 }
 
 #[tauri::command]

@@ -81,7 +81,7 @@ body {
   padding: clamp(24px, 4vw, 40px);
 }
 
-.mock-media-card {
+.media-info-card {
   background: var(--sb-color-surface);
 }
 
