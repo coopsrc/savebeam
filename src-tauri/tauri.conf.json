@@ -39,6 +39,9 @@
     "active": true,
     "targets": "all",
     "publisher": "CoopSrc",
+    "category": "Video",
+    "shortDescription": "本地优先的视频下载工具",
+    "longDescription": "Savebeam 在本机解析并下载用户提供的视频链接，支持任务管理和可选组件配置。应用不提供媒体托管或转发服务。",
     "macOS": {
       "minimumSystemVersion": "12.0"
     },
