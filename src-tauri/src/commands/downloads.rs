@@ -6,6 +6,7 @@ use std::{
 };
 
 use tauri::{AppHandle, Emitter, Manager, State};
+use tauri_plugin_opener::OpenerExt;
 
 use crate::{
     commands::{
@@ -17,9 +18,11 @@ use crate::{
     },
     domain::{
         component::{ComponentInstallation, ComponentKind, ComponentStatus},
+        download::DownloadHistoryRecord,
         download::{DownloadOptions, DownloadTask, DownloadTaskStatus},
         error::{AppError, ErrorCode},
     },
+    infrastructure::database::{DatabaseManager, repositories::HistoryRepository},
     infrastructure::process_supervisor::ProcessSupervisor,
     security::download_args::build_download_args,
     services::{
@@ -63,6 +66,82 @@ pub fn get_download_tasks(
     tasks: State<'_, DownloadTaskRegistry>,
 ) -> CommandResult<Vec<DownloadTask>> {
     tasks.list()
+}
+
+#[tauri::command]
+pub fn get_download_history(
+    query: Option<String>,
+    database: State<'_, DatabaseManager>,
+) -> CommandResult<Vec<DownloadHistoryRecord>> {
+    let repository = HistoryRepository::new(database.database()?);
+    repository.search(query.as_deref().unwrap_or(""))
+}
+
+#[tauri::command]
+pub fn delete_download_history(
+    task_id: String,
+    database: State<'_, DatabaseManager>,
+) -> CommandResult<bool> {
+    HistoryRepository::new(database.database()?).delete(&task_id)
+}
+
+#[tauri::command]
+pub fn open_history_file(
+    app: AppHandle,
+    task_id: String,
+    output_index: usize,
+    database: State<'_, DatabaseManager>,
+) -> CommandResult<()> {
+    open_history_path(&app, &task_id, output_index, false, database.inner())
+}
+
+#[tauri::command]
+pub fn open_history_folder(
+    app: AppHandle,
+    task_id: String,
+    output_index: usize,
+    database: State<'_, DatabaseManager>,
+) -> CommandResult<()> {
+    open_history_path(&app, &task_id, output_index, true, database.inner())
+}
+
+fn open_history_path(
+    app: &AppHandle,
+    task_id: &str,
+    output_index: usize,
+    folder: bool,
+    database: &DatabaseManager,
+) -> CommandResult<()> {
+    let history = HistoryRepository::new(database.database()?)
+        .search("")?
+        .into_iter()
+        .find(|record| record.task_id == task_id)
+        .ok_or_else(|| AppError::new(ErrorCode::InvalidPath, "找不到对应的下载历史。", false))?;
+    let output = history
+        .output_paths
+        .get(output_index)
+        .ok_or_else(|| AppError::new(ErrorCode::InvalidPath, "下载记录中不存在此文件。", false))?;
+    let path = PathBuf::from(output);
+    let path = if folder {
+        path.parent()
+            .ok_or_else(|| AppError::new(ErrorCode::InvalidPath, "无法定位文件所在目录。", false))?
+            .to_path_buf()
+    } else {
+        path
+    };
+    if !path.exists() {
+        return Err(AppError::new(
+            ErrorCode::InvalidPath,
+            "本地文件或目录已不存在。",
+            false,
+        ));
+    }
+    app.opener()
+        .open_path(path.to_string_lossy(), None::<&str>)
+        .map_err(|error| {
+            AppError::new(ErrorCode::Unknown, "无法打开本地文件或目录。", true)
+                .with_diagnostic(error.to_string())
+        })
 }
 
 pub(crate) fn resume_queued_downloads(app: AppHandle) {
@@ -195,6 +274,16 @@ fn run_task(
 
     match result {
         Ok(result) => {
+            if let Some(database) = app.try_state::<DatabaseManager>() {
+                match database.database().and_then(|database| {
+                    HistoryRepository::new(database).insert(&result, unix_ms_now()?)
+                }) {
+                    Ok(()) => {}
+                    Err(error) => {
+                        let _ = app.emit(DOWNLOAD_ERROR_EVENT, EventPayload::new(error));
+                    }
+                }
+            }
             let _ = app.emit(DOWNLOAD_RESULT_EVENT, EventPayload::new(result));
             if current_status == DownloadTaskStatus::Preparing {
                 let _ =
@@ -218,6 +307,13 @@ fn run_task(
             }
         }
     }
+}
+
+fn unix_ms_now() -> CommandResult<u64> {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|duration| duration.as_millis() as u64)
+        .map_err(|_| AppError::new(ErrorCode::Unknown, "系统时间不可用。", false))
 }
 
 fn required_component(

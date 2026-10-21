@@ -20,6 +20,7 @@ import { DownloadPage } from "./features/download/DownloadPage";
 import { useNavigate } from "react-router-dom";
 import { useAppStore } from "./stores/appStore";
 import { ComponentsSettings } from "./features/settings/ComponentsSettings";
+import { HistoryPage } from "./features/history/HistoryPage";
 import { invokeCommand, IpcError } from "./ipc/client";
 import type { DownloadTask } from "./types/domain";
 import "./App.css";
@@ -65,6 +66,10 @@ function FoundationPage() {
 
   if (location.pathname === "/settings") {
     return <ComponentsSettings />;
+  }
+
+  if (location.pathname === "/history") {
+    return <HistoryPage />;
   }
 
   if (location.pathname === "/tasks") {

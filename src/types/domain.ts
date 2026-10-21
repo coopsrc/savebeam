@@ -112,3 +112,11 @@ export interface DownloadResult {
   outputPaths: string[];
   totalBytes: number;
 }
+
+export interface DownloadHistoryRecord {
+  taskId: string;
+  title: string;
+  outputPaths: string[];
+  totalBytes: number;
+  completedAtUnixMs: number;
+}

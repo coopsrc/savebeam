@@ -31,6 +31,10 @@ pub fn run() {
             commands::media::inspect_media,
             commands::downloads::start_download,
             commands::downloads::get_download_tasks,
+            commands::downloads::get_download_history,
+            commands::downloads::delete_download_history,
+            commands::downloads::open_history_file,
+            commands::downloads::open_history_folder,
             commands::downloads::cancel_download,
             commands::downloads::retry_download,
         ])
