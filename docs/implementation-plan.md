@@ -167,7 +167,7 @@ chore(milestone): verify M4 single-download workflow
 任务：
 
 - [x] M5-T1 在 Rust 层引入 SQLite 和 migration 机制。
-- [ ] M5-T2 实现设置、任务和历史 Repository。
+- [x] M5-T2 实现设置、任务和历史 Repository。
 - [ ] M5-T3 实现顺序队列和可配置的有限并发。
 - [ ] M5-T4 实现重启后的未完成任务恢复策略。
 - [ ] M5-T5 实现历史搜索、打开文件和打开目录。

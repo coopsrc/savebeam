@@ -12,6 +12,8 @@ use crate::domain::error::{AppError, ErrorCode};
 
 pub const CURRENT_SCHEMA_VERSION: u32 = 1;
 
+pub mod repositories;
+
 const MIGRATIONS: &[(u32, &str)] = &[(
     1,
     "CREATE TABLE app_settings (
@@ -158,7 +160,7 @@ fn migrate(connection: &mut Connection) -> rusqlite::Result<()> {
     Ok(())
 }
 
-fn storage_error(error: rusqlite::Error) -> AppError {
+pub(crate) fn storage_error(error: rusqlite::Error) -> AppError {
     AppError::new(
         ErrorCode::Unknown,
         "本地数据库无法打开或迁移失败，应用仍可启动，但本地设置与历史暂不可用。",

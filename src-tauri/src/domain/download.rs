@@ -58,6 +58,16 @@ pub struct DownloadResult {
     pub total_bytes: u64,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DownloadHistoryRecord {
+    pub task_id: String,
+    pub title: String,
+    pub output_paths: Vec<String>,
+    pub total_bytes: u64,
+    pub completed_at_unix_ms: u64,
+}
+
 #[cfg(test)]
 mod tests {
     use super::{DownloadOptions, DownloadProgress, DownloadTaskStatus};
