@@ -20,7 +20,10 @@ pub fn build_download_args(
     cookies: &CookiePreferences,
 ) -> Result<Vec<OsString>, AppError> {
     validate_url(&options.url)?;
-    if !options.audio_only {
+    if !matches!(
+        options.format_id.as_str(),
+        "bestaudio/best" | "bestvideo+bestaudio/best"
+    ) {
         validate_format_selector(&options.format_id)?;
     }
     validate_subtitle_languages(&options.subtitle_languages)?;
@@ -90,11 +93,7 @@ pub fn build_download_args(
         "--progress-template".into(),
         "postprocess:SB_PROGRESS:post_processing".into(),
         "--format".into(),
-        if options.audio_only {
-            "bestaudio/best".into()
-        } else {
-            options.format_id.clone().into()
-        },
+        options.format_id.clone().into(),
         "--paths".into(),
         format!("home:{}", options.output_directory).into(),
         "--output".into(),
@@ -106,6 +105,17 @@ pub fn build_download_args(
     ];
     let mut args = args;
     args.splice(2..2, playlist_arguments);
+    if !options.audio_only
+        && let Some(container) = options.merge_container
+    {
+        args.splice(
+            2..2,
+            [
+                OsString::from("--merge-output-format"),
+                OsString::from(container.extension()),
+            ],
+        );
+    }
 
     if let Some(path) = &cookies.cookies_file_path {
         validate_cookies_file(path)?;
@@ -256,6 +266,7 @@ mod tests {
             title: "Example".into(),
             url: "https://example.com/watch?v=a&b=c".into(),
             format_id: "bestvideo+bestaudio".into(),
+            merge_container: None,
             output_directory: directory.to_string_lossy().into_owned(),
             subtitle_languages: Vec::new(),
             conflict_strategy: crate::domain::download::DownloadConflictStrategy::Skip,
@@ -299,6 +310,39 @@ mod tests {
         let mut download_options = options(&directory);
         download_options.format_id = "best;--exec=touch /tmp/pwned".into();
         assert!(build_download_args(&download_options, &CookiePreferences::default()).is_err());
+        download_options.audio_only = true;
+        assert!(build_download_args(&download_options, &CookiePreferences::default()).is_err());
+        let _ = fs::remove_dir_all(directory);
+    }
+
+    #[test]
+    fn preserves_selected_audio_and_the_predicted_merge_container() {
+        let directory = temp_directory();
+        let mut download_options = options(&directory);
+        download_options.format_id = "137+140".into();
+        download_options.merge_container = Some(crate::domain::download::MergeContainer::Mp4);
+        let args = build_download_args(&download_options, &CookiePreferences::default()).unwrap();
+        assert!(args.windows(2).any(|pair| pair == ["--format", "137+140"]));
+        assert!(
+            args.windows(2)
+                .any(|pair| pair == ["--merge-output-format", "mp4"])
+        );
+
+        download_options.audio_only = true;
+        download_options.format_id = "251".into();
+        download_options.merge_container = None;
+        let args = build_download_args(&download_options, &CookiePreferences::default()).unwrap();
+        assert!(args.windows(2).any(|pair| pair == ["--format", "251"]));
+        assert!(
+            args.windows(2)
+                .any(|pair| pair == ["--audio-format", "mp3"])
+        );
+        assert!(!args.iter().any(|arg| arg == "--merge-output-format"));
+
+        download_options.audio_only = false;
+        download_options.playlist_item_count = Some(2);
+        download_options.format_id = "bestvideo+bestaudio/best".into();
+        assert!(build_download_args(&download_options, &CookiePreferences::default()).is_ok());
         let _ = fs::remove_dir_all(directory);
     }
 
@@ -337,6 +381,7 @@ mod tests {
         let directory = temp_directory();
         let mut download_options = options(&directory);
         download_options.audio_only = true;
+        download_options.format_id = "bestaudio/best".into();
         download_options.subtitle_languages = vec!["en-US".into(), "zh-Hans".into()];
         download_options.write_automatic_subtitles = true;
         download_options.write_thumbnail = true;

@@ -21,16 +21,15 @@ import { invokeCommand } from "../../ipc/client";
 import { useAppStore } from "../../stores/appStore";
 import { inspectMedia } from "./mediaApi";
 import { getMediaUrlError, validateMediaUrl } from "./validateMediaUrl";
-
-function formatLabel(format: MediaInfo["formats"][number]): string {
-  const details = [format.resolution, format.fps ? `${format.fps} fps` : null, format.extension]
-    .filter(Boolean)
-    .join(" · ");
-  const streams = [format.videoCodec ? "视频" : null, format.audioCodec ? "音频" : null]
-    .filter(Boolean)
-    .join("+");
-  return `${format.formatId} — ${details || "未知规格"}${streams ? ` · ${streams}` : ""}`;
-}
+import {
+  AUTOMATIC_AUDIO,
+  audioFormats,
+  codecLabel,
+  formatLabel,
+  isRecommendedAudio,
+  selectDownload,
+  videoFormats,
+} from "./formatSelection";
 
 export function DownloadPage() {
   const [url, setUrl] = useState("");
@@ -39,7 +38,9 @@ export function DownloadPage() {
   const [isStartingDownload, setIsStartingDownload] = useState(false);
   const [mediaInfo, setMediaInfo] = useState<MediaInfo | null>(null);
   const [thumbnailFailed, setThumbnailFailed] = useState(false);
-  const [selectedFormat, setSelectedFormat] = useState<string | null>(null);
+  const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
+  const [selectedAudioId, setSelectedAudioId] = useState(AUTOMATIC_AUDIO);
+  const [manualAudio, setManualAudio] = useState(false);
   const [playlistConfirmed, setPlaylistConfirmed] = useState(false);
   const [audioOnly, setAudioOnly] = useState(false);
   const [subtitleLanguages, setSubtitleLanguages] = useState<string[]>([]);
@@ -60,7 +61,9 @@ export function DownloadPage() {
     setRequestError(null);
     setMediaInfo(null);
     setThumbnailFailed(false);
-    setSelectedFormat(null);
+    setSelectedVideoId(null);
+    setSelectedAudioId(AUTOMATIC_AUDIO);
+    setManualAudio(false);
     setPlaylistConfirmed(false);
     setAudioOnly(false);
     setSubtitleLanguages([]);
@@ -76,7 +79,11 @@ export function DownloadPage() {
     try {
       const result = await inspectMedia(checked.normalizedUrl);
       setMediaInfo(result);
-      setSelectedFormat(result.formats[0]?.formatId ?? null);
+      const videos = videoFormats(result.formats);
+      setSelectedVideoId(videos[0]?.formatId ?? null);
+      setAudioOnly(
+        !result.playlist && !videos.length && audioFormats(result.formats, true).length > 0,
+      );
     } catch (error: unknown) {
       setRequestError(error instanceof IpcError ? error.message : "解析失败，请稍后重试。");
     } finally {
@@ -93,14 +100,14 @@ export function DownloadPage() {
   }
 
   async function handleStartDownload() {
-    if (!mediaInfo || (mediaInfo.playlist ? !playlistConfirmed : !selectedFormat && !audioOnly))
-      return;
+    if (!mediaInfo || !selection || (mediaInfo.playlist && !playlistConfirmed)) return;
     setRequestError(null);
     setIsStartingDownload(true);
     const options: DownloadOptions = {
       title: mediaInfo.title,
       url: mediaInfo.webpageUrl,
-      formatId: audioOnly ? "bestaudio/best" : mediaInfo.playlist ? "best" : selectedFormat!,
+      formatId: selection.formatId,
+      mergeContainer: selection.mergeContainer,
       outputDirectory: "",
       playlistItemCount: mediaInfo.playlist?.downloadCount ?? null,
       audioOnly,
@@ -122,11 +129,30 @@ export function DownloadPage() {
     }
   }
 
-  const formatOptions =
-    mediaInfo?.formats.map((format) => ({
-      value: format.formatId,
-      label: formatLabel(format),
-    })) ?? [];
+  const selection = mediaInfo
+    ? selectDownload(mediaInfo, selectedVideoId, selectedAudioId, audioOnly)
+    : null;
+  const automaticSelection = mediaInfo
+    ? selectDownload(mediaInfo, selectedVideoId, AUTOMATIC_AUDIO, audioOnly)
+    : null;
+  const videos = videoFormats(mediaInfo?.formats ?? []);
+  const currentVideo = videos.find((format) => format.formatId === selectedVideoId);
+  const usesEmbeddedAudio = !audioOnly && !!currentVideo?.audioCodec;
+  const audios = audioFormats(mediaInfo?.formats ?? [], audioOnly);
+  const videoOptions = videos.map((format) => ({
+    value: format.formatId,
+    label: formatLabel(format, "video") + (format.audioCodec ? " · 含音轨" : ""),
+  }));
+  const audioOptions = audios.map((format) => ({
+    value: format.formatId,
+    label:
+      formatLabel(format, "audio") +
+      (format.formatId === automaticSelection?.audio?.formatId
+        ? "（推荐 · 自动匹配）"
+        : !audioOnly && currentVideo && isRecommendedAudio(currentVideo, format)
+          ? "（兼容推荐）"
+          : ""),
+  }));
   const subtitleOptions = mediaInfo
     ? Array.from(new Map(mediaInfo.subtitles.map((track) => [track.language, track])).values()).map(
         (track) => ({
@@ -249,24 +275,94 @@ export function DownloadPage() {
                           />
                         </Stack>
                       </Alert>
-                    ) : !audioOnly && formatOptions.length > 0 ? (
-                      <Select
-                        label="可用格式"
-                        data={formatOptions}
-                        value={selectedFormat}
-                        onChange={setSelectedFormat}
-                        allowDeselect={false}
-                        disabled={audioOnly}
-                      />
-                    ) : !audioOnly ? (
+                    ) : videos.length > 0 || audios.length > 0 ? (
+                      <Stack gap="sm">
+                        {!audioOnly && (
+                          <Select
+                            label="视频画质"
+                            description="默认优先最佳画质。独立音频将在下载后自动合并。"
+                            data={videoOptions}
+                            value={selectedVideoId}
+                            onChange={setSelectedVideoId}
+                            allowDeselect={false}
+                          />
+                        )}
+                        <Text size="sm" c="dimmed">
+                          {usesEmbeddedAudio
+                            ? `音频：使用视频内置音轨（${codecLabel(currentVideo?.audioCodec ?? null)}）`
+                            : automaticSelection?.audio
+                              ? `${manualAudio ? "推荐音频" : "自动匹配音频"}：${formatLabel(automaticSelection.audio, "audio")}`
+                              : "站点未提供独立音频轨道。"}
+                        </Text>
+                        <Checkbox
+                          label="手动选择音频"
+                          description={
+                            usesEmbeddedAudio
+                              ? "该视频格式已包含音轨；选择音视频分离的视频格式后可更换独立音轨。"
+                              : "展开可用音频列表，按推荐标识、编码、码率或语言选择。"
+                          }
+                          checked={manualAudio && !usesEmbeddedAudio}
+                          disabled={usesEmbeddedAudio || audios.length === 0}
+                          onChange={(event) => {
+                            const manual = event.currentTarget.checked;
+                            setManualAudio(manual);
+                            setSelectedAudioId(
+                              manual
+                                ? (automaticSelection?.audio?.formatId ??
+                                    audios[0]?.formatId ??
+                                    AUTOMATIC_AUDIO)
+                                : AUTOMATIC_AUDIO,
+                            );
+                          }}
+                        />
+                        {manualAudio && !usesEmbeddedAudio && (
+                          <Select
+                            label="音频轨道"
+                            description="推荐项优先保持视频容器兼容；更换编码后，输出格式可能改变。"
+                            data={audioOptions}
+                            value={selectedAudioId}
+                            onChange={(value) => setSelectedAudioId(value ?? AUTOMATIC_AUDIO)}
+                            allowDeselect={false}
+                          />
+                        )}
+                        {selection && (
+                          <Paper withBorder radius="sm" p="sm" aria-live="polite">
+                            <Text fw={600} size="sm">
+                              预计输出：{selection.extension?.toUpperCase()}（.{selection.extension}
+                              ）
+                            </Text>
+                            <Text size="sm" c="dimmed">
+                              {audioOnly
+                                ? `${codecLabel(selection.audio?.audioCodec ?? null)} → MP3（转换音频）`
+                                : `${codecLabel(selection.video?.videoCodec ?? null)}${selection.audio ? ` + ${codecLabel(selection.audio.audioCodec)}` : " · 无音频"}`}
+                            </Text>
+                            {selection.mergeContainer && (
+                              <Text size="xs" c="dimmed">
+                                下载完成后合并为一个文件，保留原始音视频编码。
+                              </Text>
+                            )}
+                          </Paper>
+                        )}
+                        {!audioOnly && selection && !selection.audio && (
+                          <Alert color="yellow" title="该格式没有音轨">
+                            站点未提供独立音频，此选择将下载无声视频。可尝试选择包含音轨的视频格式。
+                          </Alert>
+                        )}
+                      </Stack>
+                    ) : (
                       <Alert color="yellow" title="没有可选格式">
                         网站没有返回可供下载的媒体格式。
                       </Alert>
-                    ) : null}
+                    )}
                     <Stack gap="xs">
                       <Checkbox
                         checked={audioOnly}
-                        onChange={(event) => setAudioOnly(event.currentTarget.checked)}
+                        disabled={!mediaInfo.playlist && videos.length === 0}
+                        onChange={(event) => {
+                          setAudioOnly(event.currentTarget.checked);
+                          setSelectedAudioId(AUTOMATIC_AUDIO);
+                          setManualAudio(false);
+                        }}
                         label="仅下载音频（MP3）"
                         description="需要 FFmpeg 和 ffprobe 进行音频提取与转换。"
                       />
@@ -323,9 +419,8 @@ export function DownloadPage() {
                         onClick={handleStartDownload}
                         loading={isStartingDownload}
                         disabled={
-                          (mediaInfo.playlist
-                            ? !playlistConfirmed
-                            : !selectedFormat && !audioOnly) ||
+                          !selection ||
+                          (mediaInfo.playlist && !playlistConfirmed) ||
                           (writeAutomaticSubtitles && subtitleLanguages.length === 0)
                         }
                       >

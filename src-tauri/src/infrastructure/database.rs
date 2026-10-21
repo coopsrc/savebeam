@@ -10,7 +10,7 @@ use rusqlite::{Connection, TransactionBehavior};
 
 use crate::domain::error::{AppError, ErrorCode};
 
-pub const CURRENT_SCHEMA_VERSION: u32 = 5;
+pub const CURRENT_SCHEMA_VERSION: u32 = 6;
 
 pub mod repositories;
 
@@ -54,6 +54,8 @@ const MIGRATIONS: &[(u32, &str)] = &[(
     "ALTER TABLE download_tasks ADD COLUMN cookies_file_path TEXT;
      ALTER TABLE download_tasks ADD COLUMN cookies_browser TEXT;
      ALTER TABLE download_tasks ADD COLUMN cookie_access_confirmed INTEGER NOT NULL DEFAULT 0;"
+), (6,
+    "ALTER TABLE download_tasks ADD COLUMN merge_container TEXT;"
 )];
 
 #[derive(Debug, Clone)]
@@ -251,6 +253,7 @@ mod tests {
             cookies_file_path: Option<String>,
             cookies_browser: Option<String>,
             cookie_access_confirmed: bool,
+            merge_container: Option<String>,
         }
 
         let mut connection = Connection::open_in_memory().unwrap();
@@ -281,7 +284,7 @@ mod tests {
             .query_row(
                 "SELECT task_id, conflict_strategy, playlist_item_count, audio_only,
                         write_automatic_subtitles, write_thumbnail, write_info_json, embed_metadata,
-                        cookies_file_path, cookies_browser, cookie_access_confirmed
+                        cookies_file_path, cookies_browser, cookie_access_confirmed, merge_container
                  FROM download_tasks WHERE task_id = 'old-task'",
                 [],
                 |row| {
@@ -297,6 +300,7 @@ mod tests {
                         cookies_file_path: row.get(8)?,
                         cookies_browser: row.get(9)?,
                         cookie_access_confirmed: row.get(10)?,
+                        merge_container: row.get(11)?,
                     })
                 },
             )
@@ -317,6 +321,7 @@ mod tests {
                 cookies_file_path: None,
                 cookies_browser: None,
                 cookie_access_confirmed: false,
+                merge_container: None,
             }
         );
     }

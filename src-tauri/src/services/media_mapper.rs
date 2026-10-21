@@ -118,6 +118,9 @@ fn map_formats(value: Option<&Value>) -> Vec<FormatOption> {
                 fps: positive_number(format.get("fps")),
                 video_codec: codec(format.get("vcodec")),
                 audio_codec: codec(format.get("acodec")),
+                audio_bitrate_kbps: positive_number(format.get("abr")),
+                language: nonempty_string(format.get("language")),
+                format_note: nonempty_string(format.get("format_note")),
                 file_size_bytes: positive_integer(format.get("filesize")),
                 approximate_file_size_bytes: positive_integer(format.get("filesize_approx")),
             })
@@ -204,7 +207,8 @@ mod tests {
                 { "format_id": "137", "ext": "mp4", "width": 1920, "height": 1080,
                   "fps": 30, "vcodec": "avc1", "acodec": "none", "filesize_approx": 2000 },
                 { "format_id": "bad" },
-                { "format_id": "audio", "ext": "m4a", "vcodec": "none", "acodec": "mp4a" }
+                { "format_id": "audio", "ext": "m4a", "vcodec": "none", "acodec": "mp4a", "abr": 192,
+                  "language": "zh-Hans", "format_note": "original" }
             ],
             "subtitles": { "en": [{ "ext": "vtt", "name": "English" }] },
             "automatic_captions": { "zh-Hans": [{ "ext": "json3" }] }
@@ -221,6 +225,9 @@ mod tests {
         assert_eq!(media.formats[0].video_codec.as_deref(), Some("avc1"));
         assert_eq!(media.formats[0].audio_codec, None);
         assert_eq!(media.formats[0].approximate_file_size_bytes, Some(2000));
+        assert_eq!(media.formats[1].audio_bitrate_kbps, Some(192.0));
+        assert_eq!(media.formats[1].language.as_deref(), Some("zh-Hans"));
+        assert_eq!(media.formats[1].format_note.as_deref(), Some("original"));
         assert_eq!(media.subtitles.len(), 2);
         assert!(!media.subtitles[0].automatic);
         assert!(media.subtitles[1].automatic);

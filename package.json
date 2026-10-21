@@ -12,7 +12,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "check": "pnpm format:check && pnpm lint && pnpm build && pnpm test:rust",
+    "check": "pnpm format:check && pnpm lint && pnpm build && pnpm test:frontend && pnpm test:rust",
     "format": "prettier --write . && cargo fmt --manifest-path src-tauri/Cargo.toml --all",
     "format:check": "prettier --check . && cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check",
     "lint": "pnpm lint:frontend && pnpm lint:rust",
@@ -20,6 +20,7 @@
     "lint:rust": "cargo clippy --manifest-path src-tauri/Cargo.toml --locked --all-targets -- -D warnings",
     "preview": "vite preview",
     "test:rust": "cargo test --manifest-path src-tauri/Cargo.toml --locked",
+    "test:frontend": "node --test tests/*.test.mjs",
     "tauri": "tauri"
   },
   "dependencies": {

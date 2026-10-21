@@ -522,6 +522,7 @@ mod tests {
             title: title.to_owned(),
             url: url.to_owned(),
             format_id: format_id.to_owned(),
+            merge_container: None,
             output_directory: "/tmp".into(),
             subtitle_languages: Vec::new(),
             conflict_strategy: crate::domain::download::DownloadConflictStrategy::Skip,

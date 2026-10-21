@@ -66,6 +66,9 @@ export interface MediaFormat {
   fps: number | null;
   videoCodec: string | null;
   audioCodec: string | null;
+  audioBitrateKbps: number | null;
+  language: string | null;
+  formatNote: string | null;
   fileSizeBytes: number | null;
   approximateFileSizeBytes: number | null;
 }
@@ -119,6 +122,7 @@ export interface DownloadOptions {
   title: string;
   url: string;
   formatId: string;
+  mergeContainer: MergeContainer | null;
   outputDirectory: string;
   subtitleLanguages: string[];
   playlistItemCount: number | null;
@@ -129,6 +133,8 @@ export interface DownloadOptions {
   embedMetadata: boolean;
   conflictStrategy: "skip" | "overwrite";
 }
+
+export type MergeContainer = "mp4" | "webm" | "mkv";
 
 export type CookieBrowser =
   "brave" | "chrome" | "chromium" | "edge" | "firefox" | "opera" | "safari" | "vivaldi" | "whale";

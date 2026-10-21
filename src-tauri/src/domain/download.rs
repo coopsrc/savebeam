@@ -55,6 +55,8 @@ pub struct DownloadOptions {
     pub title: String,
     pub url: String,
     pub format_id: String,
+    #[serde(default)]
+    pub merge_container: Option<MergeContainer>,
     pub output_directory: String,
     #[serde(default)]
     pub subtitle_languages: Vec<String>,
@@ -78,6 +80,24 @@ pub struct DownloadOptions {
     pub cookies_browser: Option<CookieBrowser>,
     #[serde(default)]
     pub cookie_access_confirmed: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum MergeContainer {
+    Mp4,
+    Webm,
+    Mkv,
+}
+
+impl MergeContainer {
+    pub fn extension(self) -> &'static str {
+        match self {
+            Self::Mp4 => "mp4",
+            Self::Webm => "webm",
+            Self::Mkv => "mkv",
+        }
+    }
 }
 
 /// App-wide authenticated extraction settings. Consent is stored separately
@@ -190,6 +210,7 @@ mod tests {
         assert_eq!(options.title, "Example");
         assert_eq!(options.subtitle_languages, ["en"]);
         assert_eq!(options.playlist_item_count, None);
+        assert_eq!(options.merge_container, None);
         assert!(!options.audio_only);
         assert!(!options.write_automatic_subtitles);
         assert!(!options.write_thumbnail);

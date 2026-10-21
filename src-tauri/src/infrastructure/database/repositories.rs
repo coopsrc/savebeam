@@ -104,8 +104,8 @@ impl DownloadTaskRepository {
                      subtitle_languages_json, status, created_at_unix_ms, updated_at_unix_ms,
                      conflict_strategy, playlist_item_count, audio_only,
                      write_automatic_subtitles, write_thumbnail, write_info_json, embed_metadata,
-                     cookies_file_path, cookies_browser, cookie_access_confirmed
-                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18)",
+                     cookies_file_path, cookies_browser, cookie_access_confirmed, merge_container
+                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19)",
                 params![
                     task.id,
                     options.url,
@@ -125,6 +125,7 @@ impl DownloadTaskRepository {
                     options.cookies_file_path,
                     options.cookies_browser.map(|browser| browser.yt_dlp_name()),
                     options.cookie_access_confirmed,
+                    options.merge_container.map(|container| container.extension()),
                 ],
             )
         })?;
@@ -156,7 +157,7 @@ impl DownloadTaskRepository {
                             subtitle_languages_json, conflict_strategy, status, created_at_unix_ms,
                             playlist_item_count, audio_only, write_automatic_subtitles,
                             write_thumbnail, write_info_json, embed_metadata,
-                            cookies_file_path, cookies_browser, cookie_access_confirmed
+                            cookies_file_path, cookies_browser, cookie_access_confirmed, merge_container
                      FROM download_tasks WHERE task_id = ?1",
                     [task_id],
                     task_from_row,
@@ -172,7 +173,7 @@ impl DownloadTaskRepository {
                         subtitle_languages_json, conflict_strategy, status, created_at_unix_ms,
                         playlist_item_count, audio_only, write_automatic_subtitles,
                         write_thumbnail, write_info_json, embed_metadata,
-                        cookies_file_path, cookies_browser, cookie_access_confirmed
+                        cookies_file_path, cookies_browser, cookie_access_confirmed, merge_container
                  FROM download_tasks ORDER BY created_at_unix_ms DESC",
             )?;
             let rows = statement.query_map([], task_from_row)?;
@@ -283,6 +284,13 @@ fn task_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<(DownloadTask, Dow
             title: row.get(2)?,
             format_id: row.get(3)?,
             output_directory: row.get(4)?,
+            merge_container: row
+                .get::<_, Option<String>>(18)?
+                .map(|value| {
+                    serde_json::from_value(serde_json::Value::String(value))
+                        .map_err(|_| rusqlite::Error::InvalidQuery)
+                })
+                .transpose()?,
             subtitle_languages: subtitles,
             conflict_strategy: parse_conflict_strategy(&row.get::<_, String>(6)?)?,
             playlist_item_count: row.get(9)?,
@@ -452,6 +460,7 @@ mod tests {
             url: task.url.clone(),
             format_id: task.format_id.clone(),
             output_directory: "/tmp/videos".into(),
+            merge_container: Some(crate::domain::download::MergeContainer::Mkv),
             subtitle_languages: vec!["en".into()],
             conflict_strategy: DownloadConflictStrategy::Overwrite,
             playlist_item_count: Some(3),
@@ -489,6 +498,7 @@ mod tests {
         assert_eq!(loaded_options.cookies_file_path, None);
         assert_eq!(loaded_options.cookies_browser, Some(CookieBrowser::Firefox));
         assert!(loaded_options.cookie_access_confirmed);
+        assert_eq!(loaded_options.merge_container, options.merge_container);
         assert_eq!(tasks.list().expect("list works").len(), 1);
     }
 
@@ -508,6 +518,7 @@ mod tests {
             url: task.url.clone(),
             format_id: task.format_id.clone(),
             output_directory: "/tmp".into(),
+            merge_container: None,
             subtitle_languages: Vec::new(),
             conflict_strategy: DownloadConflictStrategy::Skip,
             playlist_item_count: None,
