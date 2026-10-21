@@ -47,6 +47,39 @@ body {
   padding: 36px;
 }
 
+.download-page {
+  display: grid;
+  min-height: 100%;
+  place-items: start center;
+  padding: clamp(24px, 6vh, 64px) var(--sb-space-page);
+}
+
+.download-card {
+  width: min(100%, 720px);
+  padding: clamp(24px, 4vw, 40px);
+}
+
+.download-heading-icon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  margin-bottom: 6px;
+  place-items: center;
+  border-radius: 12px;
+  color: var(--sb-color-accent);
+  background: var(--sb-color-accent-soft);
+}
+
+.download-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.validated-url {
+  overflow-wrap: anywhere;
+  font-family: var(--mantine-font-family-monospace);
+}
+
 .eyebrow {
   margin: 0 0 2px;
   color: var(--sb-color-muted);

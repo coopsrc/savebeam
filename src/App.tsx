@@ -3,6 +3,7 @@ import { Badge, Group, Paper, Stack, Text, ThemeIcon, Title } from "@mantine/cor
 import { IconDownload } from "@tabler/icons-react";
 import { usePlatformProfile } from "./app/platform/profile";
 import { AppShell } from "./layout/AppShell";
+import { DownloadPage } from "./features/download/DownloadPage";
 import "./App.css";
 
 function FoundationPage() {
@@ -49,7 +50,7 @@ function App() {
     <Routes>
       <Route element={<AppShell />}>
         <Route path="/" element={<Navigate to="/download" replace />} />
-        <Route path="/download" element={<FoundationPage />} />
+        <Route path="/download" element={<DownloadPage />} />
         <Route path="/tasks" element={<FoundationPage />} />
         <Route path="/history" element={<FoundationPage />} />
         <Route path="/settings" element={<FoundationPage />} />
