@@ -203,11 +203,27 @@ pub fn get_download_history(
 }
 
 #[tauri::command]
-pub fn delete_download_history(
+pub async fn delete_download_history(
     task_id: String,
+    delete_files: Option<bool>,
     database: State<'_, DatabaseManager>,
 ) -> CommandResult<bool> {
-    HistoryRepository::new(database.database()?).delete(&task_id)
+    let database = database.database()?;
+    tauri::async_runtime::spawn_blocking(move || {
+        crate::services::history_deletion::delete_history_entry(
+            &database,
+            &task_id,
+            delete_files.unwrap_or(false),
+        )
+    })
+    .await
+    .map_err(|_| {
+        AppError::new(
+            ErrorCode::Unknown,
+            "删除历史操作未完成，记录可能仍保留。",
+            true,
+        )
+    })?
 }
 
 #[tauri::command]

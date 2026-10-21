@@ -225,6 +225,18 @@ impl HistoryRepository {
         self.search("")
     }
 
+    pub fn get(&self, task_id: &str) -> Result<Option<DownloadHistoryRecord>, AppError> {
+        self.database.with_connection(|connection| {
+            connection.query_row(
+                "SELECT h.task_id, t.title, h.output_paths_json, h.total_bytes, h.completed_at_unix_ms
+                 FROM download_history h JOIN download_tasks t ON t.task_id = h.task_id
+                 WHERE h.task_id = ?1",
+                [task_id],
+                history_from_row,
+            ).optional()
+        })
+    }
+
     pub fn search(&self, query: &str) -> Result<Vec<DownloadHistoryRecord>, AppError> {
         let pattern = format!("%{}%", query.trim());
         self.database.with_connection(|connection| {
@@ -235,22 +247,7 @@ impl HistoryRepository {
                  WHERE ?1 = '%%' OR t.title LIKE ?1 OR h.output_paths_json LIKE ?1
                  ORDER BY h.completed_at_unix_ms DESC",
             )?;
-            let rows = statement.query_map([pattern], |row| {
-                let paths_json: String = row.get(2)?;
-                let output_paths: Vec<String> = serde_json::from_str(&paths_json)
-                    .map_err(|error| rusqlite::Error::FromSqlConversionFailure(
-                        paths_json.len(),
-                        rusqlite::types::Type::Text,
-                        Box::new(error),
-                    ))?;
-                Ok(DownloadHistoryRecord {
-                    task_id: row.get(0)?,
-                    title: row.get(1)?,
-                    output_paths,
-                    total_bytes: from_sql_integer(row.get(3)?)?,
-                    completed_at_unix_ms: from_sql_integer(row.get(4)?)?,
-                })
-            })?;
+            let rows = statement.query_map([pattern], history_from_row)?;
             rows.collect()
         })
     }
@@ -262,6 +259,20 @@ impl HistoryRepository {
             })
             .map(|changed| changed > 0)
     }
+}
+
+fn history_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<DownloadHistoryRecord> {
+    let paths_json: String = row.get(2)?;
+    let output_paths = serde_json::from_str(&paths_json).map_err(|error| {
+        rusqlite::Error::FromSqlConversionFailure(2, rusqlite::types::Type::Text, Box::new(error))
+    })?;
+    Ok(DownloadHistoryRecord {
+        task_id: row.get(0)?,
+        title: row.get(1)?,
+        output_paths,
+        total_bytes: from_sql_integer(row.get(3)?)?,
+        completed_at_unix_ms: from_sql_integer(row.get(4)?)?,
+    })
 }
 
 fn task_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<(DownloadTask, DownloadOptions)> {

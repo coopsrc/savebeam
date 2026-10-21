@@ -34,6 +34,7 @@ tar = "0.4"
 flate2 = "1"
 xz2 = { version = "0.1", features = ["static"] }
 tauri-plugin-dialog = "2.8.3"
+trash = { version = "5.2.9", default-features = false, features = ["chrono", "coinit_multithreaded"] }
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
