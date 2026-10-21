@@ -1,4 +1,4 @@
-//! Fixed yt-dlp argument construction for single-video downloads.
+//! Fixed yt-dlp arguments for single videos and bounded playlists.
 
 use std::{ffi::OsString, path::Path};
 
@@ -14,7 +14,10 @@ const DOWNLOAD_PROGRESS_TEMPLATE: &str = concat!(
     "\"speed\":\"%(progress.speed)s\",\"eta\":\"%(progress.eta)s\"}"
 );
 
-/// Builds a fixed, shell-free argv for a single media item.
+const SINGLE_OUTPUT_TEMPLATE: &str = "%(title)s.%(ext)s";
+const SERIES_OUTPUT_TEMPLATE: &str = "%(playlist_title,series,playlist|未命名系列)s/%(playlist_index,episode_number|1)d-%(title)s.%(ext)s";
+
+/// Builds fixed, shell-free argv for a download task.
 pub fn build_download_args(
     options: &DownloadOptions,
     cookies: &CookiePreferences,
@@ -53,6 +56,7 @@ pub fn build_download_args(
     let playlist_arguments = match options.playlist_item_count {
         Some(count) if (1..=MAX_PLAYLIST_ITEMS).contains(&count) => vec![
             OsString::from("--yes-playlist"),
+            OsString::from("--no-write-playlist-metafiles"),
             OsString::from("--playlist-items"),
             OsString::from(format!("1-{count}")),
         ],
@@ -85,6 +89,7 @@ pub fn build_download_args(
     let args = vec![
         "--ignore-config".into(),
         "--no-warnings".into(),
+        "--windows-filenames".into(),
         conflict_arg.into(),
         "--newline".into(),
         "--progress".into(),
@@ -97,7 +102,11 @@ pub fn build_download_args(
         "--paths".into(),
         format!("home:{}", options.output_directory).into(),
         "--output".into(),
-        "%(title)s [%(id)s].%(ext)s".into(),
+        if options.playlist_item_count.is_some() {
+            SERIES_OUTPUT_TEMPLATE.into()
+        } else {
+            SINGLE_OUTPUT_TEMPLATE.into()
+        },
         "--print".into(),
         "after_move:SB_RESULT:%(filepath)j".into(),
         "--".into(),
@@ -246,7 +255,10 @@ mod tests {
 
     use crate::domain::download::{CookiePreferences, DownloadOptions};
 
-    use super::{DOWNLOAD_PROGRESS_TEMPLATE, build_download_args};
+    use super::{
+        DOWNLOAD_PROGRESS_TEMPLATE, SERIES_OUTPUT_TEMPLATE, SINGLE_OUTPUT_TEMPLATE,
+        build_download_args,
+    };
 
     fn temp_directory() -> PathBuf {
         let path = std::env::temp_dir().join(format!(
@@ -292,6 +304,11 @@ mod tests {
         assert!(strings.contains(&"--ignore-config".into()));
         assert!(strings.contains(&"--no-playlist".into()));
         assert!(strings.contains(&"--no-overwrites".into()));
+        assert!(strings.contains(&"--windows-filenames".into()));
+        assert!(
+            args.windows(2)
+                .any(|pair| pair == ["--output", SINGLE_OUTPUT_TEMPLATE])
+        );
         assert!(strings.contains(&"--format".into()));
         assert!(strings.contains(&"bestvideo+bestaudio".into()));
         assert!(strings.contains(&DOWNLOAD_PROGRESS_TEMPLATE.into()));
@@ -369,6 +386,11 @@ mod tests {
         assert!(strings.contains(&"--yes-playlist".into()));
         assert!(strings.contains(&"--playlist-items".into()));
         assert!(strings.contains(&"1-50".into()));
+        assert!(strings.contains(&"--no-write-playlist-metafiles".into()));
+        assert!(
+            args.windows(2)
+                .any(|pair| pair == ["--output", SERIES_OUTPUT_TEMPLATE])
+        );
         assert!(!strings.contains(&"--no-playlist".into()));
 
         download_options.playlist_item_count = Some(51);

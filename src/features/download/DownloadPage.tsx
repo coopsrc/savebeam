@@ -412,7 +412,13 @@ export function DownloadPage() {
                       登录 Cookie 在“设置 → Cookie 与登录”中配置，全局用于解析媒体信息与下载。
                     </Text>
                     <Text size="xs" c="dimmed">
-                      保存位置：系统“下载”目录。部分后处理选项需要 FFmpeg。
+                      保存位置：默认下载目录，可在设置中更改。部分后处理选项需要 FFmpeg。
+                    </Text>
+                    <Text size="xs" c="dimmed">
+                      {mediaInfo.playlist
+                        ? "保存结构：系列名称/序号-视频标题.扩展名"
+                        : "保存结构：视频标题.扩展名"}
+                      。字幕、封面和 JSON 使用相同标题。
                     </Text>
                     <Group justify="flex-end">
                       <Button

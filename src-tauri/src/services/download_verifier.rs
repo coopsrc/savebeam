@@ -158,4 +158,57 @@ mod tests {
         let _ = fs::remove_file(outside);
         let _ = fs::remove_dir_all(directory);
     }
+
+    #[test]
+    fn accepts_series_outputs_in_a_subdirectory_and_calculates_the_total() {
+        let directory = temp_directory();
+        let series = directory.join("学习系列");
+        fs::create_dir(&series).unwrap();
+        let paths = [series.join("1-第一课.mp4"), series.join("2-第二课.mkv")];
+        for path in &paths {
+            fs::write(path, b"media").unwrap();
+        }
+        let result = verify_download_outputs(
+            ProcessOutput {
+                output_paths: paths
+                    .iter()
+                    .map(|path| path.to_string_lossy().into_owned())
+                    .collect(),
+            },
+            "series-task",
+            "学习系列",
+            &directory,
+        )
+        .unwrap();
+        assert_eq!(result.output_paths.len(), 2);
+        assert_eq!(result.total_bytes, 10);
+        let _ = fs::remove_dir_all(directory);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn rejects_series_subdirectories_linked_outside_the_download_root() {
+        let directory = temp_directory();
+        let outside = temp_directory();
+        fs::write(outside.join("1-视频.mp4"), b"media").unwrap();
+        std::os::unix::fs::symlink(&outside, directory.join("系列")).unwrap();
+        let result = verify_download_outputs(
+            ProcessOutput {
+                output_paths: vec![
+                    directory
+                        .join("系列/1-视频.mp4")
+                        .to_string_lossy()
+                        .into_owned(),
+                ],
+            },
+            "series-task",
+            "系列",
+            &directory,
+        );
+        assert!(
+            matches!(result, Err(error) if error.code == crate::domain::error::ErrorCode::PermissionDenied)
+        );
+        let _ = fs::remove_dir_all(directory);
+        let _ = fs::remove_dir_all(outside);
+    }
 }
