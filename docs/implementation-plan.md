@@ -207,6 +207,8 @@ chore(milestone): verify M4 single-download workflow
 
 M6 待决：T6b 的生产安装/更新交互尚未接入。实现依赖 Savebeam 清单签名公钥、对应签名私钥的受控保管及发布清单来源；仓库当前没有 Git remote 或发行仓库。不得使用测试密钥或未签名 URL 代替。
 
+当前状态：M6 未验收，细节见 [`docs/verification/M6.md`](verification/M6.md)；完成 T6b 前不得进入 M7。
+
 ### M7：功能完善与安全加固
 
 **目标**：补齐首个公开测试版本所需能力。
