@@ -122,7 +122,7 @@ chore(milestone): verify M4 single-download workflow
 任务：
 
 - [x] M3-T1 实现 `YtDlpProcessEngine.inspect`。
-- [ ] M3-T2 定义 `MediaInfo/FormatOption/SubtitleTrack`。
+- [x] M3-T2 定义 `MediaInfo/FormatOption/SubtitleTrack`。
 - [ ] M3-T3 将 yt-dlp JSON 映射为内部稳定模型。
 - [ ] M3-T4 实现超时、取消和错误分类。
 - [ ] M3-T5 实现媒体卡片、封面、格式和字幕选择。
