@@ -5,13 +5,15 @@ use std::path::PathBuf;
 use tauri::{AppHandle, Manager, State};
 
 use crate::{
-    commands::{components::ComponentRegistry, ipc::CommandResult},
+    commands::{
+        components::ComponentRegistry, downloads::load_cookie_preferences, ipc::CommandResult,
+    },
     domain::{
         component::{ComponentKind, ComponentStatus},
         error::{AppError, ErrorCode},
         media::MediaInfo,
     },
-    infrastructure::ytdlp_process::YtDlpProcessEngine,
+    infrastructure::{database::DatabaseManager, ytdlp_process::YtDlpProcessEngine},
     services::{
         component_detector::ComponentDetector, component_paths::ComponentPaths,
         component_probe::probe_all, media_mapper::map_media_info,
@@ -22,6 +24,7 @@ use crate::{
 pub async fn inspect_media(
     app: AppHandle,
     registry: State<'_, ComponentRegistry>,
+    database: State<'_, DatabaseManager>,
     url: String,
 ) -> CommandResult<MediaInfo> {
     if url.len() > 4096 || !(url.starts_with("http://") || url.starts_with("https://")) {
@@ -40,6 +43,7 @@ pub async fn inspect_media(
         .lock()
         .map_err(|_| AppError::new(ErrorCode::Unknown, "组件设置暂时不可用。", true))?
         .clone();
+    let cookies = load_cookie_preferences(database.inner())?;
 
     tauri::async_runtime::spawn_blocking(move || {
         let detector =
@@ -71,7 +75,8 @@ pub async fn inspect_media(
             })
             .and_then(|item| item.executable_path.as_ref())
             .map(PathBuf::from);
-        let raw = YtDlpProcessEngine::new(executable, runtime_path).inspect(&url)?;
+        let raw = YtDlpProcessEngine::new(executable, runtime_path)
+            .inspect_with_cookies(&url, &cookies)?;
         map_media_info(&raw, &url)
     })
     .await

@@ -218,7 +218,7 @@ M6 待决：T6b 应用侧交互及 T8 本地准备已完成，但 Savebeam 仓�
 
 - [x] M7-T1 支持播放列表并提供数量确认和安全上限。
 - [x] M7-T2 支持仅音频、字幕、缩略图和元数据选项。
-- [x] M7-T3 支持用户显式选择 `cookies.txt`，并在任务级明确授权后允许 yt-dlp 从选定浏览器默认配置读取登录 Cookie。
+- [x] M7-T3 支持用户选择 `cookies.txt` 或浏览器 Cookie 并明确授权；后续依用户反馈调整为设置页全局配置，同时用于视频解析和下载。
 - [x] M7-T4 完成错误诊断脱敏和用户主动导出隐私最小化诊断报告。
 - [x] M7-T5 启用并收紧 CSP 与 Tauri capabilities。
 - [x] M7-T6 完成基础可访问性、错误文案本地化准备和关键错误提示。
@@ -231,7 +231,7 @@ M6 待决：T6b 应用侧交互及 T8 本地准备已完成，但 Savebeam 仓�
 - 播放列表不会在未确认时创建超大任务集合。
 - 安全与许可证检查项有记录并关闭高优先级问题。
 
-当前进度：M7-T1 至 M7-T7 已完成任务级实现、审计及 macOS 自动化验证，证据见 [`M7-T1`](verification/M7-T1.md)、[`M7-T2`](verification/M7-T2.md)、[`M7-T3`](verification/M7-T3.md)、[`M7-T4`](verification/M7-T4.md)、[`M7-T5`](verification/M7-T5.md)、[`M7-T6`](verification/M7-T6.md) 和 [`M7-T7`](verification/M7-T7.md)。M7 整体仍未验收：尚缺 GUI 人工 smoke test、完整 VoiceOver/键盘巡检，且 M6 组件发行门槛仍打开。
+当前进度：M7-T1 至 M7-T7 已完成实现、审计及 macOS 自动化验证，Cookie 已按用户反馈改为设置页全局授权，并同时作用于解析与下载；证据见 [`M7-T1`](verification/M7-T1.md)、[`M7-T2`](verification/M7-T2.md)、[`M7-T3`](verification/M7-T3.md)、[`M7-T4`](verification/M7-T4.md)、[`M7-T5`](verification/M7-T5.md)、[`M7-T6`](verification/M7-T6.md) 和 [`M7-T7`](verification/M7-T7.md)。M7 整体仍未验收：尚缺 GUI 人工 smoke test、完整 VoiceOver/键盘巡检，且 M6 组件发行门槛仍打开。
 
 ### M8：桌面发布准备
 

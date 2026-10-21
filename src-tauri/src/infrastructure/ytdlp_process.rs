@@ -14,7 +14,10 @@ use std::{
 
 use serde_json::Value;
 
-use crate::domain::error::{AppError, ErrorCode};
+use crate::domain::{
+    download::CookiePreferences,
+    error::{AppError, ErrorCode},
+};
 
 const INSPECT_TIMEOUT: Duration = Duration::from_secs(60);
 const MAX_JSON_BYTES: usize = 16 * 1024 * 1024;
@@ -60,7 +63,20 @@ impl YtDlpProcessEngine {
         url: &str,
         cancellation: &CancellationToken,
     ) -> Result<Value, AppError> {
-        self.inspect_with_timeout(url, cancellation, INSPECT_TIMEOUT)
+        self.inspect_with_timeout(
+            url,
+            cancellation,
+            INSPECT_TIMEOUT,
+            &CookiePreferences::default(),
+        )
+    }
+
+    pub fn inspect_with_cookies(
+        &self,
+        url: &str,
+        cookies: &CookiePreferences,
+    ) -> Result<Value, AppError> {
+        self.inspect_with_timeout(url, &CancellationToken::default(), INSPECT_TIMEOUT, cookies)
     }
 
     fn inspect_with_timeout(
@@ -68,6 +84,7 @@ impl YtDlpProcessEngine {
         url: &str,
         cancellation: &CancellationToken,
         timeout: Duration,
+        cookies: &CookiePreferences,
     ) -> Result<Value, AppError> {
         if url.len() > 4096 || !(url.starts_with("http://") || url.starts_with("https://")) {
             return Err(AppError::new(
@@ -97,6 +114,38 @@ impl YtDlpProcessEngine {
             && let Some(runtime) = runtime_argument(runtime_path)
         {
             command.arg("--js-runtimes").arg(runtime);
+        }
+
+        if cookies.cookies_file_path.is_some() && cookies.cookies_browser.is_some() {
+            return Err(AppError::new(
+                ErrorCode::InvalidPath,
+                "全局 Cookie 只能配置一种来源。",
+                false,
+            ));
+        }
+        if (cookies.cookies_file_path.is_some() || cookies.cookies_browser.is_some())
+            && !cookies.access_confirmed
+        {
+            return Err(AppError::new(
+                ErrorCode::PermissionDenied,
+                "启用全局登录 Cookie 前需要明确确认授权。",
+                false,
+            ));
+        }
+        if let Some(path) = &cookies.cookies_file_path {
+            if path.contains('\0') || !std::path::Path::new(path).is_file() {
+                return Err(AppError::new(
+                    ErrorCode::InvalidPath,
+                    "全局 Cookie 文件不可访问。",
+                    false,
+                ));
+            }
+            command.arg("--cookies").arg(path);
+        }
+        if let Some(browser) = cookies.cookies_browser {
+            command
+                .arg("--cookies-from-browser")
+                .arg(browser.yt_dlp_name());
         }
 
         let mut child = command.arg(url).spawn().map_err(|_| {
@@ -268,6 +317,7 @@ mod tests {
         time::{SystemTime, UNIX_EPOCH},
     };
 
+    use crate::domain::download::CookiePreferences;
     use crate::domain::error::ErrorCode;
     use crate::services::media_mapper::map_media_info;
 
@@ -370,6 +420,7 @@ mod tests {
                 "https://example.com/video",
                 &CancellationToken::default(),
                 std::time::Duration::from_millis(75),
+                &CookiePreferences::default(),
             )
             .expect_err("slow inspection should time out");
 

@@ -14,9 +14,8 @@ import {
   Title,
 } from "@mantine/core";
 import { IconAlertCircle, IconLink, IconSearch } from "@tabler/icons-react";
-import { open } from "@tauri-apps/plugin-dialog";
 import { IpcError } from "../../ipc/client";
-import type { CookieBrowser, DownloadOptions, DownloadTask, MediaInfo } from "../../types/domain";
+import type { DownloadOptions, DownloadTask, MediaInfo } from "../../types/domain";
 import { useNavigate } from "react-router-dom";
 import { invokeCommand } from "../../ipc/client";
 import { useAppStore } from "../../stores/appStore";
@@ -47,11 +46,6 @@ export function DownloadPage() {
   const [writeThumbnail, setWriteThumbnail] = useState(false);
   const [writeInfoJson, setWriteInfoJson] = useState(false);
   const [embedMetadata, setEmbedMetadata] = useState(false);
-  const [cookieSource, setCookieSource] = useState<"none" | "file" | "browser">("none");
-  const [cookiesFilePath, setCookiesFilePath] = useState<string | null>(null);
-  const [cookiesBrowser, setCookiesBrowser] = useState<CookieBrowser | null>(null);
-  const [cookieAccessConfirmed, setCookieAccessConfirmed] = useState(false);
-  const [cookiePickerError, setCookiePickerError] = useState<string | null>(null);
   const [requestError, setRequestError] = useState<string | null>(null);
   const upsertDownloadTask = useAppStore((state) => state.upsertDownloadTask);
   const navigate = useNavigate();
@@ -72,11 +66,6 @@ export function DownloadPage() {
     setWriteThumbnail(false);
     setWriteInfoJson(false);
     setEmbedMetadata(false);
-    setCookieSource("none");
-    setCookiesFilePath(null);
-    setCookiesBrowser(null);
-    setCookieAccessConfirmed(false);
-    setCookiePickerError(null);
 
     const checked = validateMediaUrl(url);
     if (!checked.valid) return;
@@ -118,9 +107,6 @@ export function DownloadPage() {
       writeThumbnail,
       writeInfoJson,
       embedMetadata,
-      cookiesFilePath: cookieSource === "file" ? cookiesFilePath : null,
-      cookiesBrowser: cookieSource === "browser" ? cookiesBrowser : null,
-      cookieAccessConfirmed,
       conflictStrategy: "skip",
     };
     try {
@@ -131,25 +117,6 @@ export function DownloadPage() {
       setRequestError(error instanceof IpcError ? error.message : "无法创建下载任务。");
     } finally {
       setIsStartingDownload(false);
-    }
-  }
-
-  async function chooseCookiesFile() {
-    setCookiePickerError(null);
-    try {
-      const selection = await open({
-        title: "选择 cookies.txt",
-        filters: [{ name: "Cookie 文本文件", extensions: ["txt"] }],
-        multiple: false,
-        directory: false,
-        fileAccessMode: "scoped",
-      });
-      if (typeof selection === "string") {
-        setCookiesFilePath(selection);
-        setCookieAccessConfirmed(false);
-      }
-    } catch {
-      setCookiePickerError("无法打开系统文件选择器，请稍后重试。");
     }
   }
 
@@ -331,100 +298,9 @@ export function DownloadPage() {
                         label="将媒体元数据写入文件"
                       />
                     </Stack>
-                    <Stack gap="xs">
-                      <Select
-                        label="登录信息来源（可选）"
-                        description="只用于你明确选择的当前下载任务。"
-                        data={[
-                          { value: "none", label: "不使用登录信息" },
-                          { value: "file", label: "使用 cookies.txt 文件" },
-                          { value: "browser", label: "从本机浏览器读取登录 Cookie" },
-                        ]}
-                        value={cookieSource}
-                        onChange={(value) => {
-                          const source = value === "file" || value === "browser" ? value : "none";
-                          setCookieSource(source);
-                          setCookieAccessConfirmed(false);
-                          setCookiePickerError(null);
-                          if (source !== "file") setCookiesFilePath(null);
-                          if (source !== "browser") setCookiesBrowser(null);
-                        }}
-                        allowDeselect={false}
-                      />
-                      {cookieSource === "file" && (
-                        <>
-                          <Group align="center" wrap="wrap">
-                            <Button variant="default" onClick={() => void chooseCookiesFile()}>
-                              选择 cookies.txt
-                            </Button>
-                            {cookiesFilePath && (
-                              <Text size="sm" c="dimmed">
-                                已选择：{cookiesFilePath.split(/[\\/]/).pop() ?? "cookies.txt"}
-                              </Text>
-                            )}
-                          </Group>
-                          <Alert color="yellow" title="Cookie 文件注意事项">
-                            yt-dlp
-                            会读取并可能更新你选择的文件。若不希望原文件发生变化，请先选择它的副本。
-                          </Alert>
-                        </>
-                      )}
-                      {cookieSource === "browser" && (
-                        <>
-                          <Select
-                            label="选择浏览器"
-                            placeholder="选择已登录的浏览器"
-                            data={[
-                              { value: "brave", label: "Brave" },
-                              { value: "chrome", label: "Google Chrome" },
-                              { value: "chromium", label: "Chromium" },
-                              { value: "edge", label: "Microsoft Edge" },
-                              { value: "firefox", label: "Firefox" },
-                              { value: "opera", label: "Opera" },
-                              { value: "safari", label: "Safari" },
-                              { value: "vivaldi", label: "Vivaldi" },
-                              { value: "whale", label: "Whale" },
-                            ]}
-                            value={cookiesBrowser}
-                            onChange={(value) => {
-                              setCookiesBrowser(value as CookieBrowser | null);
-                              setCookieAccessConfirmed(false);
-                            }}
-                            searchable
-                            allowDeselect={false}
-                          />
-                          <Alert color="orange" title="敏感权限确认">
-                            Savebeam 将要求 yt-dlp 从所选浏览器读取登录 Cookie；配置按 yt-dlp
-                            默认规则选择， 通常为最近使用的配置。Cookie
-                            可代表你的账号访问网站；请只对你信任的网站使用。应用不会读取 Cookie
-                            内容， 但 yt-dlp
-                            会在本机读取它们并用于本次下载。若浏览器配置被占用，请先退出浏览器。
-                          </Alert>
-                        </>
-                      )}
-                      {cookieSource !== "none" && (
-                        <Checkbox
-                          checked={cookieAccessConfirmed}
-                          onChange={(event) =>
-                            setCookieAccessConfirmed(event.currentTarget.checked)
-                          }
-                          disabled={
-                            (cookieSource === "file" && !cookiesFilePath) ||
-                            (cookieSource === "browser" && !cookiesBrowser)
-                          }
-                          label={
-                            cookieSource === "browser"
-                              ? "我授权本任务使用所选浏览器的登录 Cookie"
-                              : "我授权 yt-dlp 为本任务读取并可能更新所选 cookies.txt 文件"
-                          }
-                        />
-                      )}
-                      {cookiePickerError && (
-                        <Text size="sm" c="red" role="alert">
-                          {cookiePickerError}
-                        </Text>
-                      )}
-                    </Stack>
+                    <Text size="sm" c="dimmed">
+                      登录 Cookie 在“设置 → Cookie 与登录”中配置，全局用于解析媒体信息与下载。
+                    </Text>
                     <Text size="xs" c="dimmed">
                       保存位置：系统“下载”目录。部分后处理选项需要 FFmpeg。
                     </Text>
@@ -436,11 +312,7 @@ export function DownloadPage() {
                           (mediaInfo.playlist
                             ? !playlistConfirmed
                             : !selectedFormat && !audioOnly) ||
-                          (writeAutomaticSubtitles && subtitleLanguages.length === 0) ||
-                          (cookieSource === "file" && !cookiesFilePath) ||
-                          (cookieSource === "browser" &&
-                            (!cookiesBrowser || !cookieAccessConfirmed)) ||
-                          (cookieSource === "file" && !cookieAccessConfirmed)
+                          (writeAutomaticSubtitles && subtitleLanguages.length === 0)
                         }
                       >
                         开始下载

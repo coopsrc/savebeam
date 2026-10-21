@@ -126,9 +126,6 @@ export interface DownloadOptions {
   writeThumbnail: boolean;
   writeInfoJson: boolean;
   embedMetadata: boolean;
-  cookiesFilePath: string | null;
-  cookiesBrowser: CookieBrowser | null;
-  cookieAccessConfirmed: boolean;
   conflictStrategy: "skip" | "overwrite";
 }
 
@@ -139,6 +136,12 @@ export interface DownloadPreferences {
   outputDirectory: string;
   maxConcurrent: number;
   conflictStrategy: "skip" | "overwrite";
+}
+
+export interface CookiePreferences {
+  cookiesFilePath: string | null;
+  cookiesBrowser: CookieBrowser | null;
+  accessConfirmed: boolean;
 }
 
 export interface DownloadProgress {

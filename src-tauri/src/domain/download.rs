@@ -49,7 +49,7 @@ impl CookieBrowser {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DownloadOptions {
     pub title: String,
@@ -78,6 +78,16 @@ pub struct DownloadOptions {
     pub cookies_browser: Option<CookieBrowser>,
     #[serde(default)]
     pub cookie_access_confirmed: bool,
+}
+
+/// App-wide authenticated extraction settings. Consent is stored separately
+/// from download tasks and applies to both metadata inspection and downloads.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CookiePreferences {
+    pub cookies_file_path: Option<String>,
+    pub cookies_browser: Option<CookieBrowser>,
+    pub access_confirmed: bool,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, Serialize)]

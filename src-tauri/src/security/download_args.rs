@@ -3,7 +3,7 @@
 use std::{ffi::OsString, path::Path};
 
 use crate::domain::{
-    download::{DownloadConflictStrategy, DownloadOptions, MAX_PLAYLIST_ITEMS},
+    download::{CookiePreferences, DownloadConflictStrategy, DownloadOptions, MAX_PLAYLIST_ITEMS},
     error::{AppError, ErrorCode},
 };
 
@@ -15,7 +15,10 @@ const DOWNLOAD_PROGRESS_TEMPLATE: &str = concat!(
 );
 
 /// Builds a fixed, shell-free argv for a single media item.
-pub fn build_download_args(options: &DownloadOptions) -> Result<Vec<OsString>, AppError> {
+pub fn build_download_args(
+    options: &DownloadOptions,
+    cookies: &CookiePreferences,
+) -> Result<Vec<OsString>, AppError> {
     validate_url(&options.url)?;
     if !options.audio_only {
         validate_format_selector(&options.format_id)?;
@@ -29,15 +32,15 @@ pub fn build_download_args(options: &DownloadOptions) -> Result<Vec<OsString>, A
         ));
     }
     let cookie_source_selected =
-        options.cookies_file_path.is_some() || options.cookies_browser.is_some();
-    if options.cookies_file_path.is_some() && options.cookies_browser.is_some() {
+        cookies.cookies_file_path.is_some() || cookies.cookies_browser.is_some();
+    if cookies.cookies_file_path.is_some() && cookies.cookies_browser.is_some() {
         return Err(AppError::new(
             ErrorCode::InvalidPath,
             "每个任务只能选择一种登录 Cookie 来源。",
             false,
         ));
     }
-    if cookie_source_selected && !options.cookie_access_confirmed {
+    if cookie_source_selected && !cookies.access_confirmed {
         return Err(AppError::new(
             ErrorCode::PermissionDenied,
             "使用登录 Cookie 前需要明确确认授权。",
@@ -104,14 +107,14 @@ pub fn build_download_args(options: &DownloadOptions) -> Result<Vec<OsString>, A
     let mut args = args;
     args.splice(2..2, playlist_arguments);
 
-    if let Some(path) = &options.cookies_file_path {
+    if let Some(path) = &cookies.cookies_file_path {
         validate_cookies_file(path)?;
         args.splice(
             args.len() - 2..args.len() - 2,
             [OsString::from("--cookies"), OsString::from(path)],
         );
     }
-    if let Some(browser) = options.cookies_browser {
+    if let Some(browser) = cookies.cookies_browser {
         args.splice(
             args.len() - 2..args.len() - 2,
             [
@@ -231,7 +234,7 @@ mod tests {
         time::{SystemTime, UNIX_EPOCH},
     };
 
-    use crate::domain::download::DownloadOptions;
+    use crate::domain::download::{CookiePreferences, DownloadOptions};
 
     use super::{DOWNLOAD_PROGRESS_TEMPLATE, build_download_args};
 
@@ -271,7 +274,8 @@ mod tests {
     #[test]
     fn builds_fixed_argv_and_keeps_urls_and_paths_as_single_values() {
         let directory = temp_directory();
-        let args = build_download_args(&options(&directory)).expect("valid options should build");
+        let args = build_download_args(&options(&directory), &CookiePreferences::default())
+            .expect("valid options should build");
         let strings: Vec<_> = args.iter().map(|value| value.to_string_lossy()).collect();
 
         assert!(strings.contains(&"--ignore-config".into()));
@@ -294,7 +298,7 @@ mod tests {
         let directory = temp_directory();
         let mut download_options = options(&directory);
         download_options.format_id = "best;--exec=touch /tmp/pwned".into();
-        assert!(build_download_args(&download_options).is_err());
+        assert!(build_download_args(&download_options, &CookiePreferences::default()).is_err());
         let _ = fs::remove_dir_all(directory);
     }
 
@@ -304,7 +308,7 @@ mod tests {
         let mut download_options = options(&directory);
         download_options.conflict_strategy =
             crate::domain::download::DownloadConflictStrategy::Overwrite;
-        let args = build_download_args(&download_options).unwrap();
+        let args = build_download_args(&download_options, &CookiePreferences::default()).unwrap();
         let strings: Vec<_> = args.iter().map(|value| value.to_string_lossy()).collect();
         assert!(strings.contains(&"--force-overwrites".into()));
         assert!(!strings.contains(&"--no-overwrites".into()));
@@ -316,7 +320,7 @@ mod tests {
         let directory = temp_directory();
         let mut download_options = options(&directory);
         download_options.playlist_item_count = Some(50);
-        let args = build_download_args(&download_options).unwrap();
+        let args = build_download_args(&download_options, &CookiePreferences::default()).unwrap();
         let strings: Vec<_> = args.iter().map(|value| value.to_string_lossy()).collect();
         assert!(strings.contains(&"--yes-playlist".into()));
         assert!(strings.contains(&"--playlist-items".into()));
@@ -324,7 +328,7 @@ mod tests {
         assert!(!strings.contains(&"--no-playlist".into()));
 
         download_options.playlist_item_count = Some(51);
-        assert!(build_download_args(&download_options).is_err());
+        assert!(build_download_args(&download_options, &CookiePreferences::default()).is_err());
         let _ = fs::remove_dir_all(directory);
     }
 
@@ -339,7 +343,7 @@ mod tests {
         download_options.write_info_json = true;
         download_options.embed_metadata = true;
 
-        let args = build_download_args(&download_options).unwrap();
+        let args = build_download_args(&download_options, &CookiePreferences::default()).unwrap();
         let strings: Vec<_> = args.iter().map(|value| value.to_string_lossy()).collect();
         for flag in [
             "--extract-audio",
@@ -358,7 +362,7 @@ mod tests {
         assert!(strings.contains(&"en-US,zh-Hans".into()));
 
         download_options.subtitle_languages = vec!["en,all".into()];
-        assert!(build_download_args(&download_options).is_err());
+        assert!(build_download_args(&download_options, &CookiePreferences::default()).is_err());
         let _ = fs::remove_dir_all(directory);
     }
 
@@ -367,20 +371,23 @@ mod tests {
         let directory = temp_directory();
         let cookie_file = directory.join("cookies.txt");
         fs::write(&cookie_file, "not read by Savebeam").unwrap();
-        let mut download_options = options(&directory);
-        download_options.cookies_file_path = Some(cookie_file.to_string_lossy().into_owned());
-        assert!(build_download_args(&download_options).is_err());
+        let download_options = options(&directory);
+        let mut cookies = CookiePreferences {
+            cookies_file_path: Some(cookie_file.to_string_lossy().into_owned()),
+            ..CookiePreferences::default()
+        };
+        assert!(build_download_args(&download_options, &cookies).is_err());
 
-        download_options.cookie_access_confirmed = true;
-        let args = build_download_args(&download_options).unwrap();
+        cookies.access_confirmed = true;
+        let args = build_download_args(&download_options, &cookies).unwrap();
         let strings: Vec<_> = args.iter().map(|value| value.to_string_lossy()).collect();
         assert!(strings.contains(&"--cookies".into()));
         assert!(strings.contains(&cookie_file.to_string_lossy().into_owned().into()));
 
-        download_options.cookies_browser = Some(crate::domain::download::CookieBrowser::Firefox);
-        assert!(build_download_args(&download_options).is_err());
-        download_options.cookies_file_path = None;
-        let args = build_download_args(&download_options).unwrap();
+        cookies.cookies_browser = Some(crate::domain::download::CookieBrowser::Firefox);
+        assert!(build_download_args(&download_options, &cookies).is_err());
+        cookies.cookies_file_path = None;
+        let args = build_download_args(&download_options, &cookies).unwrap();
         let strings: Vec<_> = args.iter().map(|value| value.to_string_lossy()).collect();
         assert!(strings.contains(&"--cookies-from-browser".into()));
         assert!(strings.contains(&"firefox".into()));
@@ -394,10 +401,10 @@ mod tests {
         let mut download_options = options(&directory);
         download_options.output_directory =
             directory.join("missing").to_string_lossy().into_owned();
-        assert!(build_download_args(&download_options).is_err());
+        assert!(build_download_args(&download_options, &CookiePreferences::default()).is_err());
         download_options.output_directory = directory.to_string_lossy().into_owned();
         download_options.url = "file:///etc/passwd".into();
-        assert!(build_download_args(&download_options).is_err());
+        assert!(build_download_args(&download_options, &CookiePreferences::default()).is_err());
         let _ = fs::remove_dir_all(directory);
     }
 }

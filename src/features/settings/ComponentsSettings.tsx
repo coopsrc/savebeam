@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import {
+  Alert,
   Badge,
   Button,
+  Checkbox,
   Group,
   NumberInput,
   Paper,
@@ -13,7 +15,7 @@ import {
   Title,
 } from "@mantine/core";
 import { IconRefresh, IconTrash } from "@tabler/icons-react";
-import { confirm, save } from "@tauri-apps/plugin-dialog";
+import { confirm, open, save } from "@tauri-apps/plugin-dialog";
 import { ErrorState, LoadingState } from "../../components/states/AppStates";
 import { usePlatformProfile } from "../../app/platform/profile";
 import { invokeCommand } from "../../ipc/client";
@@ -22,6 +24,8 @@ import type {
   ComponentInstallProgress,
   ComponentKind,
   ComponentRelease,
+  CookiePreferences,
+  CookieBrowser,
   DownloadPreferences,
 } from "../../types/domain";
 import { IPC_EVENTS, listenToEvent } from "../../ipc/events";
@@ -257,6 +261,7 @@ export function ComponentsSettings() {
   return (
     <main className="settings-page">
       <Stack gap="lg">
+        <CookiePreferencesPanel />
         <DownloadPreferencesPanel />
         <DiagnosticsPanel />
         <Group justify="space-between" align="flex-start">
@@ -549,6 +554,186 @@ function DiagnosticsPanel() {
         <Group justify="flex-end">
           <Button variant="light" loading={exporting} onClick={() => void exportReport()}>
             导出诊断信息
+          </Button>
+        </Group>
+      </Stack>
+    </Paper>
+  );
+}
+
+function CookiePreferencesPanel() {
+  const [preferences, setPreferences] = useState<CookiePreferences>({
+    cookiesFilePath: null,
+    cookiesBrowser: null,
+    accessConfirmed: false,
+  });
+  const [source, setSource] = useState<"none" | "file" | "browser">("none");
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    invokeCommand<CookiePreferences>("get_cookie_preferences")
+      .then((value) => {
+        setPreferences(value);
+        setSource(value.cookiesFilePath ? "file" : value.cookiesBrowser ? "browser" : "none");
+      })
+      .catch((reason: unknown) =>
+        setError(reason instanceof Error ? reason.message : "无法读取登录 Cookie 设置。"),
+      );
+  }, []);
+
+  function changeSource(value: "none" | "file" | "browser") {
+    setSource(value);
+    setPreferences((current) => ({
+      ...current,
+      cookiesFilePath: value === "file" ? current.cookiesFilePath : null,
+      cookiesBrowser: value === "browser" ? current.cookiesBrowser : null,
+      accessConfirmed: value === "none" ? false : current.accessConfirmed,
+    }));
+    setSaved(false);
+  }
+
+  async function chooseCookiesFile() {
+    try {
+      const selected = await open({
+        title: "选择 cookies.txt",
+        filters: [{ name: "Cookie 文本文件", extensions: ["txt"] }],
+        multiple: false,
+        directory: false,
+        fileAccessMode: "scoped",
+      });
+      if (typeof selected === "string") {
+        setPreferences((value) => ({
+          ...value,
+          cookiesFilePath: selected,
+          accessConfirmed: false,
+        }));
+        setSaved(false);
+      }
+    } catch {
+      setError("无法打开系统文件选择器，请稍后重试。");
+    }
+  }
+
+  async function savePreferences() {
+    setSaving(true);
+    setError(null);
+    setSaved(false);
+    try {
+      const next = await invokeCommand<CookiePreferences>("save_cookie_preferences", {
+        preferences,
+      });
+      setPreferences(next);
+      setSaved(true);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "无法保存登录 Cookie 设置。");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const browserOptions: { value: CookieBrowser; label: string }[] = [
+    { value: "brave", label: "Brave" },
+    { value: "chrome", label: "Google Chrome" },
+    { value: "chromium", label: "Chromium" },
+    { value: "edge", label: "Microsoft Edge" },
+    { value: "firefox", label: "Firefox" },
+    { value: "opera", label: "Opera" },
+    { value: "safari", label: "Safari" },
+    { value: "vivaldi", label: "Vivaldi" },
+    { value: "whale", label: "Whale" },
+  ];
+
+  return (
+    <Paper withBorder radius="md" p="md">
+      <Stack gap="sm">
+        <div>
+          <Text fw={650}>Cookie 与登录</Text>
+          <Text size="sm" c="dimmed" mt={3}>
+            配置后全局用于解析媒体信息和下载，适用于需要登录才能查看的内容或更高画质。
+          </Text>
+        </div>
+        <Select
+          label="登录信息来源"
+          data={[
+            { value: "none", label: "不使用登录信息" },
+            { value: "file", label: "使用 cookies.txt 文件" },
+            { value: "browser", label: "从本机浏览器读取" },
+          ]}
+          value={source}
+          onChange={(value) =>
+            changeSource(value === "file" || value === "browser" ? value : "none")
+          }
+          allowDeselect={false}
+        />
+        {source === "file" && (
+          <Group align="center" wrap="wrap">
+            <Button variant="default" onClick={() => void chooseCookiesFile()}>
+              选择 cookies.txt
+            </Button>
+            {preferences.cookiesFilePath && (
+              <Text size="sm" c="dimmed">
+                已选择：{preferences.cookiesFilePath.split(/[\\/]/).pop() ?? "cookies.txt"}
+              </Text>
+            )}
+          </Group>
+        )}
+        {source === "browser" && (
+          <Select
+            label="选择浏览器"
+            placeholder="选择已登录的浏览器"
+            data={browserOptions}
+            value={preferences.cookiesBrowser}
+            onChange={(value) => {
+              setPreferences((current) => ({
+                ...current,
+                cookiesBrowser: value as CookieBrowser | null,
+                accessConfirmed: false,
+              }));
+              setSaved(false);
+            }}
+            searchable
+            allowDeselect={false}
+          />
+        )}
+        {source !== "none" && (
+          <>
+            <Alert color="yellow" title="敏感权限确认">
+              yt-dlp 将在本机读取登录 Cookie，并同时用于解析和下载。Cookie 可代表你的账号访问网站；
+              cookies.txt 可能被 yt-dlp 更新，浏览器配置可能需要先退出浏览器。应用不会读取或上传
+              Cookie 内容。仅对你信任的网站使用。
+            </Alert>
+            <Checkbox
+              checked={preferences.accessConfirmed}
+              disabled={
+                (source === "file" && !preferences.cookiesFilePath) ||
+                (source === "browser" && !preferences.cookiesBrowser)
+              }
+              onChange={(event) => {
+                setPreferences((value) => ({
+                  ...value,
+                  accessConfirmed: event.currentTarget.checked,
+                }));
+                setSaved(false);
+              }}
+              label="我授权 Savebeam 全局使用所选登录 Cookie 进行媒体解析和下载"
+            />
+          </>
+        )}
+        {error && (
+          <Text size="sm" c="red" role="alert">
+            {error}
+          </Text>
+        )}
+        {saved && (
+          <Text size="sm" c="green" role="status">
+            Cookie 设置已保存。
+          </Text>
+        )}
+        <Group justify="flex-end">
+          <Button onClick={() => void savePreferences()} loading={saving}>
+            保存 Cookie 设置
           </Button>
         </Group>
       </Stack>

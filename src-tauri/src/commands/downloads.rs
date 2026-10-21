@@ -20,8 +20,8 @@ use crate::{
         component::{ComponentInstallation, ComponentKind, ComponentStatus},
         download::DownloadHistoryRecord,
         download::{
-            DownloadOptions, DownloadPreferences, DownloadTask, DownloadTaskStatus,
-            MAX_PLAYLIST_ITEMS,
+            CookiePreferences, DownloadOptions, DownloadPreferences, DownloadTask,
+            DownloadTaskStatus, MAX_PLAYLIST_ITEMS,
         },
         error::{AppError, ErrorCode},
     },
@@ -46,6 +46,11 @@ pub fn start_download(
     tasks: State<'_, DownloadTaskRegistry>,
     database: State<'_, DatabaseManager>,
 ) -> CommandResult<DownloadTask> {
+    // Cookie sources are app-wide settings and must never be copied into a
+    // task row supplied by an older client or crafted IPC call.
+    options.cookies_file_path = None;
+    options.cookies_browser = None;
+    options.cookie_access_confirmed = false;
     let preferences = get_preferences(database.inner())?;
     if options.output_directory.trim().is_empty() {
         options.output_directory = if preferences.output_directory.is_empty() {
@@ -111,6 +116,68 @@ pub fn save_download_preferences(
     )?;
     tasks.set_max_concurrent(preferences.max_concurrent)?;
     Ok(preferences)
+}
+
+#[tauri::command]
+pub fn get_cookie_preferences(
+    database: State<'_, DatabaseManager>,
+) -> CommandResult<CookiePreferences> {
+    load_cookie_preferences(database.inner())
+}
+
+#[tauri::command]
+pub fn save_cookie_preferences(
+    preferences: CookiePreferences,
+    database: State<'_, DatabaseManager>,
+) -> CommandResult<CookiePreferences> {
+    validate_cookie_preferences(&preferences)?;
+    SettingsRepository::new(database.database()?).set(
+        "privacy.cookies",
+        &preferences,
+        unix_ms_now()?,
+    )?;
+    Ok(preferences)
+}
+
+pub(crate) fn load_cookie_preferences(
+    database: &DatabaseManager,
+) -> CommandResult<CookiePreferences> {
+    SettingsRepository::new(database.database()?)
+        .get("privacy.cookies")
+        .map(|value| value.unwrap_or_default())
+}
+
+fn validate_cookie_preferences(preferences: &CookiePreferences) -> CommandResult<()> {
+    if preferences.cookies_file_path.is_some() && preferences.cookies_browser.is_some() {
+        return Err(AppError::new(
+            ErrorCode::InvalidPath,
+            "全局 Cookie 只能配置一种来源。",
+            false,
+        ));
+    }
+    if (preferences.cookies_file_path.is_some() || preferences.cookies_browser.is_some())
+        && !preferences.access_confirmed
+    {
+        return Err(AppError::new(
+            ErrorCode::PermissionDenied,
+            "启用全局登录 Cookie 前需要明确确认授权。",
+            false,
+        ));
+    }
+    if let Some(path) = &preferences.cookies_file_path {
+        let file = Path::new(path);
+        if path.contains('\0')
+            || file.extension().and_then(|extension| extension.to_str()) != Some("txt")
+            || !file.is_file()
+        {
+            return Err(AppError::new(
+                ErrorCode::InvalidPath,
+                "请选择一个存在且可访问的 .txt Cookie 文件。",
+                false,
+            ));
+        }
+    }
+    Ok(())
 }
 
 fn get_preferences(database: &DatabaseManager) -> CommandResult<DownloadPreferences> {
@@ -293,35 +360,6 @@ fn validate_task_options(options: &DownloadOptions) -> CommandResult<()> {
             false,
         ));
     }
-    if options.cookies_file_path.is_some() && options.cookies_browser.is_some() {
-        return Err(AppError::new(
-            ErrorCode::InvalidPath,
-            "每个任务只能选择一种登录 Cookie 来源。",
-            false,
-        ));
-    }
-    if (options.cookies_file_path.is_some() || options.cookies_browser.is_some())
-        && !options.cookie_access_confirmed
-    {
-        return Err(AppError::new(
-            ErrorCode::PermissionDenied,
-            "使用登录 Cookie 前需要明确确认授权。",
-            false,
-        ));
-    }
-    if let Some(cookie_path) = &options.cookies_file_path {
-        let path = Path::new(cookie_path);
-        if cookie_path.contains('\0')
-            || path.extension().and_then(|extension| extension.to_str()) != Some("txt")
-            || !path.is_file()
-        {
-            return Err(AppError::new(
-                ErrorCode::InvalidPath,
-                "请选择一个存在且可访问的 .txt Cookie 文件。",
-                false,
-            ));
-        }
-    }
     Ok(())
 }
 
@@ -357,7 +395,8 @@ fn run_task(
         if options.audio_only {
             required_component(&installations, ComponentKind::Ffprobe)?;
         }
-        let mut args = build_download_args(&options)?;
+        let cookies = load_cookie_preferences(app.state::<DatabaseManager>().inner())?;
+        let mut args = build_download_args(&options, &cookies)?;
         append_option_before_url(&mut args, "--ffmpeg-location", Path::new(ffmpeg))?;
         let executable = PathBuf::from(ytdlp);
         let cancellation = tasks.cancellation_token(&task_id)?;

@@ -49,6 +49,8 @@ pub fn run() {
             commands::downloads::get_download_tasks,
             commands::downloads::get_download_preferences,
             commands::downloads::save_download_preferences,
+            commands::downloads::get_cookie_preferences,
+            commands::downloads::save_cookie_preferences,
             commands::downloads::get_download_history,
             commands::downloads::delete_download_history,
             commands::downloads::open_history_file,
