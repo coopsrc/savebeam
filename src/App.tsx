@@ -7,6 +7,7 @@ import { AppShell } from "./layout/AppShell";
 import { DownloadPage } from "./features/download/DownloadPage";
 import { useNavigate } from "react-router-dom";
 import { useAppStore } from "./stores/appStore";
+import { ComponentsSettings } from "./features/settings/ComponentsSettings";
 import "./App.css";
 
 function FoundationPage() {
@@ -21,6 +22,10 @@ function FoundationPage() {
     "/settings": "设置",
   };
   const title = titleByRoute[location.pathname] ?? "下载";
+
+  if (location.pathname === "/settings") {
+    return <ComponentsSettings />;
+  }
 
   if (location.pathname === "/tasks") {
     if (mockTasks.length > 0) {

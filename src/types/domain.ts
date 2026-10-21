@@ -4,6 +4,7 @@ export type AppErrorCode =
   | "unsupported_url"
   | "component_missing"
   | "component_too_old"
+  | "invalid_path"
   | "video_unavailable"
   | "login_required"
   | "private_content"

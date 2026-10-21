@@ -11,6 +11,7 @@ pub enum ErrorCode {
     UnsupportedUrl,
     ComponentMissing,
     ComponentTooOld,
+    InvalidPath,
     VideoUnavailable,
     LoginRequired,
     PrivateContent,

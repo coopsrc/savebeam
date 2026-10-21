@@ -90,6 +90,16 @@ body {
   padding: var(--sb-space-page);
 }
 
+.settings-page {
+  min-height: 100%;
+  padding: var(--sb-space-page);
+}
+
+.component-path-input {
+  min-width: 0;
+  flex: 1;
+}
+
 .download-heading-icon {
   display: grid;
   width: 40px;

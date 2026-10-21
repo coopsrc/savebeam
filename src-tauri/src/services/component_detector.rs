@@ -90,7 +90,7 @@ fn installation(
     }
 }
 
-fn is_usable_file(path: &Path) -> bool {
+pub fn is_usable_file(path: &Path) -> bool {
     if !path.is_file() {
         return false;
     }

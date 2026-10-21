@@ -6,6 +6,7 @@ const ERROR_CODES: ReadonlySet<string> = new Set([
   "unsupported_url",
   "component_missing",
   "component_too_old",
+  "invalid_path",
   "video_unavailable",
   "login_required",
   "private_content",
