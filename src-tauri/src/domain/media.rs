@@ -21,12 +21,24 @@ pub struct MediaInfo {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PlaylistInfo {
-    /// Number of first items Savebeam will allow in one playlist task (always at most 50).
+    /// Number of selectable entries exposed among the first 50 source positions.
     pub download_count: u8,
     /// Exact upstream count, when yt-dlp reports one.
     pub total_count: Option<u64>,
     /// True when the playlist is known or observed to exceed the safe per-task limit.
     pub truncated: bool,
+    pub id: Option<String>,
+    pub title: String,
+    pub entries: Vec<PlaylistEntry>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlaylistEntry {
+    pub index: u32,
+    pub id: Option<String>,
+    pub title: String,
+    pub available: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]

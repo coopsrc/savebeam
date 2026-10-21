@@ -352,6 +352,7 @@ fn launch_next_task(app: AppHandle, components: ComponentRegistry, tasks: Downlo
 }
 
 fn validate_task_options(options: &DownloadOptions) -> CommandResult<()> {
+    crate::security::download_args::playlist_selector(options)?;
     if options.title.trim().is_empty() || options.title.chars().count() > 1024 {
         return Err(AppError::new(
             ErrorCode::InvalidUrl,

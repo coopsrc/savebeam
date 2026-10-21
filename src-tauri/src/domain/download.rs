@@ -65,6 +65,8 @@ pub struct DownloadOptions {
     #[serde(default)]
     pub playlist_item_count: Option<u8>,
     #[serde(default)]
+    pub playlist_items: Option<Vec<u8>>,
+    #[serde(default)]
     pub audio_only: bool,
     #[serde(default)]
     pub write_automatic_subtitles: bool,
@@ -212,6 +214,7 @@ mod tests {
         assert_eq!(options.title, "Example");
         assert_eq!(options.subtitle_languages, ["en"]);
         assert_eq!(options.playlist_item_count, None);
+        assert_eq!(options.playlist_items, None);
         assert_eq!(options.merge_container, None);
         assert!(!options.audio_only);
         assert!(!options.write_automatic_subtitles);

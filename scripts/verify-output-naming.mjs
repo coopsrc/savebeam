@@ -22,6 +22,8 @@ const result = execFileSync(
     "-c",
     String.raw`
 import json
+import contextlib
+import io
 from pathlib import Path
 import sys
 from yt_dlp import YoutubeDL
@@ -68,7 +70,23 @@ for value in unsafe:
     path = Path(value)
     assert len(path.parts) == 2, value
     assert not any(char in path.name for char in chr(58) + chr(92) + '|?*'), value
-print(json.dumps({'cases': cases, 'unsafe_fields_sanitized': list(unsafe)}, ensure_ascii=False, indent=2))
+entries = [{'_type': 'video', 'id': f'video{i}', 'title': f'第{i}课',
+            'url': 'https://example.invalid/fixture.mp4', 'ext': 'mp4', 'format_id': 'fixture',
+            'vcodec': 'avc1', 'acodec': 'aac', 'extractor': 'fixture', 'extractor_key': 'Generic',
+            'webpage_url': 'https://example.invalid/video'} for i in range(1, 6)]
+captured = io.StringIO()
+with contextlib.redirect_stdout(captured), YoutubeDL({
+        'quiet': True, 'no_warnings': True, 'simulate': True, 'check_formats': False,
+        'playlist_items': '1,3,5', 'outtmpl': series,
+        'forceprint': {'video': ['SB:%(playlist_index)d:%(id)s:%(filename)s']}}) as ydl:
+    ydl.process_ie_result({'_type': 'playlist', 'id': 'list123', 'title': '课程',
+                          'extractor': 'fixture', 'extractor_key': 'Generic',
+                          'webpage_url': 'https://example.invalid/playlist', 'entries': entries}, download=True)
+selected = [line for line in captured.getvalue().splitlines() if line.startswith('SB:')]
+assert [line.split(':')[1] for line in selected] == ['1', '3', '5'], selected
+assert all(f'{i}-第{i}课 [video{i}].mp4' in line for i, line in zip([1,3,5], selected)), selected
+print(json.dumps({'cases': cases, 'unsafe_fields_sanitized': list(unsafe),
+                  'native_playlist_selection': selected}, ensure_ascii=False, indent=2))
 `,
     template("SINGLE_OUTPUT_TEMPLATE"),
     template("SERIES_OUTPUT_TEMPLATE"),

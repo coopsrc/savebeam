@@ -97,6 +97,16 @@ export interface PlaylistInfo {
   downloadCount: number;
   totalCount: number | null;
   truncated: boolean;
+  id: string | null;
+  title: string;
+  entries: PlaylistEntry[];
+}
+
+export interface PlaylistEntry {
+  index: number;
+  id: string | null;
+  title: string;
+  available: boolean;
 }
 
 export type DownloadTaskStatus =
@@ -126,6 +136,7 @@ export interface DownloadOptions {
   outputDirectory: string;
   subtitleLanguages: string[];
   playlistItemCount: number | null;
+  playlistItems: number[] | null;
   audioOnly: boolean;
   writeAutomaticSubtitles: boolean;
   writeThumbnail: boolean;

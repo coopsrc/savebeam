@@ -6,7 +6,7 @@ use serde_json::Value;
 
 use crate::domain::{
     error::{AppError, ErrorCode},
-    media::{FormatOption, MediaInfo, PlaylistInfo, SubtitleTrack},
+    media::{FormatOption, MediaInfo, PlaylistEntry, PlaylistInfo, SubtitleTrack},
 };
 
 use crate::domain::download::MAX_PLAYLIST_ITEMS;
@@ -59,9 +59,39 @@ fn map_playlist_info(raw: &Value, requested_url: &str) -> Result<MediaInfo, AppE
     let truncated = total_count
         .map(|count| count > u64::from(MAX_PLAYLIST_ITEMS))
         .unwrap_or(observed_count > u64::from(MAX_PLAYLIST_ITEMS));
-    let download_count = total_count
-        .unwrap_or(observed_count)
-        .min(u64::from(MAX_PLAYLIST_ITEMS)) as u8;
+    let mut seen_indices = BTreeSet::new();
+    let selectable_entries: Vec<_> = entries
+        .iter()
+        .take(usize::from(MAX_PLAYLIST_ITEMS))
+        .enumerate()
+        .map(|(offset, entry)| {
+            let index = entry
+                .get("playlist_index")
+                .and_then(Value::as_u64)
+                .and_then(|index| u32::try_from(index).ok())
+                .filter(|index| *index > 0)
+                .unwrap_or(offset as u32 + 1);
+            let id = nonempty_string(entry.get("id"));
+            let has_url = entry
+                .get("url")
+                .and_then(Value::as_str)
+                .is_some_and(|url| url.starts_with("http://") || url.starts_with("https://"));
+            PlaylistEntry {
+                index,
+                available: (id.is_some() || has_url)
+                    && entry.get("_type").and_then(Value::as_str) != Some("playlist")
+                    && index <= u32::from(MAX_PLAYLIST_ITEMS)
+                    && seen_indices.insert(index),
+                id,
+                title: nonempty_string(entry.get("title"))
+                    .unwrap_or_else(|| "未命名视频（下载时解析）".into()),
+            }
+        })
+        .collect();
+    let download_count = selectable_entries
+        .iter()
+        .filter(|entry| entry.available)
+        .count() as u8;
 
     Ok(MediaInfo {
         id: nonempty_string(raw.get("id")).unwrap_or_else(|| requested_url.to_owned()),
@@ -80,6 +110,12 @@ fn map_playlist_info(raw: &Value, requested_url: &str) -> Result<MediaInfo, AppE
             download_count,
             total_count,
             truncated,
+            id: nonempty_string(raw.get("id")).or_else(|| nonempty_string(raw.get("series_id"))),
+            title: nonempty_string(raw.get("title"))
+                .or_else(|| nonempty_string(raw.get("series")))
+                .or_else(|| nonempty_string(raw.get("playlist")))
+                .unwrap_or_else(|| "未命名系列".into()),
+            entries: selectable_entries,
         }),
     })
 }
@@ -323,6 +359,38 @@ mod tests {
         assert_eq!(playlist.total_count, Some(73));
         assert!(playlist.truncated);
         assert!(result.formats.is_empty());
+    }
+
+    #[test]
+    fn exposes_bounded_playlist_choices_without_renumbering_missing_entries() {
+        let raw = json!({"_type":"playlist", "id":"list-123", "title":"课程", "entries":[
+            {"id":"first", "title":"第一课", "playlist_index":1}, null,
+            {"id":"third", "title":"第三课", "playlist_index":3},
+            {"url":"https://example.com/unknown", "playlist_index":4},
+            {"id":"duplicate", "playlist_index":3},
+            {"id":"nested", "_type":"playlist"}
+        ]});
+        let media = map_media_info(&raw, "https://example.com/list").unwrap();
+        let playlist = media.playlist.unwrap();
+        assert_eq!(playlist.id.as_deref(), Some("list-123"));
+        assert_eq!(playlist.title, "课程");
+        assert_eq!(playlist.download_count, 3);
+        assert_eq!(
+            playlist
+                .entries
+                .iter()
+                .map(|item| item.index)
+                .collect::<Vec<_>>(),
+            [1, 2, 3, 4, 3, 6]
+        );
+        assert!(!playlist.entries[1].available);
+        assert!(!playlist.entries[4].available);
+        assert!(!playlist.entries[5].available);
+        assert_eq!(playlist.entries[2].id.as_deref(), Some("third"));
+        assert!(playlist.entries[3].available);
+        assert!(playlist.entries[3].title.contains("下载时解析"));
+        let value = serde_json::to_value(playlist).unwrap();
+        assert!(value["entries"][3].get("url").is_none());
     }
 
     #[test]

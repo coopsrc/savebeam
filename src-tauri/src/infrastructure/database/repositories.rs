@@ -91,6 +91,12 @@ impl DownloadTaskRepository {
     }
 
     pub fn insert(&self, task: &DownloadTask, options: &DownloadOptions) -> Result<(), AppError> {
+        let playlist_items_json = options
+            .playlist_items
+            .as_ref()
+            .map(serde_json::to_string)
+            .transpose()
+            .map_err(|_| AppError::new(ErrorCode::InvalidPath, "无法保存播放列表选择。", false))?;
         let created_at = to_sql_integer(task.created_at_unix_ms)?;
         let subtitle_languages =
             serde_json::to_string(&options.subtitle_languages).map_err(|error| {
@@ -105,8 +111,8 @@ impl DownloadTaskRepository {
                      conflict_strategy, playlist_item_count, audio_only,
                      write_automatic_subtitles, write_thumbnail, write_info_json, embed_metadata,
                      cookies_file_path, cookies_browser, cookie_access_confirmed, merge_container,
-                     keep_intermediate_files
-                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20)",
+                     keep_intermediate_files, playlist_items_json
+                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21)",
                 params![
                     task.id,
                     options.url,
@@ -128,6 +134,7 @@ impl DownloadTaskRepository {
                     options.cookie_access_confirmed,
                     options.merge_container.map(|container| container.extension()),
                     options.keep_intermediate_files,
+                    playlist_items_json,
                 ],
             )
         })?;
@@ -160,7 +167,7 @@ impl DownloadTaskRepository {
                             playlist_item_count, audio_only, write_automatic_subtitles,
                             write_thumbnail, write_info_json, embed_metadata,
                             cookies_file_path, cookies_browser, cookie_access_confirmed, merge_container,
-                            keep_intermediate_files
+                            keep_intermediate_files, playlist_items_json
                      FROM download_tasks WHERE task_id = ?1",
                     [task_id],
                     task_from_row,
@@ -177,7 +184,7 @@ impl DownloadTaskRepository {
                         playlist_item_count, audio_only, write_automatic_subtitles,
                         write_thumbnail, write_info_json, embed_metadata,
                         cookies_file_path, cookies_browser, cookie_access_confirmed, merge_container,
-                        keep_intermediate_files
+                        keep_intermediate_files, playlist_items_json
                  FROM download_tasks ORDER BY created_at_unix_ms DESC",
             )?;
             let rows = statement.query_map([], task_from_row)?;
@@ -309,6 +316,18 @@ fn task_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<(DownloadTask, Dow
             subtitle_languages: subtitles,
             conflict_strategy: parse_conflict_strategy(&row.get::<_, String>(6)?)?,
             playlist_item_count: row.get(9)?,
+            playlist_items: row
+                .get::<_, Option<String>>(20)?
+                .map(|value| {
+                    serde_json::from_str(&value).map_err(|error| {
+                        rusqlite::Error::FromSqlConversionFailure(
+                            20,
+                            rusqlite::types::Type::Text,
+                            Box::new(error),
+                        )
+                    })
+                })
+                .transpose()?,
             audio_only: row.get(10)?,
             write_automatic_subtitles: row.get(11)?,
             write_thumbnail: row.get(12)?,
@@ -480,6 +499,7 @@ mod tests {
             subtitle_languages: vec!["en".into()],
             conflict_strategy: DownloadConflictStrategy::Overwrite,
             playlist_item_count: Some(3),
+            playlist_items: Some(vec![1, 3, 5]),
             audio_only: true,
             write_automatic_subtitles: true,
             write_thumbnail: true,
@@ -507,6 +527,7 @@ mod tests {
             DownloadConflictStrategy::Overwrite
         );
         assert_eq!(loaded_options.playlist_item_count, Some(3));
+        assert_eq!(loaded_options.playlist_items, Some(vec![1, 3, 5]));
         assert!(loaded_options.audio_only);
         assert!(loaded_options.write_automatic_subtitles);
         assert!(loaded_options.write_thumbnail);
@@ -540,6 +561,7 @@ mod tests {
             subtitle_languages: Vec::new(),
             conflict_strategy: DownloadConflictStrategy::Skip,
             playlist_item_count: None,
+            playlist_items: None,
             audio_only: false,
             write_automatic_subtitles: false,
             write_thumbnail: false,

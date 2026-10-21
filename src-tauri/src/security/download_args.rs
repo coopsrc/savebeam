@@ -58,20 +58,13 @@ pub fn build_download_args(
             false,
         ));
     }
-    let playlist_arguments = match options.playlist_item_count {
-        Some(count) if (1..=MAX_PLAYLIST_ITEMS).contains(&count) => vec![
+    let playlist_arguments = match playlist_selector(options)? {
+        Some(selector) => vec![
             OsString::from("--yes-playlist"),
             OsString::from("--no-write-playlist-metafiles"),
             OsString::from("--playlist-items"),
-            OsString::from(format!("1-{count}")),
+            OsString::from(selector),
         ],
-        Some(_) => {
-            return Err(AppError::new(
-                ErrorCode::InvalidPath,
-                "播放列表下载数量超出安全上限。",
-                false,
-            ));
-        }
         None => vec![OsString::from("--no-playlist")],
     };
 
@@ -193,6 +186,44 @@ pub fn build_download_args(
     Ok(args)
 }
 
+pub fn playlist_selector(options: &DownloadOptions) -> Result<Option<String>, AppError> {
+    let invalid = || {
+        AppError::new(
+            ErrorCode::InvalidPath,
+            "播放列表选择无效；请选择前 50 项中至少一项，且不能重复。",
+            false,
+        )
+    };
+    match (options.playlist_item_count, &options.playlist_items) {
+        (None, None) => Ok(None),
+        (Some(count), None) if (1..=MAX_PLAYLIST_ITEMS).contains(&count) => {
+            Ok(Some(format!("1-{count}")))
+        }
+        (Some(count), Some(items))
+            if (1..=MAX_PLAYLIST_ITEMS).contains(&count) && items.len() == usize::from(count) =>
+        {
+            let mut indices = items.clone();
+            indices.sort_unstable();
+            indices.dedup();
+            if indices.len() != items.len()
+                || indices
+                    .iter()
+                    .any(|index| !(1..=MAX_PLAYLIST_ITEMS).contains(index))
+            {
+                return Err(invalid());
+            }
+            Ok(Some(
+                indices
+                    .iter()
+                    .map(u8::to_string)
+                    .collect::<Vec<_>>()
+                    .join(","),
+            ))
+        }
+        _ => Err(invalid()),
+    }
+}
+
 fn validate_cookies_file(path: &str) -> Result<(), AppError> {
     let file_path = Path::new(path);
     if path.contains('\0')
@@ -298,6 +329,7 @@ mod tests {
             subtitle_languages: Vec::new(),
             conflict_strategy: crate::domain::download::DownloadConflictStrategy::Skip,
             playlist_item_count: None,
+            playlist_items: None,
             audio_only: false,
             write_automatic_subtitles: false,
             write_thumbnail: false,
@@ -434,6 +466,44 @@ mod tests {
 
         download_options.playlist_item_count = Some(51);
         assert!(build_download_args(&download_options, &CookiePreferences::default()).is_err());
+        let _ = fs::remove_dir_all(directory);
+    }
+
+    #[test]
+    fn selects_explicit_playlist_indices_in_source_order_instead_of_first_n_items() {
+        let directory = temp_directory();
+        let mut selected = options(&directory);
+        selected.playlist_item_count = Some(3);
+        selected.playlist_items = Some(vec![5, 1, 3]);
+        let args = build_download_args(&selected, &CookiePreferences::default()).unwrap();
+        assert!(
+            args.windows(2)
+                .any(|pair| pair == ["--playlist-items", "1,3,5"])
+        );
+        assert!(!args.iter().any(|value| value == "1-3"));
+        assert!(
+            args.windows(2)
+                .any(|pair| pair == ["--output", SERIES_OUTPUT_TEMPLATE])
+        );
+        let _ = fs::remove_dir_all(directory);
+    }
+
+    #[test]
+    fn rejects_empty_duplicate_out_of_bound_and_inconsistent_playlist_choices() {
+        let directory = temp_directory();
+        for (count, items) in [
+            (Some(0), Some(vec![])),
+            (Some(2), Some(vec![1, 1])),
+            (Some(2), Some(vec![0, 1])),
+            (Some(2), Some(vec![1, 51])),
+            (Some(3), Some(vec![1, 3])),
+            (None, Some(vec![1])),
+        ] {
+            let mut selected = options(&directory);
+            selected.playlist_item_count = count;
+            selected.playlist_items = items;
+            assert!(build_download_args(&selected, &CookiePreferences::default()).is_err());
+        }
         let _ = fs::remove_dir_all(directory);
     }
 

@@ -23,6 +23,7 @@ import { inspectMedia } from "./mediaApi";
 import { getMediaUrlError, validateMediaUrl } from "./validateMediaUrl";
 import { estimateOutputBytes } from "./outputEstimate";
 import { formatBytes } from "../../utils/formatBytes";
+import { outputPreview, selectedEntries } from "./outputPreview";
 import {
   AUTOMATIC_AUDIO,
   audioFormats,
@@ -44,6 +45,7 @@ export function DownloadPage() {
   const [selectedAudioId, setSelectedAudioId] = useState(AUTOMATIC_AUDIO);
   const [manualAudio, setManualAudio] = useState(false);
   const [playlistConfirmed, setPlaylistConfirmed] = useState(false);
+  const [playlistItems, setPlaylistItems] = useState<number[]>([]);
   const [audioOnly, setAudioOnly] = useState(false);
   const [subtitleLanguages, setSubtitleLanguages] = useState<string[]>([]);
   const [writeAutomaticSubtitles, setWriteAutomaticSubtitles] = useState(false);
@@ -68,6 +70,7 @@ export function DownloadPage() {
     setSelectedAudioId(AUTOMATIC_AUDIO);
     setManualAudio(false);
     setPlaylistConfirmed(false);
+    setPlaylistItems([]);
     setAudioOnly(false);
     setSubtitleLanguages([]);
     setWriteAutomaticSubtitles(false);
@@ -83,6 +86,10 @@ export function DownloadPage() {
     try {
       const result = await inspectMedia(checked.normalizedUrl);
       setMediaInfo(result);
+      setPlaylistItems(
+        result.playlist?.entries?.filter((entry) => entry.available).map((entry) => entry.index) ??
+          [],
+      );
       const videos = videoFormats(result.formats);
       setSelectedVideoId(videos[0]?.formatId ?? null);
       setAudioOnly(
@@ -104,7 +111,12 @@ export function DownloadPage() {
   }
 
   async function handleStartDownload() {
-    if (!mediaInfo || !selection || (mediaInfo.playlist && !playlistConfirmed)) return;
+    if (
+      !mediaInfo ||
+      !selection ||
+      (mediaInfo.playlist && (!playlistConfirmed || chosenEntries.length === 0))
+    )
+      return;
     setRequestError(null);
     setIsStartingDownload(true);
     const options: DownloadOptions = {
@@ -113,7 +125,8 @@ export function DownloadPage() {
       formatId: selection.formatId,
       mergeContainer: selection.mergeContainer,
       outputDirectory: "",
-      playlistItemCount: mediaInfo.playlist?.downloadCount ?? null,
+      playlistItemCount: mediaInfo.playlist ? chosenEntries.length : null,
+      playlistItems: mediaInfo.playlist ? chosenEntries.map((entry) => entry.index) : null,
       audioOnly,
       subtitleLanguages,
       writeAutomaticSubtitles,
@@ -141,6 +154,16 @@ export function DownloadPage() {
     ? selectDownload(mediaInfo, selectedVideoId, AUTOMATIC_AUDIO, audioOnly)
     : null;
   const estimatedBytes = selection ? estimateOutputBytes(selection, audioOnly) : null;
+  const playlistEntries = mediaInfo?.playlist?.entries ?? [];
+  const chosenEntries = mediaInfo?.playlist
+    ? selectedEntries(mediaInfo.playlist, playlistItems)
+    : [];
+  const preview =
+    mediaInfo && selection ? outputPreview(mediaInfo, selection.extension, playlistItems) : null;
+  function changePlaylistItems(items: number[]) {
+    setPlaylistItems(items);
+    setPlaylistConfirmed(false);
+  }
   const videos = videoFormats(mediaInfo?.formats ?? []);
   const currentVideo = videos.find((format) => format.formatId === selectedVideoId);
   const usesEmbeddedAudio = !audioOnly && !!currentVideo?.audioCodec;
@@ -267,20 +290,78 @@ export function DownloadPage() {
                       </div>
                     </Group>
                     {mediaInfo.playlist ? (
-                      <Alert color="orange" title="播放列表下载数量确认" aria-live="polite">
+                      <Paper component="section" aria-label="选择系列视频" withBorder p="sm">
                         <Stack gap="sm">
+                          <Group justify="space-between">
+                            <Text fw={600}>选择下载条目（已选 {chosenEntries.length} 项）</Text>
+                            <Group gap="xs">
+                              <Button
+                                type="button"
+                                size="xs"
+                                variant="subtle"
+                                onClick={() =>
+                                  changePlaylistItems(
+                                    playlistEntries
+                                      .filter((entry) => entry.available)
+                                      .map((entry) => entry.index),
+                                  )
+                                }
+                              >
+                                全选
+                              </Button>
+                              <Button
+                                type="button"
+                                size="xs"
+                                variant="subtle"
+                                onClick={() => changePlaylistItems([])}
+                              >
+                                取消全选
+                              </Button>
+                            </Group>
+                          </Group>
                           <Text size="sm">
                             {mediaInfo.playlist.truncated
-                              ? `播放列表超过安全上限，将只下载前 ${mediaInfo.playlist.downloadCount} 项。`
-                              : `检测到 ${mediaInfo.playlist.downloadCount} 项，将按${audioOnly ? "仅音频 MP3" : "默认最佳格式"}下载。`}
+                              ? "系列超过安全上限，当前最多展示前 50 项，可勾选其中一部分。"
+                              : `检测到 ${mediaInfo.playlist.totalCount ?? playlistEntries.length} 项，可勾选需要下载的条目。`}
                           </Text>
+                          <Stack gap="sm" mah={240} style={{ overflowY: "auto" }}>
+                            {playlistEntries.map((entry, offset) => (
+                              <Checkbox
+                                key={`${entry.index}-${offset}`}
+                                label={`第 ${entry.index} 项 · ${entry.title}`}
+                                description={
+                                  entry.available
+                                    ? entry.id
+                                      ? `视频 ID：${entry.id}`
+                                      : "视频 ID 待解析"
+                                    : "条目信息不可用或不在支持范围，暂不可选"
+                                }
+                                checked={entry.available && playlistItems.includes(entry.index)}
+                                disabled={!entry.available}
+                                onChange={(event) => {
+                                  const checked = event.currentTarget.checked;
+                                  changePlaylistItems(
+                                    checked
+                                      ? [...playlistItems, entry.index]
+                                      : playlistItems.filter((index) => index !== entry.index),
+                                  );
+                                }}
+                              />
+                            ))}
+                            {!playlistEntries.length && (
+                              <Text c="dimmed" size="sm">
+                                未返回可选条目，请重新解析链接。
+                              </Text>
+                            )}
+                          </Stack>
                           <Checkbox
                             checked={playlistConfirmed}
+                            disabled={chosenEntries.length === 0}
                             onChange={(event) => setPlaylistConfirmed(event.currentTarget.checked)}
-                            label={`我确认创建 ${mediaInfo.playlist.downloadCount} 项的播放列表下载任务`}
+                            label={`我确认下载所选 ${chosenEntries.length} 项`}
                           />
                         </Stack>
-                      </Alert>
+                      </Paper>
                     ) : videos.length > 0 || audios.length > 0 ? (
                       <Stack gap="sm">
                         {!audioOnly && (
@@ -348,6 +429,7 @@ export function DownloadPage() {
                         disabled={!mediaInfo.playlist && videos.length === 0}
                         onChange={(event) => {
                           setAudioOnly(event.currentTarget.checked);
+                          setPlaylistConfirmed(false);
                           setSelectedAudioId(AUTOMATIC_AUDIO);
                           setManualAudio(false);
                         }}
@@ -421,7 +503,7 @@ export function DownloadPage() {
                         withBorder
                         radius="sm"
                         p="sm"
-                        mih={132}
+                        mih={mediaInfo.playlist ? 340 : 200}
                         aria-live="polite"
                       >
                         <Text fw={600} size="sm">
@@ -430,9 +512,49 @@ export function DownloadPage() {
                             ? `${selection.extension.toUpperCase()}（.${selection.extension}）`
                             : "逐项自动匹配"}
                         </Text>
+                        {preview &&
+                          (mediaInfo.playlist ? (
+                            <>
+                              <Text
+                                size="sm"
+                                lineClamp={2}
+                                mih={40}
+                                title={preview.directory ?? undefined}
+                              >
+                                保存子目录：{preview.directory}/
+                              </Text>
+                              <Text size="sm">
+                                已选 {preview.files.length} 个文件，保留系列原始序号：
+                              </Text>
+                              <Stack
+                                gap={4}
+                                h={128}
+                                style={{ overflowY: "auto" }}
+                                aria-label="预计文件列表"
+                              >
+                                {preview.files.length ? (
+                                  preview.files.map((name, index) => (
+                                    <Text key={index} size="xs" title={name} truncate>
+                                      {name}
+                                    </Text>
+                                  ))
+                                ) : (
+                                  <Text size="sm" c="dimmed">
+                                    尚未选择下载条目
+                                  </Text>
+                                )}
+                              </Stack>
+                            </>
+                          ) : (
+                            <Text size="sm" lineClamp={2} mih={40} title={preview.files[0]}>
+                              预计文件名：{preview.files[0]}
+                            </Text>
+                          ))}
                         <Text size="sm" c="dimmed">
                           {mediaInfo.playlist
-                            ? "每项自动选择视频与音频"
+                            ? audioOnly
+                              ? "每项自动选择源音频并转换 MP3"
+                              : "每项自动选择视频与音频"
                             : audioOnly
                               ? `${codecLabel(selection.audio?.audioCodec ?? null)} → MP3（转换音频）`
                               : `${codecLabel(selection.video?.videoCodec ?? null)}${selection.audio ? ` + ${codecLabel(selection.audio.audioCodec)}` : " · 无音频"}`}
@@ -459,6 +581,9 @@ export function DownloadPage() {
                         <Text size="xs" c="dimmed">
                           大小不含字幕、封面和 JSON，封装后可能略有差异。
                         </Text>
+                        <Text size="xs" c="dimmed">
+                          文件名为预览；标题、特殊字符清理和最终后缀以下载时 yt-dlp 解析结果为准。
+                        </Text>
                       </Paper>
                     )}
                     <Group justify="flex-end">
@@ -467,7 +592,8 @@ export function DownloadPage() {
                         loading={isStartingDownload}
                         disabled={
                           !selection ||
-                          (mediaInfo.playlist && !playlistConfirmed) ||
+                          (mediaInfo.playlist &&
+                            (!playlistConfirmed || chosenEntries.length === 0)) ||
                           (writeAutomaticSubtitles && subtitleLanguages.length === 0)
                         }
                       >
