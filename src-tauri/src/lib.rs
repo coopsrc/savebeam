@@ -15,6 +15,7 @@ pub fn run() {
         .manage(services::component_install_registry::ComponentInstallRegistry::default())
         .manage(services::download_registry::DownloadTaskRegistry::default())
         .manage(infrastructure::database::DatabaseManager::default())
+        .manage(commands::subscriptions::SubscriptionOperations::default())
         .setup(|app| {
             let app_data = app.path().resolve(".", BaseDirectory::AppData)?;
             let database_manager = app.state::<infrastructure::database::DatabaseManager>();
@@ -44,6 +45,12 @@ pub fn run() {
             commands::components::clear_component_custom_path,
             commands::components::remove_managed_component,
             commands::media::inspect_media,
+            commands::subscriptions::list_subscriptions,
+            commands::subscriptions::get_subscription_candidates,
+            commands::subscriptions::subscribe_series,
+            commands::subscriptions::check_subscription,
+            commands::subscriptions::unsubscribe_series,
+            commands::subscriptions::download_subscription_items,
             commands::diagnostics::export_diagnostics,
             commands::downloads::start_download,
             commands::downloads::get_download_tasks,

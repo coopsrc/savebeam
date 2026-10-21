@@ -65,7 +65,10 @@ pub struct DownloadOptions {
     #[serde(default)]
     pub playlist_item_count: Option<u8>,
     #[serde(default)]
-    pub playlist_items: Option<Vec<u8>>,
+    pub playlist_items: Option<Vec<u32>>,
+    /// Internal ID guard for a single subscription item; stripped from ordinary IPC tasks.
+    #[serde(default)]
+    pub expected_media_id: Option<String>,
     #[serde(default)]
     pub audio_only: bool,
     #[serde(default)]

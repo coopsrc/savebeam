@@ -10,9 +10,10 @@ use rusqlite::{Connection, TransactionBehavior};
 
 use crate::domain::error::{AppError, ErrorCode};
 
-pub const CURRENT_SCHEMA_VERSION: u32 = 8;
+pub const CURRENT_SCHEMA_VERSION: u32 = 9;
 
 pub mod repositories;
+pub mod subscriptions;
 
 const MIGRATIONS: &[(u32, &str)] = &[(
     1,
@@ -60,6 +61,32 @@ const MIGRATIONS: &[(u32, &str)] = &[(
     "ALTER TABLE download_tasks ADD COLUMN keep_intermediate_files INTEGER NOT NULL DEFAULT 0;"
 ), (8,
     "ALTER TABLE download_tasks ADD COLUMN playlist_items_json TEXT;"
+) , (9,
+    "ALTER TABLE download_tasks ADD COLUMN expected_media_id TEXT;
+     CREATE INDEX download_tasks_subscription_idx ON download_tasks(url, expected_media_id, created_at_unix_ms);
+     CREATE TABLE subscriptions (
+         subscription_id INTEGER PRIMARY KEY AUTOINCREMENT,
+         url TEXT NOT NULL UNIQUE,
+         source_id TEXT NOT NULL,
+         title TEXT NOT NULL,
+         last_checked_unix_ms INTEGER NOT NULL,
+         truncated INTEGER NOT NULL DEFAULT 0
+     );
+     CREATE TABLE subscription_entries (
+         subscription_id INTEGER NOT NULL REFERENCES subscriptions(subscription_id) ON DELETE CASCADE,
+         media_id TEXT NOT NULL,
+         position INTEGER NOT NULL,
+         title TEXT NOT NULL,
+         downloaded INTEGER NOT NULL DEFAULT 0,
+         is_new INTEGER NOT NULL DEFAULT 0,
+         available INTEGER NOT NULL DEFAULT 1,
+         PRIMARY KEY(subscription_id, media_id)
+     );
+     CREATE TABLE downloaded_media (
+         source_url TEXT NOT NULL,
+         media_id TEXT NOT NULL,
+         PRIMARY KEY(source_url, media_id)
+     );"
 )];
 
 #[derive(Debug, Clone)]

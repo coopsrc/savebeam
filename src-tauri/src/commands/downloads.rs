@@ -51,7 +51,24 @@ pub fn start_download(
     options.cookies_file_path = None;
     options.cookies_browser = None;
     options.cookie_access_confirmed = false;
-    let preferences = get_preferences(database.inner())?;
+    options.expected_media_id = None;
+    queue_download(
+        app,
+        options,
+        components.inner(),
+        tasks.inner(),
+        database.inner(),
+    )
+}
+
+pub(crate) fn queue_download(
+    app: AppHandle,
+    mut options: DownloadOptions,
+    components: &ComponentRegistry,
+    tasks: &DownloadTaskRegistry,
+    database: &DatabaseManager,
+) -> CommandResult<DownloadTask> {
+    let preferences = get_preferences(database)?;
     if options.output_directory.trim().is_empty() {
         options.output_directory = if preferences.output_directory.is_empty() {
             app.path()
@@ -71,11 +88,7 @@ pub fn start_download(
     validate_task_options(&options)?;
     let task = tasks.create(options.clone())?;
     tasks.enqueue(&task.id)?;
-    launch_next_task(
-        app.clone(),
-        components.inner().clone(),
-        tasks.inner().clone(),
-    );
+    launch_next_task(app.clone(), components.clone(), tasks.clone());
     Ok(task)
 }
 
@@ -428,12 +441,31 @@ fn run_task(
                 let _ = app.emit(DOWNLOAD_PROGRESS_EVENT, EventPayload::new(progress));
             })?;
         let intermediates = std::mem::take(&mut process_output.intermediate_files);
+        let media_items = std::mem::take(&mut process_output.media_items);
+        if options.expected_media_id.is_some() && process_output.output_paths.is_empty() {
+            return Err(AppError::new(
+                ErrorCode::VideoUnavailable,
+                "目标条目未匹配；系列顺序可能已变化，请检查订阅更新后重新选择。",
+                true,
+            ));
+        }
         let result = verify_download_outputs(
             process_output,
             &task_id,
             &options.title,
             Path::new(&options.output_directory),
         )?;
+        let ids = crate::services::subscriptions::verified_ids(
+            &media_items,
+            &result.output_paths,
+            options.expected_media_id.as_deref(),
+        )?;
+        if options.playlist_item_count.is_some() {
+            crate::infrastructure::database::subscriptions::SubscriptionRepository(
+                app.state::<DatabaseManager>().database()?,
+            )
+            .mark_downloaded(&options.url, &ids)?;
+        }
         if options.keep_intermediate_files {
             crate::services::intermediate_files::organize_retained_streams(
                 &intermediates,

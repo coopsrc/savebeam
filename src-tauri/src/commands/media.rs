@@ -21,6 +21,42 @@ use crate::{
     },
 };
 
+/// Called on a blocking worker; follows the same configured component paths as media parsing.
+pub(crate) fn subscription_engine(app: &AppHandle) -> CommandResult<YtDlpProcessEngine> {
+    let registry = app.state::<ComponentRegistry>();
+    let custom = registry
+        .custom_paths
+        .lock()
+        .map_err(|_| AppError::new(ErrorCode::Unknown, "组件设置暂时不可用。", true))?
+        .clone();
+    let paths = ComponentPaths::from_app_data_dir(
+        app.path()
+            .app_data_dir()
+            .map_err(|_| AppError::new(ErrorCode::InvalidPath, "应用目录不可用。", false))?,
+    );
+    let installations = probe_all(ComponentDetector::from_environment(paths).detect_all(&custom));
+    let executable = installations
+        .iter()
+        .find(|item| item.kind == ComponentKind::YtDlp && item.status == ComponentStatus::Available)
+        .and_then(|item| item.executable_path.as_ref())
+        .ok_or_else(|| {
+            AppError::new(
+                ErrorCode::ComponentMissing,
+                "请先在设置中配置可用的 yt-dlp。",
+                false,
+            )
+        })?;
+    let runtime = installations
+        .iter()
+        .find(|item| {
+            item.kind == ComponentKind::JavaScriptRuntime
+                && item.status == ComponentStatus::Available
+        })
+        .and_then(|item| item.executable_path.as_ref())
+        .map(PathBuf::from);
+    Ok(YtDlpProcessEngine::new(executable, runtime).for_subscription())
+}
+
 #[tauri::command]
 pub async fn inspect_media(
     app: AppHandle,

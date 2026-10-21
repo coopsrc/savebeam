@@ -107,10 +107,33 @@ pub fn build_download_args(
         },
         "--print".into(),
         "after_move:SB_RESULT:%(filepath)j".into(),
+        "--print".into(),
+        "after_move:SB_MEDIA:{\"id\":%(id)j,\"path\":%(filepath)j}".into(),
         "--".into(),
         options.url.clone().into(),
     ];
     let mut args = args;
+    if let Some(id) = &options.expected_media_id {
+        if id.is_empty() || id.len() > 512 || options.playlist_item_count != Some(1) {
+            return Err(AppError::new(
+                ErrorCode::InvalidPath,
+                "订阅视频 ID 无效。",
+                false,
+            ));
+        }
+        // Hex-encode every character: IDs can never introduce filter syntax or regex operators.
+        let escaped = id
+            .chars()
+            .map(|ch| format!("\\U{:08x}", ch as u32))
+            .collect::<String>();
+        args.splice(
+            2..2,
+            [
+                "--match-filter".into(),
+                format!("id ~= '^{escaped}$'").into(),
+            ],
+        );
+    }
     if options.keep_intermediate_files {
         args.splice(
             2..2,
@@ -206,16 +229,21 @@ pub fn playlist_selector(options: &DownloadOptions) -> Result<Option<String>, Ap
             indices.sort_unstable();
             indices.dedup();
             if indices.len() != items.len()
-                || indices
-                    .iter()
-                    .any(|index| !(1..=MAX_PLAYLIST_ITEMS).contains(index))
+                || indices.iter().any(|index| {
+                    !(1..=if options.expected_media_id.is_some() {
+                        1000
+                    } else {
+                        u32::from(MAX_PLAYLIST_ITEMS)
+                    })
+                        .contains(index)
+                })
             {
                 return Err(invalid());
             }
             Ok(Some(
                 indices
                     .iter()
-                    .map(u8::to_string)
+                    .map(u32::to_string)
                     .collect::<Vec<_>>()
                     .join(","),
             ))
@@ -330,6 +358,7 @@ mod tests {
             conflict_strategy: crate::domain::download::DownloadConflictStrategy::Skip,
             playlist_item_count: None,
             playlist_items: None,
+            expected_media_id: None,
             audio_only: false,
             write_automatic_subtitles: false,
             write_thumbnail: false,
@@ -340,6 +369,29 @@ mod tests {
             cookies_browser: None,
             cookie_access_confirmed: false,
         }
+    }
+
+    #[test]
+    fn subscription_guard_allows_a_single_late_index_and_encodes_filter_metacharacters() {
+        let directory = temp_directory();
+        let mut selected = options(&directory);
+        selected.playlist_item_count = Some(1);
+        selected.playlist_items = Some(vec![999]);
+        assert!(build_download_args(&selected, &CookiePreferences::default()).is_err());
+        selected.expected_media_id = Some("a'&😀".into());
+        let args = build_download_args(&selected, &CookiePreferences::default()).unwrap();
+        let filter = args
+            .windows(2)
+            .find(|pair| pair[0] == "--match-filter")
+            .unwrap();
+        assert_eq!(
+            filter[1],
+            "id ~= '^\\U00000061\\U00000027\\U00000026\\U0001f600$'"
+        );
+        selected.playlist_item_count = Some(2);
+        selected.playlist_items = Some(vec![998, 999]);
+        assert!(build_download_args(&selected, &CookiePreferences::default()).is_err());
+        std::fs::remove_dir_all(directory).unwrap();
     }
 
     #[test]

@@ -43,6 +43,13 @@ struct OutputLine {
 pub struct ProcessOutput {
     pub output_paths: Vec<String>,
     pub intermediate_files: Vec<IntermediateFiles>,
+    pub media_items: Vec<CompletedMedia>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CompletedMedia {
+    pub id: String,
+    pub path: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -235,6 +242,15 @@ fn handle_line(
         stderr.push(b'\n');
     }
     let text = String::from_utf8_lossy(&line.bytes);
+    if line.stream == OutputStream::Stdout
+        && output.media_items.len() < 50
+        && let Some(payload) = text.strip_prefix("SB_MEDIA:")
+        && let Ok(item) = serde_json::from_str::<CompletedMedia>(payload.trim())
+        && !item.id.is_empty()
+        && item.id.len() <= 512
+    {
+        output.media_items.push(item);
+    }
     if let Some(payload) = text
         .split_once(PROGRESS_MARKER)
         .map(|(_, payload)| payload.trim())
@@ -333,6 +349,39 @@ mod tests {
     use crate::{
         domain::download::DownloadTaskStatus, infrastructure::ytdlp_process::CancellationToken,
     };
+
+    #[test]
+    fn accepts_only_bounded_stdout_media_identity_records() {
+        let mut output = super::ProcessOutput::default();
+        for (stream, text) in [
+            (
+                super::OutputStream::Stderr,
+                r#"SB_MEDIA:{"id":"v","path":"/tmp/file"}"#,
+            ),
+            (super::OutputStream::Stdout, "SB_MEDIA:invalid"),
+            (
+                super::OutputStream::Stdout,
+                r#"SB_MEDIA:{"id":"","path":"/tmp/file"}"#,
+            ),
+            (
+                super::OutputStream::Stdout,
+                r#"SB_MEDIA:{"id":"v","path":"/tmp/file"}"#,
+            ),
+        ] {
+            super::handle_line(
+                super::OutputLine {
+                    stream,
+                    bytes: text.as_bytes().to_vec(),
+                },
+                &mut output,
+                &mut Vec::new(),
+                "task",
+                &mut |_| {},
+            );
+        }
+        assert_eq!(output.media_items.len(), 1);
+        assert_eq!(output.media_items[0].id, "v");
+    }
 
     #[test]
     fn parses_minimal_stream_metadata_and_ignores_invalid_or_stderr_records() {

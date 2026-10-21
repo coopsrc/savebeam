@@ -24,12 +24,15 @@ export class IpcError extends Error implements AppError {
   readonly code: AppErrorCode;
   readonly retryable: boolean;
   readonly diagnostic?: string;
+  /** Rust-authored, user-safe context, never stderr or diagnostic text. */
+  readonly contextMessage: string;
 
   constructor(error: AppError) {
     super(getLocalizedErrorMessage(error, "zh-CN"));
     this.name = "IpcError";
     this.code = error.code;
     this.retryable = error.retryable;
+    this.contextMessage = error.message;
     this.diagnostic = error.diagnostic;
   }
 }

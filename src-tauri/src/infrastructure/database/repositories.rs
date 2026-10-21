@@ -111,8 +111,8 @@ impl DownloadTaskRepository {
                      conflict_strategy, playlist_item_count, audio_only,
                      write_automatic_subtitles, write_thumbnail, write_info_json, embed_metadata,
                      cookies_file_path, cookies_browser, cookie_access_confirmed, merge_container,
-                     keep_intermediate_files, playlist_items_json
-                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21)",
+                     keep_intermediate_files, playlist_items_json, expected_media_id
+                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22)",
                 params![
                     task.id,
                     options.url,
@@ -135,6 +135,7 @@ impl DownloadTaskRepository {
                     options.merge_container.map(|container| container.extension()),
                     options.keep_intermediate_files,
                     playlist_items_json,
+                    options.expected_media_id,
                 ],
             )
         })?;
@@ -167,7 +168,7 @@ impl DownloadTaskRepository {
                             playlist_item_count, audio_only, write_automatic_subtitles,
                             write_thumbnail, write_info_json, embed_metadata,
                             cookies_file_path, cookies_browser, cookie_access_confirmed, merge_container,
-                            keep_intermediate_files, playlist_items_json
+                            keep_intermediate_files, playlist_items_json, expected_media_id
                      FROM download_tasks WHERE task_id = ?1",
                     [task_id],
                     task_from_row,
@@ -184,7 +185,7 @@ impl DownloadTaskRepository {
                         playlist_item_count, audio_only, write_automatic_subtitles,
                         write_thumbnail, write_info_json, embed_metadata,
                         cookies_file_path, cookies_browser, cookie_access_confirmed, merge_container,
-                        keep_intermediate_files, playlist_items_json
+                        keep_intermediate_files, playlist_items_json, expected_media_id
                  FROM download_tasks ORDER BY created_at_unix_ms DESC",
             )?;
             let rows = statement.query_map([], task_from_row)?;
@@ -334,6 +335,7 @@ fn task_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<(DownloadTask, Dow
             write_info_json: row.get(13)?,
             embed_metadata: row.get(14)?,
             keep_intermediate_files: row.get(19)?,
+            expected_media_id: row.get(21)?,
             cookies_file_path: row.get(15)?,
             cookies_browser: row
                 .get::<_, Option<String>>(16)?
@@ -500,6 +502,7 @@ mod tests {
             conflict_strategy: DownloadConflictStrategy::Overwrite,
             playlist_item_count: Some(3),
             playlist_items: Some(vec![1, 3, 5]),
+            expected_media_id: Some("expected-id".into()),
             audio_only: true,
             write_automatic_subtitles: true,
             write_thumbnail: true,
@@ -562,6 +565,7 @@ mod tests {
             conflict_strategy: DownloadConflictStrategy::Skip,
             playlist_item_count: None,
             playlist_items: None,
+            expected_media_id: None,
             audio_only: false,
             write_automatic_subtitles: false,
             write_thumbnail: false,

@@ -293,6 +293,18 @@ export function DownloadPage() {
                       <Paper component="section" aria-label="选择系列视频" withBorder p="sm">
                         <Stack gap="sm">
                           <Group justify="space-between">
+                            <Button
+                              type="button"
+                              size="xs"
+                              variant="light"
+                              onClick={() =>
+                                navigate(
+                                  `/subscriptions?url=${encodeURIComponent(mediaInfo.webpageUrl)}`,
+                                )
+                              }
+                            >
+                              订阅此系列
+                            </Button>
                             <Text fw={600}>选择下载条目（已选 {chosenEntries.length} 项）</Text>
                             <Group gap="xs">
                               <Button

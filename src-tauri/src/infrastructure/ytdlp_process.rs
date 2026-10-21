@@ -40,6 +40,7 @@ impl CancellationToken {
 pub struct YtDlpProcessEngine {
     executable_path: PathBuf,
     javascript_runtime_path: Option<PathBuf>,
+    playlist_limit: usize,
 }
 
 impl YtDlpProcessEngine {
@@ -50,7 +51,14 @@ impl YtDlpProcessEngine {
         Self {
             executable_path: executable_path.into(),
             javascript_runtime_path,
+            playlist_limit: 51,
         }
+    }
+
+    /// Subscription checks have a separate, explicit 1000-entry scan budget.
+    pub fn for_subscription(mut self) -> Self {
+        self.playlist_limit = 1001;
+        self
     }
 
     /// Reads yt-dlp JSON without downloading media or loading user configuration.
@@ -105,7 +113,7 @@ impl YtDlpProcessEngine {
             "--no-progress",
             "--flat-playlist",
             "--playlist-end",
-            "51",
+            &self.playlist_limit.to_string(),
             "--dump-single-json",
             "--skip-download",
         ]);

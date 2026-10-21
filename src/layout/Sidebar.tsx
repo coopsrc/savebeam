@@ -1,11 +1,18 @@
 import { NavLink, Stack, Text, Tooltip } from "@mantine/core";
-import { IconDownload, IconHistory, IconListCheck, IconSettings } from "@tabler/icons-react";
+import {
+  IconDownload,
+  IconHistory,
+  IconListCheck,
+  IconSettings,
+  IconRss,
+} from "@tabler/icons-react";
 import { Link, useLocation } from "react-router-dom";
 
 const primaryItems = [
   { path: "/download", label: "下载", icon: IconDownload },
   { path: "/tasks", label: "任务", icon: IconListCheck },
   { path: "/history", label: "历史", icon: IconHistory },
+  { path: "/subscriptions", label: "订阅", icon: IconRss },
 ];
 
 const settingsItem = { path: "/settings", label: "设置", icon: IconSettings };

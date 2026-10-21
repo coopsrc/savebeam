@@ -534,6 +534,7 @@ mod tests {
             conflict_strategy: crate::domain::download::DownloadConflictStrategy::Skip,
             playlist_item_count: None,
             playlist_items: None,
+            expected_media_id: None,
             audio_only: false,
             write_automatic_subtitles: false,
             write_thumbnail: false,

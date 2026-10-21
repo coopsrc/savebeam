@@ -21,6 +21,7 @@ import { useNavigate } from "react-router-dom";
 import { useAppStore } from "./stores/appStore";
 import { ComponentsSettings } from "./features/settings/ComponentsSettings";
 import { HistoryPage } from "./features/history/HistoryPage";
+import { SubscriptionsPage } from "./features/subscriptions/SubscriptionsPage";
 import { invokeCommand, IpcError } from "./ipc/client";
 import type { DownloadTask } from "./types/domain";
 import "./App.css";
@@ -270,6 +271,7 @@ function App() {
         <Route path="/download" element={<DownloadPage />} />
         <Route path="/tasks" element={<FoundationPage />} />
         <Route path="/history" element={<FoundationPage />} />
+        <Route path="/subscriptions" element={<SubscriptionsPage />} />
         <Route path="/settings" element={<FoundationPage />} />
         <Route path="*" element={<Navigate to="/download" replace />} />
       </Route>

@@ -14,6 +14,7 @@ const routeTitles: Record<string, string> = {
   "/download": "下载",
   "/tasks": "任务",
   "/history": "历史",
+  "/subscriptions": "订阅",
   "/settings": "设置",
 };
 
@@ -43,6 +44,7 @@ export function AppShell() {
         "1": "/download",
         "2": "/tasks",
         "3": "/history",
+        "4": "/subscriptions",
         ",": "/settings",
       };
       const route = routes[event.key];
@@ -144,7 +146,7 @@ export function AppShell() {
             桌面版
           </span>
           <span className="shortcut-hint">
-            {profile.modifierKey === "Meta" ? "⌘" : "Ctrl"}1–3 导航 ·{" "}
+            {profile.modifierKey === "Meta" ? "⌘" : "Ctrl"}1–4 导航 ·{" "}
             {profile.modifierKey === "Meta" ? "⌘" : "Ctrl"}", 设置
           </span>
         </footer>

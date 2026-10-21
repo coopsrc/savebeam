@@ -8,3 +8,4 @@ pub mod diagnostics;
 pub mod downloads;
 pub mod ipc;
 pub mod media;
+pub mod subscriptions;
