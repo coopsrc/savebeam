@@ -11,7 +11,7 @@ import {
   TextInput,
   Title,
 } from "@mantine/core";
-import { IconRefresh } from "@tabler/icons-react";
+import { IconRefresh, IconTrash } from "@tabler/icons-react";
 import { ErrorState, LoadingState } from "../../components/states/AppStates";
 import { usePlatformProfile } from "../../app/platform/profile";
 import { invokeCommand } from "../../ipc/client";
@@ -81,6 +81,7 @@ export function ComponentsSettings() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copiedKind, setCopiedKind] = useState<ComponentKind | null>(null);
+  const [removingKind, setRemovingKind] = useState<ComponentKind | null>(null);
 
   const acceptComponents = useCallback((result: ComponentInstallation[]) => {
     setComponents(result);
@@ -160,6 +161,25 @@ export function ComponentsSettings() {
     }
   }
 
+  async function removeManaged(kind: ComponentKind) {
+    if (
+      !window.confirm(
+        `确定删除 Savebeam 管理的 ${componentNames[kind]} 及其回滚版本？系统和自定义组件不会被删除。`,
+      )
+    )
+      return;
+    setRemovingKind(kind);
+    setError(null);
+    try {
+      await invokeCommand("remove_managed_component", { kind });
+      await refresh();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "无法删除应用管理组件。");
+    } finally {
+      setRemovingKind(null);
+    }
+  }
+
   return (
     <main className="settings-page">
       <Stack gap="lg">
@@ -219,6 +239,22 @@ export function ComponentsSettings() {
                       <Badge variant="outline">版本：{component.version}</Badge>
                     )}
                   </Group>
+                  <Text size="xs" c="dimmed">
+                    许可证：{licenseSummary(component.kind)}
+                  </Text>
+                  {component.source === "app_managed" && (
+                    <Group justify="flex-end">
+                      <Button
+                        color="red"
+                        variant="subtle"
+                        leftSection={<IconTrash size={15} />}
+                        loading={removingKind === component.kind}
+                        onClick={() => void removeManaged(component.kind)}
+                      >
+                        删除应用管理版本
+                      </Button>
+                    </Group>
+                  )}
                   <Group align="end" wrap="nowrap">
                     <TextInput
                       className="component-path-input"
@@ -306,6 +342,13 @@ export function ComponentsSettings() {
       </Stack>
     </main>
   );
+}
+
+function licenseSummary(kind: ComponentKind): string {
+  if (kind === "yt_dlp")
+    return "yt-dlp 源码为 Unlicense；独立可执行文件还包含第三方依赖，须按对应发行包附带 notices 展示。";
+  if (kind === "javascript_runtime") return "Deno 使用 MIT 许可；具体发布包仍需核对其 notices。";
+  return "FFmpeg 构建许可取决于构建方启用的组件与编译选项；未确定构建前不推断为 LGPL 或 GPL。";
 }
 
 function DownloadPreferencesPanel() {

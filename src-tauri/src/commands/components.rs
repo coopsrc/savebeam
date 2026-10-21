@@ -97,3 +97,31 @@ pub fn clear_component_custom_path(
         .remove(&kind);
     Ok(())
 }
+
+#[tauri::command]
+pub fn remove_managed_component(
+    app: AppHandle,
+    kind: ComponentKind,
+    registry: State<'_, ComponentRegistry>,
+) -> CommandResult<()> {
+    let app_data_dir = app.path().app_data_dir().map_err(|error| {
+        AppError::new(ErrorCode::Unknown, "无法访问应用数据目录。", false)
+            .with_diagnostic(error.to_string())
+    })?;
+    let custom_paths = registry
+        .custom_paths
+        .lock()
+        .map_err(|_| AppError::new(ErrorCode::Unknown, "组件设置暂时不可用。", true))?
+        .clone();
+    let paths = ComponentPaths::from_app_data_dir(app_data_dir);
+    let detector = ComponentDetector::from_environment(paths.clone());
+    let installation = detector.detect(kind, custom_paths.get(&kind).map(PathBuf::as_path));
+    if installation.source != Some(crate::domain::component::ComponentSource::AppManaged) {
+        return Err(AppError::new(
+            ErrorCode::InvalidPath,
+            "只允许删除 Savebeam 应用管理的组件。",
+            false,
+        ));
+    }
+    crate::services::component_installer::remove_managed_component(kind, &paths)
+}

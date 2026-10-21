@@ -274,4 +274,27 @@ mod tests {
         assert!(paths.managed_executable_paths(ComponentKind::YtDlp)[0].is_file());
         let _ = fs::remove_dir_all(root);
     }
+
+    #[test]
+    fn removal_deletes_only_managed_component_and_rollback_files() {
+        use crate::{
+            domain::component::ComponentKind,
+            services::{
+                component_installer::remove_managed_component, component_paths::ComponentPaths,
+            },
+        };
+        let root = temp_dir();
+        let paths = ComponentPaths::from_app_data_dir(&root);
+        let directory = paths.ensure_component_dir(ComponentKind::Ffmpeg).unwrap();
+        fs::write(directory.join("ffmpeg"), b"current").unwrap();
+        fs::write(directory.join("ffmpeg.previous"), b"previous").unwrap();
+        fs::write(directory.join("ffmpeg.previous.1"), b"older").unwrap();
+        fs::write(directory.join("user-notes.txt"), b"keep").unwrap();
+        remove_managed_component(ComponentKind::Ffmpeg, &paths).unwrap();
+        assert!(!directory.join("ffmpeg").exists());
+        assert!(!directory.join("ffmpeg.previous").exists());
+        assert!(!directory.join("ffmpeg.previous.1").exists());
+        assert!(directory.join("user-notes.txt").exists());
+        let _ = fs::remove_dir_all(root);
+    }
 }

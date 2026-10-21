@@ -194,7 +194,8 @@ chore(milestone): verify M4 single-download workflow
 - [x] M6-T3 实现带进度的安全下载和取消。
 - [x] M6-T4 实现哈希/签名验证及安全解压。
 - [x] M6-T5 实现安装、健康检查、原子切换和回滚。
-- [ ] M6-T6 实现组件更新、删除和许可证详情 UI。
+- [x] M6-T6a 实现组件来源/版本/许可证展示及应用管理组件删除。
+- [ ] M6-T6b 将已验签发行清单接入组件安装与更新 UI（需配置发布公钥和清单来源）。
 - [ ] M6-T7 建立 yt-dlp、FFmpeg、ffprobe 与受支持 JavaScript runtime 的兼容组合测试，至少覆盖应用管理的 Deno。
 
 验收标准：

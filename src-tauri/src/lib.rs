@@ -37,6 +37,7 @@ pub fn run() {
             commands::components::get_component_status,
             commands::components::set_component_custom_path,
             commands::components::clear_component_custom_path,
+            commands::components::remove_managed_component,
             commands::media::inspect_media,
             commands::downloads::start_download,
             commands::downloads::get_download_tasks,
