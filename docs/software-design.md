@@ -402,6 +402,8 @@ DownloadEngine
 | ffprobe            | 媒体信息检查                                                                | 推荐，与 FFmpeg 同源 |
 | JavaScript runtime | yt-dlp JavaScript challenge 支持；Deno 优先，也可使用 Node.js、Bun、QuickJS | 完整站点兼容推荐     |
 
+组件检测按 yt-dlp 官方 [EJS runtime compatibility](https://github.com/yt-dlp/yt-dlp/wiki/EJS) 检查最低版本：Deno 2.3.0、Node.js 22.0.0、Bun 1.2.11–1.3.14（已弃用）、QuickJS 2023-12-09；QuickJS-NG 版本不设下限。该兼容矩阵会随 yt-dlp 更新重新核对；系统包管理器提供的版本可能不满足此下限。
+
 ### 8.2 三种组件来源
 
 ```text

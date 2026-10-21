@@ -25,7 +25,12 @@ pub fn probe_installation(installation: &ComponentInstallation) -> ComponentInst
     match run_bounded_version_command(Path::new(executable_path), argument) {
         Ok(output) => match extract_version(&output) {
             Some(version) => ComponentInstallation {
-                status: ComponentStatus::Available,
+                status: compatibility_status(
+                    installation.kind,
+                    Path::new(executable_path),
+                    &version,
+                    &output,
+                ),
                 version: Some(version),
                 ..installation.clone()
             },
@@ -145,6 +150,61 @@ fn extract_version(output: &str) -> Option<String> {
     })
 }
 
+fn compatibility_status(
+    kind: ComponentKind,
+    executable: &Path,
+    version: &str,
+    output: &str,
+) -> ComponentStatus {
+    if kind != ComponentKind::JavaScriptRuntime {
+        return ComponentStatus::Available;
+    }
+
+    let filename = executable
+        .file_name()
+        .map(|name| name.to_string_lossy().to_ascii_lowercase())
+        .unwrap_or_default();
+    let flavor = filename.strip_suffix(".exe").unwrap_or(&filename);
+
+    match flavor {
+        "deno" => is_at_least(version, &[2, 3, 0]),
+        "node" => is_at_least(version, &[22, 0, 0]),
+        "bun" => {
+            if is_at_least(version, &[1, 2, 11]) == ComponentStatus::Available
+                && !is_greater_than(version, &[1, 3, 14])
+            {
+                ComponentStatus::Available
+            } else {
+                ComponentStatus::Outdated
+            }
+        }
+        "qjs" if output.to_ascii_lowercase().contains("quickjs-ng") => ComponentStatus::Available,
+        "qjs" => is_at_least(version, &[2023, 12, 9]),
+        _ => ComponentStatus::Unhealthy,
+    }
+}
+
+fn is_at_least(version: &str, minimum: &[u32; 3]) -> ComponentStatus {
+    match parse_version_components(version) {
+        Some(components) if components >= *minimum => ComponentStatus::Available,
+        Some(_) => ComponentStatus::Outdated,
+        None => ComponentStatus::Unhealthy,
+    }
+}
+
+fn is_greater_than(version: &str, maximum: &[u32; 3]) -> bool {
+    parse_version_components(version).is_some_and(|components| components > *maximum)
+}
+
+fn parse_version_components(version: &str) -> Option<[u32; 3]> {
+    let mut components = version.trim_start_matches(['v', 'V']).split(['.', '-']);
+    Some([
+        components.next()?.parse().ok()?,
+        components.next()?.parse().ok()?,
+        components.next()?.parse().ok()?,
+    ])
+}
+
 #[cfg(test)]
 mod tests {
     use std::{
@@ -190,6 +250,68 @@ mod tests {
             Some("2025-09-13".to_owned())
         );
         assert_eq!(extract_version("version unavailable"), None);
+    }
+
+    #[test]
+    fn enforces_yt_dlp_javascript_runtime_compatibility_floors() {
+        use std::path::Path;
+
+        use crate::domain::component::{ComponentKind, ComponentStatus};
+
+        assert_eq!(
+            super::compatibility_status(
+                ComponentKind::JavaScriptRuntime,
+                Path::new("deno"),
+                "2.2.0",
+                "deno 2.2.0",
+            ),
+            ComponentStatus::Outdated
+        );
+        assert_eq!(
+            super::compatibility_status(
+                ComponentKind::JavaScriptRuntime,
+                Path::new("deno"),
+                "2.3.0",
+                "deno 2.3.0",
+            ),
+            ComponentStatus::Available
+        );
+        assert_eq!(
+            super::compatibility_status(
+                ComponentKind::JavaScriptRuntime,
+                Path::new("node"),
+                "v20.19.2",
+                "v20.19.2",
+            ),
+            ComponentStatus::Outdated
+        );
+        assert_eq!(
+            super::compatibility_status(
+                ComponentKind::JavaScriptRuntime,
+                Path::new("bun"),
+                "1.3.15",
+                "1.3.15",
+            ),
+            ComponentStatus::Outdated
+        );
+        assert_eq!(
+            super::compatibility_status(
+                ComponentKind::JavaScriptRuntime,
+                Path::new("qjs"),
+                "2025-04-26",
+                "QuickJS version 2025-04-26",
+            ),
+            ComponentStatus::Available
+        );
+        assert_eq!(
+            super::compatibility_status(
+                ComponentKind::JavaScriptRuntime,
+                Path::new("qjs"),
+                "0.11.0",
+                "QuickJS-NG 0.11.0",
+            ),
+            ComponentStatus::Available
+        );
     }
 
     #[test]

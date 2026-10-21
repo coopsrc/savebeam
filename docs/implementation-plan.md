@@ -104,6 +104,7 @@ chore(milestone): verify M4 single-download workflow
 - [x] M2-T5 实现“运行组件”设置页面。
 - [x] M2-T6 实现包管理器说明、复制命令和重新检测。
 - [x] M2-T7 为检测优先级和版本解析编写测试。
+- [x] M2-T8 按 yt-dlp 当前 EJS 兼容矩阵检查 JavaScript runtime 最低版本。
 
 验收标准：
 
