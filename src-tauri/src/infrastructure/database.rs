@@ -173,7 +173,9 @@ pub(crate) fn storage_error(error: rusqlite::Error) -> AppError {
 
 #[cfg(test)]
 mod tests {
-    use super::{CURRENT_SCHEMA_VERSION, Database, DatabaseManager};
+    use rusqlite::Connection;
+
+    use super::{CURRENT_SCHEMA_VERSION, Database, DatabaseManager, migrate};
 
     #[test]
     fn creates_schema_with_all_initial_tables_and_version() {
@@ -220,6 +222,44 @@ mod tests {
         let _ = std::fs::remove_file(&path);
         let _ = std::fs::remove_file(path.with_extension("sqlite3-shm"));
         let _ = std::fs::remove_file(path.with_extension("sqlite3-wal"));
+    }
+
+    #[test]
+    fn upgrades_a_version_one_database_without_losing_task_rows() {
+        let mut connection = Connection::open_in_memory().unwrap();
+        connection
+            .execute_batch(
+                "CREATE TABLE download_tasks (
+                    task_id TEXT PRIMARY KEY NOT NULL,
+                    url TEXT NOT NULL,
+                    title TEXT NOT NULL,
+                    format_id TEXT NOT NULL,
+                    output_directory TEXT NOT NULL,
+                    subtitle_languages_json TEXT NOT NULL DEFAULT '[]',
+                    status TEXT NOT NULL,
+                    created_at_unix_ms INTEGER NOT NULL,
+                    updated_at_unix_ms INTEGER NOT NULL
+                );
+                INSERT INTO download_tasks VALUES
+                    ('old-task', 'https://example.com/video', 'Old', '18', '/tmp', '[]', 'completed', 10, 10);
+                PRAGMA user_version = 1;",
+            )
+            .unwrap();
+
+        migrate(&mut connection).expect("v1 database should migrate to current version");
+        let version: u32 = connection
+            .pragma_query_value(None, "user_version", |row| row.get(0))
+            .unwrap();
+        let migrated: (String, String) = connection
+            .query_row(
+                "SELECT task_id, conflict_strategy FROM download_tasks WHERE task_id = 'old-task'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .unwrap();
+
+        assert_eq!(version, CURRENT_SCHEMA_VERSION);
+        assert_eq!(migrated, ("old-task".into(), "skip".into()));
     }
 
     #[test]

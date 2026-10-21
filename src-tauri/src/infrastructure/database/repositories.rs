@@ -383,6 +383,30 @@ mod tests {
     }
 
     #[test]
+    fn settings_survive_database_reopen() {
+        let path = std::env::temp_dir().join(format!(
+            "savebeam-settings-{}-{}.sqlite3",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let database = Database::open(&path).unwrap();
+        SettingsRepository::new(database)
+            .set("download.preferences", &"persisted", 10)
+            .unwrap();
+        let reopened = Database::open(&path).unwrap();
+        let value: Option<String> = SettingsRepository::new(reopened)
+            .get("download.preferences")
+            .unwrap();
+        assert_eq!(value.as_deref(), Some("persisted"));
+        let _ = std::fs::remove_file(&path);
+        let _ = std::fs::remove_file(path.with_extension("sqlite3-shm"));
+        let _ = std::fs::remove_file(path.with_extension("sqlite3-wal"));
+    }
+
+    #[test]
     fn task_repository_round_trips_options_and_updates_state() {
         let (_, tasks, _) = repositories();
         let task = crate::domain::download::DownloadTask {
