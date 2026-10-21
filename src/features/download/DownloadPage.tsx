@@ -21,6 +21,8 @@ import { invokeCommand } from "../../ipc/client";
 import { useAppStore } from "../../stores/appStore";
 import { inspectMedia } from "./mediaApi";
 import { getMediaUrlError, validateMediaUrl } from "./validateMediaUrl";
+import { estimateOutputBytes } from "./outputEstimate";
+import { formatBytes } from "../../utils/formatBytes";
 import {
   AUTOMATIC_AUDIO,
   audioFormats,
@@ -135,6 +137,7 @@ export function DownloadPage() {
   const automaticSelection = mediaInfo
     ? selectDownload(mediaInfo, selectedVideoId, AUTOMATIC_AUDIO, audioOnly)
     : null;
+  const estimatedBytes = selection ? estimateOutputBytes(selection, audioOnly) : null;
   const videos = videoFormats(mediaInfo?.formats ?? []);
   const currentVideo = videos.find((format) => format.formatId === selectedVideoId);
   const usesEmbeddedAudio = !audioOnly && !!currentVideo?.audioCodec;
@@ -325,24 +328,6 @@ export function DownloadPage() {
                             allowDeselect={false}
                           />
                         )}
-                        {selection && (
-                          <Paper withBorder radius="sm" p="sm" aria-live="polite">
-                            <Text fw={600} size="sm">
-                              预计输出：{selection.extension?.toUpperCase()}（.{selection.extension}
-                              ）
-                            </Text>
-                            <Text size="sm" c="dimmed">
-                              {audioOnly
-                                ? `${codecLabel(selection.audio?.audioCodec ?? null)} → MP3（转换音频）`
-                                : `${codecLabel(selection.video?.videoCodec ?? null)}${selection.audio ? ` + ${codecLabel(selection.audio.audioCodec)}` : " · 无音频"}`}
-                            </Text>
-                            {selection.mergeContainer && (
-                              <Text size="xs" c="dimmed">
-                                下载完成后合并为一个文件，保留原始音视频编码。
-                              </Text>
-                            )}
-                          </Paper>
-                        )}
                         {!audioOnly && selection && !selection.audio && (
                           <Alert color="yellow" title="该格式没有音轨">
                             站点未提供独立音频，此选择将下载无声视频。可尝试选择包含音轨的视频格式。
@@ -420,6 +405,53 @@ export function DownloadPage() {
                         : "保存结构：视频标题.扩展名"}
                       。字幕、封面和 JSON 使用相同标题。
                     </Text>
+                    {selection && (
+                      <Paper
+                        component="section"
+                        aria-label="预计输出"
+                        withBorder
+                        radius="sm"
+                        p="sm"
+                        mih={132}
+                        aria-live="polite"
+                      >
+                        <Text fw={600} size="sm">
+                          预计输出：
+                          {selection.extension
+                            ? `${selection.extension.toUpperCase()}（.${selection.extension}）`
+                            : "逐项自动匹配"}
+                        </Text>
+                        <Text size="sm" c="dimmed">
+                          {mediaInfo.playlist
+                            ? "每项自动选择视频与音频"
+                            : audioOnly
+                              ? `${codecLabel(selection.audio?.audioCodec ?? null)} → MP3（转换音频）`
+                              : `${codecLabel(selection.video?.videoCodec ?? null)}${selection.audio ? ` + ${codecLabel(selection.audio.audioCodec)}` : " · 无音频"}`}
+                        </Text>
+                        <Text size="sm">
+                          预计文件大小：
+                          {estimatedBytes !== null
+                            ? `约 ${formatBytes(estimatedBytes)}`
+                            : mediaInfo.playlist
+                              ? "待逐项解析"
+                              : audioOnly
+                                ? "转换后待定"
+                                : "暂无法估算"}
+                        </Text>
+                        <Text size="xs" c="dimmed">
+                          {mediaInfo.playlist
+                            ? "输出格式和大小在各项解析后确定。"
+                            : audioOnly
+                              ? "转换后体积以实际生成的 MP3 为准。"
+                              : selection.mergeContainer
+                                ? "下载后合并，保留原始音视频编码。"
+                                : "保留原始媒体格式。"}
+                        </Text>
+                        <Text size="xs" c="dimmed">
+                          大小不含字幕、封面和 JSON，封装后可能略有差异。
+                        </Text>
+                      </Paper>
+                    )}
                     <Group justify="flex-end">
                       <Button
                         onClick={handleStartDownload}

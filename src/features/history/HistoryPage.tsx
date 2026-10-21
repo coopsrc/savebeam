@@ -3,6 +3,7 @@ import { Alert, Button, Group, Paper, Stack, Text, TextInput, Title } from "@man
 import { IconExternalLink, IconFolderOpen, IconTrash } from "@tabler/icons-react";
 import { invokeCommand, IpcError } from "../../ipc/client";
 import type { DownloadHistoryRecord } from "../../types/domain";
+import { formatBytes } from "../../utils/formatBytes";
 
 export function HistoryPage() {
   const [query, setQuery] = useState("");
@@ -143,16 +144,4 @@ export function HistoryPage() {
       </Stack>
     </main>
   );
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  const units = ["KB", "MB", "GB", "TB"];
-  let value = bytes / 1024;
-  let unit = 0;
-  while (value >= 1024 && unit < units.length - 1) {
-    value /= 1024;
-    unit += 1;
-  }
-  return `${value.toFixed(1)} ${units[unit]}`;
 }

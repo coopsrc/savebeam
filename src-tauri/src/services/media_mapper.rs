@@ -31,7 +31,7 @@ pub fn map_media_info(raw: &Value, requested_url: &str) -> Result<MediaInfo, App
         duration_seconds: positive_number(raw.get("duration")),
         uploader: nonempty_string(raw.get("uploader"))
             .or_else(|| nonempty_string(raw.get("channel"))),
-        formats: map_formats(raw.get("formats")),
+        formats: map_formats(raw.get("formats"), positive_number(raw.get("duration"))),
         subtitles: map_subtitles(raw.get("subtitles"), false)
             .into_iter()
             .chain(map_subtitles(raw.get("automatic_captions"), true))
@@ -94,7 +94,7 @@ fn thumbnail_url(raw: &Value) -> Option<String> {
     })
 }
 
-fn map_formats(value: Option<&Value>) -> Vec<FormatOption> {
+fn map_formats(value: Option<&Value>, duration: Option<f64>) -> Vec<FormatOption> {
     value
         .and_then(Value::as_array)
         .into_iter()
@@ -122,10 +122,27 @@ fn map_formats(value: Option<&Value>) -> Vec<FormatOption> {
                 language: nonempty_string(format.get("language")),
                 format_note: nonempty_string(format.get("format_note")),
                 file_size_bytes: positive_integer(format.get("filesize")),
-                approximate_file_size_bytes: positive_integer(format.get("filesize_approx")),
+                approximate_file_size_bytes: positive_integer(format.get("filesize_approx"))
+                    .or_else(|| estimate_format_bytes(format, duration)),
             })
         })
         .collect()
+}
+
+fn estimate_format_bytes(format: &Value, duration: Option<f64>) -> Option<u64> {
+    let duration = positive_number(format.get("duration")).or(duration)?;
+    let bitrate = positive_number(format.get("tbr")).or_else(|| {
+        match (codec(format.get("vcodec")), codec(format.get("acodec"))) {
+            (Some(_), None) => positive_number(format.get("vbr")),
+            (None, Some(_)) => positive_number(format.get("abr")),
+            (Some(_), Some(_)) => {
+                Some(positive_number(format.get("vbr"))? + positive_number(format.get("abr"))?)
+            }
+            (None, None) => None,
+        }
+    })?;
+    let bytes = bitrate * 1000.0 * duration / 8.0;
+    (bytes.is_finite() && bytes >= 1.0 && bytes < u64::MAX as f64).then_some(bytes.round() as u64)
 }
 
 fn map_subtitles(value: Option<&Value>, automatic: bool) -> Vec<SubtitleTrack> {
@@ -241,6 +258,44 @@ mod tests {
         assert_eq!(media.webpage_url, "https://canonical");
         assert_eq!(media.formats.len(), 0);
         assert_eq!(media.duration_seconds, None);
+    }
+
+    #[test]
+    fn estimates_missing_sizes_from_complete_bitrate_and_duration_metadata() {
+        let raw = json!({
+            "id": "sizes", "title": "Sizes", "duration": 10,
+            "formats": [
+                {"format_id":"video", "ext":"mp4", "vcodec":"avc1", "acodec":"none", "tbr":800},
+                {"format_id":"audio", "ext":"m4a", "vcodec":"none", "acodec":"aac", "abr":128},
+                {"format_id":"combined", "ext":"mp4", "vcodec":"avc1", "acodec":"aac", "vbr":800, "abr":128},
+                {"format_id":"incomplete", "ext":"mp4", "vcodec":"avc1", "acodec":"aac", "vbr":800},
+                {"format_id":"reported", "ext":"mp4", "vcodec":"avc1", "acodec":"none", "tbr":800, "filesize_approx":42},
+                {"format_id":"short-audio", "ext":"m4a", "vcodec":"none", "acodec":"aac", "abr":128, "duration":5},
+                {"format_id":"overflow", "ext":"mp4", "tbr":1e308}
+            ]
+        });
+        let media = map_media_info(&raw, "https://example.com/video").unwrap();
+        let estimates: Vec<_> = media
+            .formats
+            .iter()
+            .map(|format| format.approximate_file_size_bytes)
+            .collect();
+        assert_eq!(
+            estimates,
+            [
+                Some(1_000_000),
+                Some(160_000),
+                Some(1_160_000),
+                None,
+                Some(42),
+                Some(80_000),
+                None
+            ]
+        );
+        let mut no_duration = raw;
+        no_duration.as_object_mut().unwrap().remove("duration");
+        let media = map_media_info(&no_duration, "https://example.com/video").unwrap();
+        assert_eq!(media.formats[0].approximate_file_size_bytes, None);
     }
 
     #[test]
