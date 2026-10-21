@@ -153,7 +153,9 @@ mod tests {
         time::{SystemTime, UNIX_EPOCH},
     };
 
-    use super::{ComponentInstallation, probe_installation};
+    use super::{
+        ComponentInstallation, MAX_CAPTURE_BYTES, extract_version, probe_installation, read_bounded,
+    };
     use crate::domain::component::{ComponentKind, ComponentSource, ComponentStatus};
 
     fn test_executable_name(name: &str) -> PathBuf {
@@ -173,6 +175,31 @@ mod tests {
         path
     }
 
+    #[test]
+    fn extracts_common_version_formats_from_component_output() {
+        assert_eq!(
+            extract_version("2026.10.21\n"),
+            Some("2026.10.21".to_owned())
+        );
+        assert_eq!(
+            extract_version("ffmpeg version n8.1.2 Copyright (c)"),
+            Some("n8.1.2".to_owned())
+        );
+        assert_eq!(
+            extract_version("QuickJS version 2025-09-13\n"),
+            Some("2025-09-13".to_owned())
+        );
+        assert_eq!(extract_version("version unavailable"), None);
+    }
+
+    #[test]
+    fn version_output_capture_is_bounded() {
+        let output = vec![b'x'; MAX_CAPTURE_BYTES * 3];
+        let captured = read_bounded(output.as_slice());
+
+        assert_eq!(captured.len(), MAX_CAPTURE_BYTES);
+    }
+
     #[cfg(unix)]
     fn write_fake_executable(path: &PathBuf, body: &str) {
         use std::os::unix::fs::PermissionsExt;
@@ -185,7 +212,10 @@ mod tests {
     #[test]
     fn probes_version_with_the_component_specific_fixed_argument() {
         let path = test_executable_name("yt-dlp");
-        write_fake_executable(&path, "printf '2026.10.21\\n'");
+        write_fake_executable(
+            &path,
+            "[ \"$1\" = \"--version\" ] || exit 21\nprintf '2026.10.21\\n'",
+        );
         let installation = ComponentInstallation {
             kind: ComponentKind::YtDlp,
             source: Some(ComponentSource::Custom),

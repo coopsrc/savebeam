@@ -53,13 +53,12 @@ impl ComponentDetector {
             }
         }
 
-        for directory in self.common_system_dirs.iter().chain(self.path_dirs.iter()) {
-            for executable in kind.executable_names() {
-                let candidate = directory.join(executable);
-                if is_usable_file(&candidate) {
-                    return installation(kind, ComponentSource::System, &candidate);
-                }
-            }
+        if let Some(candidate) = find_in_directories(kind, &self.common_system_dirs) {
+            return installation(kind, ComponentSource::System, &candidate);
+        }
+
+        if let Some(candidate) = find_in_directories(kind, &self.path_dirs) {
+            return installation(kind, ComponentSource::System, &candidate);
         }
 
         ComponentInstallation::missing(kind)
@@ -74,6 +73,18 @@ impl ComponentDetector {
             .map(|kind| self.detect(kind, custom_paths.get(&kind).map(PathBuf::as_path)))
             .collect()
     }
+}
+
+fn find_in_directories(kind: ComponentKind, directories: &[PathBuf]) -> Option<PathBuf> {
+    for executable in kind.executable_names() {
+        for directory in directories {
+            let candidate = directory.join(executable);
+            if is_usable_file(&candidate) {
+                return Some(candidate);
+            }
+        }
+    }
+    None
 }
 
 fn installation(
@@ -216,6 +227,70 @@ mod tests {
         let detected = detector.detect(ComponentKind::Ffmpeg, None);
 
         assert_eq!(detected.source, Some(ComponentSource::AppManaged));
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn common_system_directories_precede_path_directories() {
+        let root = test_root();
+        let managed = ComponentPaths::from_app_data_dir(root.join("app-data"));
+        let common_dir = root.join("common/bin");
+        let path_dir = root.join("path/bin");
+        let common_binary = common_dir.join("ffprobe");
+        create_executable(&common_binary);
+        create_executable(&path_dir.join("ffprobe"));
+        let detector =
+            ComponentDetector::with_search_paths(managed, vec![common_dir], vec![path_dir]);
+
+        let detected = detector.detect(ComponentKind::Ffprobe, None);
+
+        assert_eq!(
+            detected.executable_path,
+            Some(common_binary.to_string_lossy().into_owned())
+        );
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn javascript_runtime_prefers_deno_within_the_same_search_priority() {
+        let root = test_root();
+        let managed = ComponentPaths::from_app_data_dir(root.join("app-data"));
+        let first_path_dir = root.join("path/first");
+        let second_path_dir = root.join("path/second");
+        create_executable(&first_path_dir.join("node"));
+        let deno_binary = second_path_dir.join("deno");
+        create_executable(&deno_binary);
+        let detector = ComponentDetector::with_search_paths(
+            managed,
+            Vec::new(),
+            vec![first_path_dir, second_path_dir],
+        );
+
+        let detected = detector.detect(ComponentKind::JavaScriptRuntime, None);
+
+        assert_eq!(
+            detected.executable_path,
+            Some(deno_binary.to_string_lossy().into_owned())
+        );
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn path_directory_is_used_when_no_higher_priority_candidate_exists() {
+        let root = test_root();
+        let managed = ComponentPaths::from_app_data_dir(root.join("app-data"));
+        let path_dir = root.join("path");
+        let binary = path_dir.join("yt-dlp");
+        create_executable(&binary);
+        let detector = ComponentDetector::with_search_paths(managed, Vec::new(), vec![path_dir]);
+
+        let detected = detector.detect(ComponentKind::YtDlp, None);
+
+        assert_eq!(detected.source, Some(ComponentSource::System));
+        assert_eq!(
+            detected.executable_path,
+            Some(binary.to_string_lossy().into_owned())
+        );
         let _ = fs::remove_dir_all(root);
     }
 }
