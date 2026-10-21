@@ -98,7 +98,7 @@ chore(milestone): verify M4 single-download workflow
 任务：
 
 - [x] M2-T1 定义 `ComponentKind/Source/Status/Installation` 领域模型。
-- [ ] M2-T2 实现应用管理目录和跨平台路径策略。
+- [x] M2-T2 实现应用管理目录和跨平台路径策略。
 - [ ] M2-T3 实现自定义路径、应用目录、常见系统路径和 PATH 检测。
 - [ ] M2-T4 实现各组件版本命令和最低能力检查。
 - [ ] M2-T5 实现“运行组件”设置页面。
