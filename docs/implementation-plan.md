@@ -143,7 +143,7 @@ chore(milestone): verify M4 single-download workflow
 
 任务：
 
-- [ ] M4-T1 定义 `DownloadOptions/Task/Progress/Result`。
+- [x] M4-T1 定义 `DownloadOptions/Task/Progress/Result`。
 - [ ] M4-T2 实现安全的 yt-dlp 参数构造器。
 - [ ] M4-T3 实现 `ProcessSupervisor` 和结构化进度读取。
 - [ ] M4-T4 实现任务状态机和 Tauri 事件。

@@ -4,5 +4,6 @@
 //! operating-system APIs.
 
 pub mod component;
+pub mod download;
 pub mod error;
 pub mod media;
