@@ -69,7 +69,46 @@ pub enum ArchiveKind {
     TarXz,
 }
 
+pub fn current_target() -> Result<(TargetOs, Architecture), AppError> {
+    #[cfg(target_os = "macos")]
+    let target_os = TargetOs::MacOs;
+    #[cfg(target_os = "windows")]
+    let target_os = TargetOs::Windows;
+    #[cfg(target_os = "linux")]
+    let target_os = TargetOs::Linux;
+    #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
+    return Err(AppError::new(
+        ErrorCode::Unknown,
+        "当前系统暂不支持应用管理组件。",
+        false,
+    ));
+
+    #[cfg(target_arch = "aarch64")]
+    let architecture = Architecture::Aarch64;
+    #[cfg(target_arch = "x86_64")]
+    let architecture = Architecture::X86_64;
+    #[cfg(not(any(target_arch = "aarch64", target_arch = "x86_64")))]
+    return Err(AppError::new(
+        ErrorCode::Unknown,
+        "当前 CPU 架构暂不支持应用管理组件。",
+        false,
+    ));
+
+    Ok((target_os, architecture))
+}
+
 impl ComponentManifest {
+    pub fn select_release(
+        &self,
+        kind: ComponentKind,
+        target_os: TargetOs,
+        architecture: Architecture,
+    ) -> Option<&ComponentRelease> {
+        self.entries.iter().find(|entry| {
+            entry.kind == kind && entry.target_os == target_os && entry.architecture == architecture
+        })
+    }
+
     pub fn signed_payload(&self) -> Result<Vec<u8>, AppError> {
         serde_json::to_vec(&SignedManifest {
             schema_version: self.schema_version,
@@ -201,5 +240,34 @@ mod tests {
         manifest.entries[0].url = "https://example.com/tool".into();
         manifest.entries[0].sha256 = "bad".into();
         assert!(manifest.validate().is_err());
+    }
+
+    #[test]
+    fn selects_only_exact_os_architecture_and_component_match() {
+        let manifest = unsigned_manifest();
+        assert!(
+            manifest
+                .select_release(ComponentKind::YtDlp, TargetOs::MacOs, Architecture::Aarch64)
+                .is_some()
+        );
+        assert!(
+            manifest
+                .select_release(ComponentKind::YtDlp, TargetOs::MacOs, Architecture::X86_64)
+                .is_none()
+        );
+        assert!(
+            manifest
+                .select_release(
+                    ComponentKind::Ffmpeg,
+                    TargetOs::MacOs,
+                    Architecture::Aarch64
+                )
+                .is_none()
+        );
+        assert!(
+            manifest
+                .select_release(ComponentKind::YtDlp, TargetOs::Linux, Architecture::Aarch64)
+                .is_none()
+        );
     }
 }
