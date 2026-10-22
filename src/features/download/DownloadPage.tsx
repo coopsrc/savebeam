@@ -48,6 +48,7 @@ export function DownloadPage() {
   const location = useLocation();
   const [url, setUrl] = useState(() => new URLSearchParams(location.search).get("url") ?? "");
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [useProxy, setUseProxy] = useState(false);
   const [isInspecting, setIsInspecting] = useState(false);
   const [isStartingDownload, setIsStartingDownload] = useState(false);
   const [mediaInfo, setMediaInfo] = useState<MediaInfo | null>(null);
@@ -103,7 +104,7 @@ export function DownloadPage() {
 
     setIsInspecting(true);
     try {
-      const result = await inspectMedia(checked.normalizedUrl);
+      const result = await inspectMedia(checked.normalizedUrl, useProxy);
       if (epoch !== sizeEpoch.current) return;
       setMediaInfo(result);
       setPlaylistItems(
@@ -116,7 +117,10 @@ export function DownloadPage() {
         !result.playlist && !videos.length && audioFormats(result.formats, true).length > 0,
       );
     } catch (error: unknown) {
-      setRequestError(error instanceof IpcError ? error.message : "解析失败，请稍后重试。");
+      if (epoch === sizeEpoch.current)
+        setRequestError(
+          error instanceof IpcError ? error.contextMessage : "解析失败，请稍后重试。",
+        );
     } finally {
       setIsInspecting(false);
     }
@@ -157,6 +161,7 @@ export function DownloadPage() {
       writeInfoJson,
       embedMetadata,
       keepIntermediateFiles,
+      useProxy,
       conflictStrategy: "skip",
     };
     try {
@@ -164,7 +169,7 @@ export function DownloadPage() {
       upsertDownloadTask(task);
       navigate("/tasks");
     } catch (error: unknown) {
-      setRequestError(error instanceof IpcError ? error.message : "无法创建下载任务。");
+      setRequestError(error instanceof IpcError ? error.contextMessage : "无法创建下载任务。");
     } finally {
       setIsStartingDownload(false);
     }
@@ -205,6 +210,7 @@ export function DownloadPage() {
       const response = await invokeCommand<PlaylistSizeItem[]>("estimate_playlist_size", {
         url: mediaInfo.webpageUrl,
         items: requested.map(({ index, id }) => ({ index, id })),
+        useProxy,
       });
       if (epoch === sizeEpoch.current)
         setPlaylistSizes((current) => applyPlaylistSizes(current, requested, response));
@@ -292,6 +298,17 @@ export function DownloadPage() {
                   解析视频信息
                 </Button>
               </div>
+              <Checkbox
+                label="使用代理"
+                description="不勾选时直接连接；勾选后，解析、大小估算和本次下载使用设置中已保存的自定义代理。"
+                checked={useProxy}
+                disabled={isInspecting || isStartingDownload}
+                onChange={(event) => {
+                  const checked = event.currentTarget.checked;
+                  setUseProxy(checked);
+                  handleChange(url);
+                }}
+              />
               <Text id="url-input-hint" size="xs" c="dimmed">
                 仅支持 http:// 和 https://；需要已在设置中配置 yt-dlp。
               </Text>

@@ -77,9 +77,64 @@ pub fn proxy_args(preferences: &NetworkPreferences) -> Result<Vec<OsString>, App
         .unwrap_or_default())
 }
 
+/// Explicit task choice wins over global defaults. Never fall back to direct on proxy failure.
+pub fn for_task(
+    saved: &NetworkPreferences,
+    use_proxy: Option<bool>,
+) -> Result<NetworkPreferences, AppError> {
+    match use_proxy {
+        Some(false) => Ok(NetworkPreferences {
+            proxy_mode: ProxyMode::Direct,
+            proxy_url: String::new(),
+        }),
+        Some(true) if saved.proxy_mode != ProxyMode::Custom => Err(invalid(
+            "请先在设置中选择自定义代理并保存，再勾选使用代理。",
+        )),
+        _ => normalize(saved),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn task_choice_overrides_global_mode_but_legacy_tasks_keep_inheritance() {
+        let saved = NetworkPreferences {
+            proxy_mode: ProxyMode::Custom,
+            proxy_url: "socks5h://127.0.0.1:1080".into(),
+        };
+        assert_eq!(
+            proxy_argument(&for_task(&saved, Some(false)).unwrap()).unwrap(),
+            Some(String::new())
+        );
+        assert_eq!(
+            for_task(&saved, Some(true)).unwrap(),
+            normalize(&saved).unwrap()
+        );
+        assert_eq!(for_task(&saved, None).unwrap(), normalize(&saved).unwrap());
+        for mode in [ProxyMode::Default, ProxyMode::Direct] {
+            let value = NetworkPreferences {
+                proxy_mode: mode,
+                proxy_url: String::new(),
+            };
+            assert!(
+                for_task(&value, Some(true))
+                    .unwrap_err()
+                    .message
+                    .contains("设置")
+            );
+        }
+        let invalid = NetworkPreferences {
+            proxy_url: "http://user:secret@host".into(),
+            ..saved
+        };
+        assert!(for_task(&invalid, Some(true)).is_err());
+        assert_eq!(
+            for_task(&invalid, Some(false)).unwrap().proxy_mode,
+            ProxyMode::Direct
+        );
+    }
 
     #[test]
     fn distinguishes_default_direct_and_custom_without_shell_interpolation() {

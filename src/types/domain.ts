@@ -149,6 +149,7 @@ export interface DownloadOptions {
   writeInfoJson: boolean;
   embedMetadata: boolean;
   keepIntermediateFiles: boolean;
+  useProxy: boolean;
   conflictStrategy: "skip" | "overwrite";
 }
 

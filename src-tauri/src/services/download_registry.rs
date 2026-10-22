@@ -509,11 +509,13 @@ mod tests {
             .unwrap();
         let mut queued_options = test_options("https://example.com/queued", "Queued", "18");
         queued_options.keep_intermediate_files = true;
+        queued_options.use_proxy = Some(false);
         queued_options.playlist_item_count = Some(2);
         queued_options.playlist_items = Some(vec![1, 3]);
         let queued = first_process.create(queued_options).unwrap();
         let mut active_options = test_options("https://example.com/active", "Active", "22");
         active_options.keep_intermediate_files = true;
+        active_options.use_proxy = Some(true);
         active_options.playlist_item_count = Some(2);
         active_options.playlist_items = Some(vec![2, 5]);
         let interrupted = first_process.create(active_options).unwrap();
@@ -535,9 +537,11 @@ mod tests {
         assert_eq!(claimed.id, queued.id);
         assert!(options.keep_intermediate_files);
         assert_eq!(options.playlist_items, Some(vec![1, 3]));
+        assert_eq!(options.use_proxy, Some(false));
         let (_, options) = second_process.retry(&interrupted.id).unwrap();
         assert!(options.keep_intermediate_files);
         assert_eq!(options.playlist_items, Some(vec![2, 5]));
+        assert_eq!(options.use_proxy, Some(true));
     }
 
     #[test]
@@ -666,6 +670,7 @@ mod tests {
             playlist_item_count: None,
             playlist_items: None,
             expected_media_id: None,
+            use_proxy: None,
             audio_only: false,
             write_automatic_subtitles: false,
             write_thumbnail: false,

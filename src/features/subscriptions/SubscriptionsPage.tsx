@@ -36,6 +36,7 @@ export function SubscriptionsPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [showDownloaded, setShowDownloaded] = useState(false);
   const [expanded, setExpanded] = useState<Record<number, boolean>>({});
+  const [proxyChoices, setProxyChoices] = useState<Record<number, boolean>>({});
   const [removing, setRemoving] = useState<SeriesSubscription | null>(null);
   const stopChecks = useRef(false);
   const [checkProgress, setCheckProgress] = useState("");
@@ -393,12 +394,26 @@ export function SubscriptionsPage() {
                   [ID]/序号-标题 [视频 ID].扩展名”结构；实际格式及大小下载时确定。
                 </Text>
                 <Group justify="flex-end">
+                  <Checkbox
+                    label="使用代理"
+                    description="仅本次下载，使用设置中保存的自定义代理；不勾选则直连。"
+                    checked={proxyChoices[item.id] ?? false}
+                    disabled={!!busy}
+                    onChange={(event) => {
+                      const checked = event.currentTarget.checked;
+                      setProxyChoices((previous) => ({ ...previous, [item.id]: checked }));
+                    }}
+                  />
                   <Button
                     disabled={!!busy || !chosen.length}
                     loading={busy === `download-${item.id}`}
                     onClick={() =>
                       void act(`download-${item.id}`, async () => {
-                        const result = await subscriptionApi.download(item.id, chosen);
+                        const result = await subscriptionApi.download(
+                          item.id,
+                          chosen,
+                          proxyChoices[item.id] ?? false,
+                        );
                         result.tasks.forEach((task) =>
                           useAppStore.getState().upsertDownloadTask(task),
                         );

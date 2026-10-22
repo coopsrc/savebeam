@@ -32,7 +32,10 @@ pub fn build_download_args_with_network(
     let index = args.len() - 2; // Keep proxy switches before the fixed -- URL delimiter.
     args.splice(
         index..index,
-        crate::security::network_proxy::proxy_args(network)?,
+        crate::security::network_proxy::proxy_args(&crate::security::network_proxy::for_task(
+            network,
+            options.use_proxy,
+        )?)?,
     );
     Ok(args)
 }
@@ -373,6 +376,7 @@ mod tests {
             playlist_item_count: None,
             playlist_items: None,
             expected_media_id: None,
+            use_proxy: None,
             audio_only: false,
             write_automatic_subtitles: false,
             write_thumbnail: false,
@@ -425,6 +429,43 @@ mod tests {
         )
         .unwrap();
         assert!(!defaults.iter().any(|arg| arg == "--proxy"));
+        let _ = fs::remove_dir_all(directory);
+    }
+
+    #[test]
+    fn persisted_task_proxy_choice_controls_download_argv_without_changing_media_options() {
+        use crate::domain::network::{NetworkPreferences, ProxyMode};
+        let directory = temp_directory();
+        let mut selected = options(&directory);
+        let saved = NetworkPreferences {
+            proxy_mode: ProxyMode::Custom,
+            proxy_url: "http://127.0.0.1:7890/".into(),
+        };
+        for (choice, expected) in [(false, ""), (true, "http://127.0.0.1:7890/")] {
+            selected.use_proxy = Some(choice);
+            let args = super::build_download_args_with_network(
+                &selected,
+                &CookiePreferences::default(),
+                &saved,
+            )
+            .unwrap();
+            assert_eq!(args[args.len() - 4], "--proxy");
+            assert_eq!(args[args.len() - 3], expected);
+            assert_eq!(args[args.len() - 2], "--");
+            assert_eq!(args[args.len() - 1], selected.url.as_str());
+            assert!(
+                args.windows(2)
+                    .any(|pair| pair[0] == "--format" && pair[1] == selected.format_id.as_str())
+            );
+        }
+        assert!(
+            super::build_download_args_with_network(
+                &selected,
+                &CookiePreferences::default(),
+                &NetworkPreferences::default()
+            )
+            .is_err()
+        );
         let _ = fs::remove_dir_all(directory);
     }
 

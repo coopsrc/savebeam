@@ -27,6 +27,14 @@ await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
 const directory = await mkdtemp(join(tmpdir(), "savebeam-proxy-fixture-"));
 const proxy = `http://127.0.0.1:${server.address().port}`;
 const target = "http://savebeam-proxy-test.invalid/media.mp4";
+let directRequests = 0;
+const directServer = createServer((request, response) => {
+  directRequests++;
+  response.writeHead(200, { "Content-Type": "video/mp4", "Content-Length": body.length });
+  response.end(request.method === "HEAD" ? undefined : body);
+});
+await new Promise((resolve) => directServer.listen(0, "127.0.0.1", resolve));
+const directTarget = `http://127.0.0.1:${directServer.address().port}/direct.mp4`;
 const common = [
   "-m",
   "yt_dlp",
@@ -58,10 +66,48 @@ try {
   assert.ok(
     requests.every((request) => request.url === target && !request.cookie && !request.auth),
   );
+  const proxyCount = requests.length;
+  const directCommon = [...common.slice(0, -2), "--proxy", ""];
+  const env = {
+    ...process.env,
+    http_proxy: proxy,
+    https_proxy: proxy,
+    all_proxy: proxy,
+    HTTP_PROXY: proxy,
+    HTTPS_PROXY: proxy,
+    ALL_PROXY: proxy,
+    NO_PROXY: "",
+    no_proxy: "",
+  };
+  await run(
+    process.argv[2],
+    [...directCommon, "--dump-single-json", "--skip-download", "--", directTarget],
+    { timeout: 15000, env },
+  );
+  await run(
+    process.argv[2],
+    [
+      ...directCommon,
+      "--no-progress",
+      "--output",
+      join(directory, "direct.mp4"),
+      "--",
+      directTarget,
+    ],
+    { timeout: 15000, env },
+  );
+  assert.deepEqual(await readFile(join(directory, "direct.mp4")), body);
+  assert.ok(directRequests > 0);
+  assert.equal(
+    requests.length,
+    proxyCount,
+    "explicit direct must bypass all inherited environment proxies",
+  );
   process.stdout.write(
-    `real yt-dlp inspect + download through loopback proxy: passed (${requests.length} requests)\n`,
+    `real yt-dlp inspect + download through proxy and forced direct with inherited proxies: passed (${requests.length} proxy, ${directRequests} direct requests)\n`,
   );
 } finally {
   await new Promise((resolve) => server.close(resolve));
+  await new Promise((resolve) => directServer.close(resolve));
   await rm(directory, { recursive: true, force: true }); // Only this script's mkdtemp fixture.
 }

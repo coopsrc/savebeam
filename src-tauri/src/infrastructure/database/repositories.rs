@@ -111,8 +111,8 @@ impl DownloadTaskRepository {
                      conflict_strategy, playlist_item_count, audio_only,
                      write_automatic_subtitles, write_thumbnail, write_info_json, embed_metadata,
                      cookies_file_path, cookies_browser, cookie_access_confirmed, merge_container,
-                     keep_intermediate_files, playlist_items_json, expected_media_id
-                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22)",
+                     keep_intermediate_files, playlist_items_json, expected_media_id, use_proxy
+                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23)",
                 params![
                     task.id,
                     options.url,
@@ -136,6 +136,7 @@ impl DownloadTaskRepository {
                     options.keep_intermediate_files,
                     playlist_items_json,
                     options.expected_media_id,
+                    options.use_proxy,
                 ],
             )
         })?;
@@ -168,7 +169,7 @@ impl DownloadTaskRepository {
                             playlist_item_count, audio_only, write_automatic_subtitles,
                             write_thumbnail, write_info_json, embed_metadata,
                             cookies_file_path, cookies_browser, cookie_access_confirmed, merge_container,
-                            keep_intermediate_files, playlist_items_json, expected_media_id
+                            keep_intermediate_files, playlist_items_json, expected_media_id, use_proxy
                      FROM download_tasks WHERE task_id = ?1",
                     [task_id],
                     task_from_row,
@@ -203,7 +204,7 @@ impl DownloadTaskRepository {
                         playlist_item_count, audio_only, write_automatic_subtitles,
                         write_thumbnail, write_info_json, embed_metadata,
                         cookies_file_path, cookies_browser, cookie_access_confirmed, merge_container,
-                        keep_intermediate_files, playlist_items_json, expected_media_id
+                        keep_intermediate_files, playlist_items_json, expected_media_id, use_proxy
                  FROM download_tasks WHERE NOT ?1 OR hidden_from_tasks = 0 ORDER BY created_at_unix_ms DESC",
             )?;
             let rows = statement.query_map([visible_only], task_from_row)?;
@@ -354,6 +355,7 @@ fn task_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<(DownloadTask, Dow
             embed_metadata: row.get(14)?,
             keep_intermediate_files: row.get(19)?,
             expected_media_id: row.get(21)?,
+            use_proxy: row.get(22)?,
             cookies_file_path: row.get(15)?,
             cookies_browser: row
                 .get::<_, Option<String>>(16)?
@@ -521,6 +523,7 @@ mod tests {
             playlist_item_count: Some(3),
             playlist_items: Some(vec![1, 3, 5]),
             expected_media_id: Some("expected-id".into()),
+            use_proxy: Some(true),
             audio_only: true,
             write_automatic_subtitles: true,
             write_thumbnail: true,
@@ -559,7 +562,68 @@ mod tests {
         assert_eq!(loaded_options.cookies_browser, Some(CookieBrowser::Firefox));
         assert!(loaded_options.cookie_access_confirmed);
         assert_eq!(loaded_options.merge_container, options.merge_container);
+        assert_eq!(loaded_options.use_proxy, Some(true));
         assert_eq!(tasks.list().expect("list works").len(), 1);
+    }
+
+    #[test]
+    fn direct_proxy_and_legacy_task_choices_survive_file_database_reopen() {
+        let path = std::env::temp_dir().join(format!(
+            "savebeam-task-proxy-{}-{}.sqlite3",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        {
+            let repository = DownloadTaskRepository::new(Database::open(&path).unwrap());
+            for (id, choice) in [
+                ("direct", Some(false)),
+                ("proxy", Some(true)),
+                ("legacy", None),
+            ] {
+                let task = crate::domain::download::DownloadTask {
+                    id: id.into(),
+                    title: id.into(),
+                    url: "https://example.invalid/video".into(),
+                    format_id: "18".into(),
+                    status: DownloadTaskStatus::Queued,
+                    created_at_unix_ms: 1,
+                };
+                let options = DownloadOptions {
+                    title: task.title.clone(),
+                    url: task.url.clone(),
+                    format_id: task.format_id.clone(),
+                    use_proxy: choice,
+                    ..Default::default()
+                };
+                repository.insert(&task, &options).unwrap();
+            }
+        }
+        let repository = DownloadTaskRepository::new(Database::open(&path).unwrap());
+        for (id, expected) in [
+            ("direct", Some(false)),
+            ("proxy", Some(true)),
+            ("legacy", None),
+        ] {
+            assert_eq!(repository.get(id).unwrap().unwrap().1.use_proxy, expected);
+            assert_eq!(
+                repository
+                    .list_visible()
+                    .unwrap()
+                    .iter()
+                    .find(|(task, _)| task.id == id)
+                    .unwrap()
+                    .1
+                    .use_proxy,
+                expected
+            );
+        }
+        drop(repository);
+        let _ = std::fs::remove_file(&path);
+        let _ = std::fs::remove_file(path.with_extension("sqlite3-wal"));
+        let _ = std::fs::remove_file(path.with_extension("sqlite3-shm"));
     }
 
     #[test]
@@ -584,6 +648,7 @@ mod tests {
             playlist_item_count: None,
             playlist_items: None,
             expected_media_id: None,
+            use_proxy: None,
             audio_only: false,
             write_automatic_subtitles: false,
             write_thumbnail: false,

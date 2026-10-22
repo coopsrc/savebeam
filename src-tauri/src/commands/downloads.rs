@@ -34,7 +34,8 @@ use crate::{
     services::{
         component_detector::ComponentDetector, component_paths::ComponentPaths,
         component_probe::probe_all, download_registry::DownloadTaskRegistry,
-        download_verifier::verify_download_outputs, network_preferences::load_network_preferences,
+        download_verifier::verify_download_outputs,
+        network_preferences::load_task_network_preferences,
     },
 };
 
@@ -52,6 +53,7 @@ pub fn start_download(
     options.cookies_browser = None;
     options.cookie_access_confirmed = false;
     options.expected_media_id = None;
+    options.use_proxy.get_or_insert(false);
     queue_download(
         app,
         options,
@@ -86,6 +88,7 @@ pub(crate) fn queue_download(
     options.conflict_strategy = preferences.conflict_strategy;
     tasks.set_max_concurrent(preferences.max_concurrent)?;
     validate_task_options(&options)?;
+    load_task_network_preferences(database.database()?, options.use_proxy)?;
     let task = tasks.create(options.clone())?;
     tasks.enqueue(&task.id)?;
     launch_next_task(app.clone(), components.clone(), tasks.clone());
@@ -446,7 +449,10 @@ fn run_task(
             required_component(&installations, ComponentKind::Ffprobe)?;
         }
         let cookies = load_cookie_preferences(app.state::<DatabaseManager>().inner())?;
-        let network = load_network_preferences(app.state::<DatabaseManager>().database()?)?;
+        let network = load_task_network_preferences(
+            app.state::<DatabaseManager>().database()?,
+            options.use_proxy,
+        )?;
         let mut args = build_download_args_with_network(&options, &cookies, &network)?;
         append_option_before_url(&mut args, "--ffmpeg-location", Path::new(ffmpeg))?;
         let executable = PathBuf::from(ytdlp);

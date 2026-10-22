@@ -45,6 +45,6 @@ export const subscriptionApi = {
   subscribe: (url: string) => invoke<number>("subscribe_series", { url }),
   check: (id: number) => invoke<void>("check_subscription", { id }),
   remove: (id: number) => invoke<void>("unsubscribe_series", { id }),
-  download: (id: number, mediaIds: string[]) =>
-    invoke<QueuedItems>("download_subscription_items", { id, mediaIds }),
+  download: (id: number, mediaIds: string[], useProxy = false) =>
+    invoke<QueuedItems>("download_subscription_items", { id, mediaIds, useProxy }),
 };

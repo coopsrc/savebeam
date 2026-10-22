@@ -107,7 +107,7 @@ export function NetworkPreferencesPanel() {
         <div>
           <Title order={3}>网络与代理</Title>
           <Text size="sm" c="dimmed" mt={3}>
-            用于视频解析、下载、订阅检查和封面请求。组件下载与应用更新暂不使用此设置。
+            保存自定义代理后，可在添加下载时勾选“使用代理”，统一用于该次解析、大小估算、封面与下载；不勾选则直连。订阅检查沿用此处的连接方式。组件下载与应用更新暂不使用此设置。
           </Text>
         </div>
         <Select
@@ -148,7 +148,7 @@ export function NetworkPreferencesPanel() {
           </Text>
         )}
         <Text size="xs" c="dimmed">
-          保存后对新启动和重试的请求生效，正在运行的任务不受影响。代理仅解决网络连接问题，不代表可以访问所有视频。
+          任务会保存是否使用代理；勾选的任务在启动或重试时读取最新自定义地址，未勾选的任务始终直连。正在运行的任务不受影响。代理仅解决网络连接问题，不代表可以访问所有视频。
         </Text>
         <Text size="xs" c="dimmed">
           测试当前填写的配置，不自动保存。测试会向 YouTube 发起一次不带 Cookie 的 HTTPS 请求，通常在

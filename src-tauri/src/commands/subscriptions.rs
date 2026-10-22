@@ -4,7 +4,7 @@ use crate::{
         components::ComponentRegistry,
         downloads::{load_cookie_preferences, queue_download},
         ipc::CommandResult,
-        media::subscription_engine,
+        media::{configured_media_engine, subscription_engine},
     },
     domain::{
         download::{DownloadOptions, DownloadTask, DownloadTaskStatus},
@@ -198,6 +198,7 @@ pub async fn download_subscription_items(
     app: AppHandle,
     id: i64,
     media_ids: Vec<String>,
+    use_proxy: Option<bool>,
 ) -> CommandResult<QueuedSubscriptionItems> {
     worker(app, move |app| {
         let wanted: HashSet<_> = media_ids.iter().collect();
@@ -207,7 +208,13 @@ pub async fn download_subscription_items(
         let database = app.state::<DatabaseManager>();
         let repo = SubscriptionRepository(database.database()?);
         let subscription = repo.get(id)?;
-        let snapshot = scan(app, &subscription.url)?;
+        let use_proxy = Some(use_proxy.unwrap_or(false));
+        let cookies = load_cookie_preferences(app.state::<DatabaseManager>().inner())?;
+        let snapshot = map_snapshot(
+            &configured_media_engine(app, use_proxy)?
+                .for_subscription()
+                .inspect_with_cookies(&subscription.url, &cookies)?,
+        )?;
         if snapshot.source_id != subscription.source_id {
             return Err(invalid("系列 ID 已变化，请重新确认订阅。"));
         }
@@ -272,6 +279,7 @@ pub async fn download_subscription_items(
                 playlist_item_count: Some(1),
                 playlist_items: Some(vec![entry.index]),
                 expected_media_id: Some(entry.id.clone()),
+                use_proxy,
                 ..Default::default()
             };
             match queue_download(

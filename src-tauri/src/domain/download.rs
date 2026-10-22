@@ -81,6 +81,9 @@ pub struct DownloadOptions {
     pub embed_metadata: bool,
     #[serde(default)]
     pub keep_intermediate_files: bool,
+    /// None is reserved for legacy tasks that inherited the global network mode.
+    #[serde(default)]
+    pub use_proxy: Option<bool>,
     #[serde(default)]
     pub cookies_file_path: Option<String>,
     #[serde(default)]
@@ -219,6 +222,7 @@ mod tests {
         assert_eq!(options.playlist_item_count, None);
         assert_eq!(options.playlist_items, None);
         assert_eq!(options.merge_container, None);
+        assert_eq!(options.use_proxy, None);
         assert!(!options.audio_only);
         assert!(!options.write_automatic_subtitles);
         assert!(!options.write_thumbnail);

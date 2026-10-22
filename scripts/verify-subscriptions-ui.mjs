@@ -67,7 +67,14 @@ const fixture = {
   ],
 };
 try {
-  for (const scenario of ["selection", "failed-check", "truncated", "add", "remove"]) {
+  for (const scenario of [
+    "selection",
+    "selection-proxy",
+    "failed-check",
+    "truncated",
+    "add",
+    "remove",
+  ]) {
     const page = await browser.newPage({ viewport: { width: 1200, height: 1000 } });
     const errors = [];
     page.on("pageerror", (error) => errors.push(error.message));
@@ -146,7 +153,13 @@ try {
     } else {
       const card = page.getByRole("region", { name: fixture.title, exact: true });
       await card.waitFor();
-      if (scenario === "selection") {
+      if (scenario.startsWith("selection")) {
+        assert.equal(
+          await card.getByRole("checkbox", { name: "使用代理", exact: true }).isChecked(),
+          false,
+        );
+        if (scenario === "selection-proxy")
+          await card.getByRole("checkbox", { name: "使用代理", exact: true }).check();
         await card.getByRole("button", { name: "选择新增", exact: true }).click();
         await card.getByRole("button", { name: /展开条目/ }).click();
         assert.equal(
@@ -169,7 +182,11 @@ try {
         const calls = await page.evaluate(() =>
           window.calls.filter((call) => call.command === "download_subscription_items"),
         );
-        assert.deepEqual(calls[0].args, { id: 1, mediaIds: ["v72"] });
+        assert.deepEqual(calls[0].args, {
+          id: 1,
+          mediaIds: ["v72"],
+          useProxy: scenario === "selection-proxy",
+        });
         assert.equal(
           await card
             .getByRole("checkbox", { name: "第 72 项 · 新增课程 · 新增", exact: true })

@@ -10,6 +10,18 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 const SETTINGS_KEY: &str = "network.preferences";
 
+pub fn load_task_network_preferences(
+    database: Database,
+    use_proxy: Option<bool>,
+) -> Result<NetworkPreferences, AppError> {
+    let saved = if use_proxy == Some(false) {
+        NetworkPreferences::default()
+    } else {
+        load_network_preferences(database)?
+    };
+    crate::security::network_proxy::for_task(&saved, use_proxy)
+}
+
 pub fn load_network_preferences(database: Database) -> Result<NetworkPreferences, AppError> {
     normalize(
         &SettingsRepository::new(database)
@@ -35,6 +47,23 @@ pub fn save_network_preferences(
 mod tests {
     use super::*;
     use crate::domain::network::ProxyMode;
+
+    #[test]
+    fn direct_tasks_do_not_require_valid_global_proxy_settings_and_proxy_tasks_never_fall_back() {
+        let db = Database::open_in_memory().unwrap();
+        assert!(load_task_network_preferences(db.clone(), Some(true)).is_err());
+        SettingsRepository::new(db.clone())
+            .set(SETTINGS_KEY, &"malformed", 1)
+            .unwrap();
+        assert_eq!(
+            load_task_network_preferences(db.clone(), Some(false))
+                .unwrap()
+                .proxy_mode,
+            ProxyMode::Direct
+        );
+        assert!(load_task_network_preferences(db.clone(), Some(true)).is_err());
+        assert!(load_task_network_preferences(db, None).is_err());
+    }
 
     #[test]
     fn stored_proxy_survives_database_reopen() {

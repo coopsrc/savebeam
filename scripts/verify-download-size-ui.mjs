@@ -9,7 +9,12 @@ const browser = await chromium.launch({
   headless: true,
 });
 try {
-  for (const series of [false, true]) {
+  for (const [series, useProxy] of [
+    [false, false],
+    [false, true],
+    [true, false],
+    [true, true],
+  ]) {
     const page = await browser.newPage({ viewport: { width: 1500, height: 1100 } });
     await page.addInitScript((series) => {
       window.calls = [];
@@ -22,6 +27,21 @@ try {
         unregisterCallback() {},
         async invoke(command, args = {}) {
           window.calls.push({ command, args });
+          if (command === "inspect_media" && args.useProxy && window.missingProxy)
+            throw {
+              code: "invalid_url",
+              message: "请先在设置中选择自定义代理并保存，再勾选使用代理。",
+              retryable: false,
+            };
+          if (command === "start_download")
+            return {
+              id: "size-task",
+              title: "测试媒体",
+              url: args.options.url,
+              formatId: args.options.formatId,
+              status: "queued",
+              createdAtUnixMs: 1000,
+            };
           if (command === "inspect_media")
             return {
               id: "media",
@@ -91,9 +111,38 @@ try {
     await page
       .getByRole("textbox", { name: "视频链接", exact: true })
       .fill("https://example.invalid/series");
+    const proxy = page.getByRole("checkbox", { name: "使用代理", exact: true });
+    assert.equal(await proxy.isChecked(), false, "new requests default to direct");
+    if (useProxy) await proxy.check();
+    if (useProxy) {
+      await page.evaluate(() => {
+        window.missingProxy = true;
+      });
+      await page.getByRole("button", { name: "解析视频信息", exact: true }).click();
+      await page
+        .getByRole("alert")
+        .filter({ hasText: "请先在设置中选择自定义代理并保存" })
+        .waitFor();
+      assert.equal(await page.getByRole("region", { name: "媒体与格式", exact: true }).count(), 0);
+      await page.evaluate(() => {
+        window.missingProxy = false;
+      });
+    }
     await page.getByRole("button", { name: "解析视频信息", exact: true }).click();
     const hint = page.locator(".download-size-hint");
     await hint.waitFor();
+    await proxy.setChecked(!useProxy);
+    await page
+      .getByRole("region", { name: "媒体与格式", exact: true })
+      .waitFor({ state: "detached" });
+    await proxy.setChecked(useProxy);
+    await page.getByRole("button", { name: "解析视频信息", exact: true }).click();
+    await hint.waitFor();
+    assert.ok(
+      (
+        await page.evaluate(() => window.calls.filter((call) => call.command === "inspect_media"))
+      ).every((call) => call.args.useProxy === useProxy),
+    );
     const text = async (value) => {
       await page.waitForFunction(
         (value) => document.querySelector(".download-size-hint")?.textContent.includes(value),
@@ -143,9 +192,20 @@ try {
     await text("MP3 转换后待定");
     assert.equal(await page.getByRole("region", { name: "预计输出", exact: true }).count(), 0);
     await page.screenshot({
-      path: `/tmp/savebeam-size-${series ? "series" : "single"}.png`,
+      path: `/tmp/savebeam-size-${series ? "series" : "single"}-${useProxy ? "proxy" : "direct"}.png`,
       fullPage: true,
     });
+    const estimateCalls = await page.evaluate(() =>
+      window.calls.filter((call) => call.command === "estimate_playlist_size"),
+    );
+    assert.ok(estimateCalls.every((call) => call.args.useProxy === useProxy));
+    if (series) await page.getByRole("checkbox", { name: /我确认下载所选/ }).check();
+    await page.getByRole("button", { name: "开始下载", exact: true }).click();
+    await page.waitForURL(/#\/tasks$/);
+    const started = await page.evaluate(() =>
+      window.calls.find((call) => call.command === "start_download"),
+    );
+    assert.equal(started.args.options.useProxy, useProxy);
     await page.close();
   }
   console.log(

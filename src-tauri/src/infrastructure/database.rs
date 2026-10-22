@@ -10,7 +10,7 @@ use rusqlite::{Connection, TransactionBehavior};
 
 use crate::domain::error::{AppError, ErrorCode};
 
-pub const CURRENT_SCHEMA_VERSION: u32 = 10;
+pub const CURRENT_SCHEMA_VERSION: u32 = 11;
 
 pub mod repositories;
 pub mod subscriptions;
@@ -89,6 +89,8 @@ const MIGRATIONS: &[(u32, &str)] = &[(
      );"
 ) , (10,
     "ALTER TABLE download_tasks ADD COLUMN hidden_from_tasks INTEGER NOT NULL DEFAULT 0;"
+) , (11,
+    "ALTER TABLE download_tasks ADD COLUMN use_proxy INTEGER CHECK (use_proxy IN (0, 1));"
 )];
 
 #[derive(Debug, Clone)]
@@ -345,6 +347,17 @@ mod tests {
             .unwrap();
 
         assert_eq!(version, CURRENT_SCHEMA_VERSION);
+        let legacy_proxy: Option<bool> = connection
+            .query_row(
+                "SELECT use_proxy FROM download_tasks WHERE task_id = 'old-task'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(
+            legacy_proxy, None,
+            "old tasks retain their inherited network behavior"
+        );
         assert_eq!(
             migrated,
             MigratedTask {

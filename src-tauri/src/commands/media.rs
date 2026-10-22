@@ -17,17 +17,20 @@ use crate::{
     services::{
         component_detector::ComponentDetector, component_paths::ComponentPaths,
         component_probe::probe_all, media_mapper::map_media_info,
-        network_preferences::load_network_preferences,
+        network_preferences::load_task_network_preferences,
         thumbnail_preview::load_thumbnail_with_network,
     },
 };
 
 /// Called on a blocking worker; follows the same configured component paths as media parsing.
 pub(crate) fn subscription_engine(app: &AppHandle) -> CommandResult<YtDlpProcessEngine> {
-    Ok(configured_media_engine(app)?.for_subscription())
+    Ok(configured_media_engine(app, None)?.for_subscription())
 }
 
-pub(crate) fn configured_media_engine(app: &AppHandle) -> CommandResult<YtDlpProcessEngine> {
+pub(crate) fn configured_media_engine(
+    app: &AppHandle,
+    use_proxy: Option<bool>,
+) -> CommandResult<YtDlpProcessEngine> {
     let registry = app.state::<ComponentRegistry>();
     let custom = registry
         .custom_paths
@@ -59,7 +62,8 @@ pub(crate) fn configured_media_engine(app: &AppHandle) -> CommandResult<YtDlpPro
         })
         .and_then(|item| item.executable_path.as_ref())
         .map(PathBuf::from);
-    let network = load_network_preferences(app.state::<DatabaseManager>().database()?)?;
+    let network =
+        load_task_network_preferences(app.state::<DatabaseManager>().database()?, use_proxy)?;
     Ok(YtDlpProcessEngine::new(executable, runtime).with_network_preferences(network))
 }
 
@@ -69,6 +73,7 @@ pub async fn inspect_media(
     registry: State<'_, ComponentRegistry>,
     database: State<'_, DatabaseManager>,
     url: String,
+    use_proxy: Option<bool>,
 ) -> CommandResult<MediaInfo> {
     if url.len() > 4096 || !(url.starts_with("http://") || url.starts_with("https://")) {
         return Err(AppError::new(
@@ -87,7 +92,8 @@ pub async fn inspect_media(
         .map_err(|_| AppError::new(ErrorCode::Unknown, "组件设置暂时不可用。", true))?
         .clone();
     let cookies = load_cookie_preferences(database.inner())?;
-    let network = load_network_preferences(database.database()?)?;
+    let network =
+        load_task_network_preferences(database.database()?, Some(use_proxy.unwrap_or(false)))?;
 
     tauri::async_runtime::spawn_blocking(move || {
         let detector =
@@ -148,6 +154,7 @@ pub async fn estimate_playlist_size(
     operations: State<'_, crate::services::playlist_size::PlaylistSizeOperations>,
     url: String,
     items: Vec<crate::services::playlist_size::PlaylistSizeRequestItem>,
+    use_proxy: Option<bool>,
 ) -> CommandResult<Vec<crate::services::playlist_size::PlaylistSizeItem>> {
     use crate::services::playlist_size::{map_sizes, validate_indices};
     if url.len() > 4096 || !(url.starts_with("http://") || url.starts_with("https://")) {
@@ -173,7 +180,8 @@ pub async fn estimate_playlist_size(
     tauri::async_runtime::spawn_blocking(move || {
         let _guard = guard;
         let cookies = load_cookie_preferences(app.state::<DatabaseManager>().inner())?;
-        let engine = configured_media_engine(&app)?.for_size_estimate(&indices)?;
+        let engine = configured_media_engine(&app, Some(use_proxy.unwrap_or(false)))?
+            .for_size_estimate(&indices)?;
         let raw = engine.inspect_with_cookies(&url, &cookies)?;
         Ok(map_sizes(&raw, &items))
     })

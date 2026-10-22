@@ -395,6 +395,7 @@ try {
       assert.deepEqual(calls[0].args.options.playlistItems, indices);
       assert.equal(calls[0].args.options.audioOnly, mp3);
       assert.equal(calls[0].args.options.keepIntermediateFiles, true);
+      assert.equal(calls[0].args.options.useProxy, false);
       if (mode === "single") {
         assert.equal(calls[0].args.options.formatId, mp3 ? "140" : "137+140");
         assert.equal(calls[0].args.options.mergeContainer, mp3 ? null : "mp4");
