@@ -168,6 +168,18 @@ export interface NetworkPreferences {
   proxyUrl: string;
 }
 
+export interface ConnectionCheck {
+  status: "success" | "failed" | "limited" | "skipped";
+  message: string;
+  durationMs: number | null;
+  httpStatus: number | null;
+}
+
+export interface NetworkConnectionTestResult {
+  proxy: ConnectionCheck;
+  youtube: ConnectionCheck;
+}
+
 export interface DownloadProgress {
   taskId: string;
   status: DownloadTaskStatus;

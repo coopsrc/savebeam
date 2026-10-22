@@ -16,6 +16,7 @@ pub mod download_verifier;
 pub mod history_deletion;
 pub mod intermediate_files;
 pub mod media_mapper;
+pub mod network_connection_test;
 pub mod network_preferences;
 pub mod subscriptions;
 pub mod thumbnail_preview;

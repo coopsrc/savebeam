@@ -36,6 +36,52 @@ async function fixture({ failLoad = false, failSave = false, delay = 0 } = {}) {
             if (state.failLoad) throw { code: "unknown", message: "读取失败", retryable: true };
             return state.preferences;
           }
+          if (command === "test_network_connection") {
+            await new Promise((resolve) => window.setTimeout(resolve, 180));
+            if (state.failTest)
+              throw {
+                code: "network_failure",
+                message: "连接测试暂不可用，请重试。",
+                retryable: true,
+              };
+            const kind = state.testKind ?? "success";
+            return {
+              proxy: {
+                status:
+                  args.preferences.proxyMode === "custom"
+                    ? kind === "proxy_failed"
+                      ? "failed"
+                      : "success"
+                    : "skipped",
+                message:
+                  args.preferences.proxyMode === "custom"
+                    ? "代理端点测试结果"
+                    : "未单独测试代理端点",
+                durationMs: 3,
+                httpStatus: null,
+              },
+              youtube: {
+                status:
+                  kind === "proxy_failed"
+                    ? "skipped"
+                    : kind === "limited"
+                      ? "limited"
+                      : kind === "timeout"
+                        ? "failed"
+                        : "success",
+                message:
+                  kind === "limited"
+                    ? "HTTP 403 访问受限"
+                    : kind === "timeout"
+                      ? "访问 YouTube 超时"
+                      : kind === "proxy_failed"
+                        ? "代理失败，未执行 YouTube 请求"
+                        : "YouTube 连通性检查通过，不代表下载一定成功",
+                durationMs: kind === "proxy_failed" ? null : 40,
+                httpStatus: kind === "success" ? 204 : kind === "limited" ? 403 : null,
+              },
+            };
+          }
           if (command === "save_network_preferences") {
             if (state.delay)
               await new Promise((resolve) => window.setTimeout(resolve, state.delay));
@@ -207,6 +253,108 @@ try {
     assert.deepEqual(errors, []);
     await page.close();
     process.stdout.write("save failure retains input, async lock, retry: passed\n");
+  }
+  {
+    const { page, panel, errors } = await fixture();
+    await choose(page, panel, "自定义代理");
+    const input = panel.getByRole("textbox", { name: "代理地址", exact: true });
+    await input.fill(" http://127.0.0.1:7890 ");
+    assert.equal(
+      await page.evaluate(
+        () =>
+          window.proxyFixture.calls.filter((call) => call.command === "test_network_connection")
+            .length,
+      ),
+      0,
+    );
+    await panel.getByRole("button", { name: "测试连接", exact: true }).click();
+    assert.equal(await input.isDisabled(), true);
+    assert.equal(
+      await panel.getByRole("button", { name: "保存网络设置", exact: true }).isDisabled(),
+      true,
+    );
+    assert.equal(
+      await panel.getByRole("button", { name: "恢复默认网络", exact: true }).isDisabled(),
+      true,
+    );
+    const result = panel.getByRole("region", { name: "连接测试结果", exact: true });
+    await result.waitFor();
+    assert.equal(await result.getByText("通过", { exact: true }).count(), 2);
+    assert.equal((await calls(page)).length, 0, "Testing must not save preferences");
+    assert.deepEqual(await page.evaluate(() => window.proxyFixture.preferences), {
+      proxyMode: "default",
+      proxyUrl: "",
+    });
+    assert.equal(
+      await page.evaluate(
+        () =>
+          window.proxyFixture.calls.find((call) => call.command === "test_network_connection").args
+            .preferences.proxyUrl,
+      ),
+      "http://127.0.0.1:7890",
+    );
+    await panel.screenshot({ path: "/tmp/savebeam-network-connection-test.png" });
+    await input.fill("http://127.0.0.1:7891");
+    assert.equal(await result.count(), 0, "Editing must clear stale test results");
+    await page.evaluate(() => {
+      window.proxyFixture.testKind = "proxy_failed";
+    });
+    await panel.getByRole("button", { name: "测试连接", exact: true }).click();
+    await result.getByText("失败", { exact: true }).waitFor();
+    await result.getByText("未执行", { exact: true }).waitFor();
+    await page.evaluate(() => {
+      window.proxyFixture.testKind = "limited";
+    });
+    await panel.getByRole("button", { name: "测试连接", exact: true }).click();
+    await result.getByText("受限", { exact: true }).waitFor();
+    await choose(page, panel, "直连（不使用代理）");
+    assert.equal(await result.count(), 0);
+    await panel.getByRole("button", { name: "测试连接", exact: true }).click();
+    await result.getByText("未执行", { exact: true }).waitFor();
+    assert.deepEqual(errors, []);
+    await page.close();
+    process.stdout.write(
+      "connection test uses unsaved snapshot, locks controls, reports stages and clears stale results: passed\n",
+    );
+  }
+  {
+    const { page, panel, errors } = await fixture();
+    await choose(page, panel, "自定义代理");
+    await panel.getByRole("button", { name: "测试连接", exact: true }).click();
+    await panel.getByRole("alert").waitFor();
+    assert.equal(
+      await page.evaluate(
+        () =>
+          window.proxyFixture.calls.filter((call) => call.command === "test_network_connection")
+            .length,
+      ),
+      0,
+    );
+    await panel
+      .getByRole("textbox", { name: "代理地址", exact: true })
+      .fill("socks5h://localhost:1080");
+    await page.evaluate(() => {
+      window.proxyFixture.failTest = true;
+    });
+    await panel.getByRole("button", { name: "测试连接", exact: true }).click();
+    await panel.getByText("连接测试暂不可用，请重试。", { exact: true }).waitFor();
+    assert.equal(await panel.getByRole("region", { name: "连接测试结果", exact: true }).count(), 0);
+    assert.equal(
+      await panel.getByRole("textbox", { name: "代理地址", exact: true }).isEnabled(),
+      true,
+    );
+    await page.evaluate(() => {
+      window.proxyFixture.failTest = false;
+      window.proxyFixture.testKind = "timeout";
+    });
+    await panel.getByRole("button", { name: "测试连接", exact: true }).click();
+    await panel.getByText("访问 YouTube 超时", { exact: true }).waitFor();
+    assert.equal((await calls(page)).length, 0);
+    assert.deepEqual(errors, []);
+    await page.close();
+    process.stdout.write(
+      "connection test validation, command failure and timeout reporting: passed\n",
+    );
   }
 } finally {
   await browser.close();

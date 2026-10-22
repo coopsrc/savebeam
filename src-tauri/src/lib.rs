@@ -16,6 +16,7 @@ pub fn run() {
         .manage(services::download_registry::DownloadTaskRegistry::default())
         .manage(infrastructure::database::DatabaseManager::default())
         .manage(commands::subscriptions::SubscriptionOperations::default())
+        .manage(services::network_connection_test::NetworkConnectionTester::default())
         .setup(|app| {
             let app_data = app.path().resolve(".", BaseDirectory::AppData)?;
             let database_manager = app.state::<infrastructure::database::DatabaseManager>();
@@ -60,6 +61,7 @@ pub fn run() {
             commands::downloads::save_cookie_preferences,
             commands::network::get_network_preferences,
             commands::network::save_network_preferences,
+            commands::network::test_network_connection,
             commands::downloads::get_download_history,
             commands::downloads::get_download_history_record,
             commands::downloads::delete_download_history,

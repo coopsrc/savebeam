@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
-import { Button, Group, Paper, Select, Stack, Text, TextInput, Title } from "@mantine/core";
+import { Badge, Button, Group, Paper, Select, Stack, Text, TextInput, Title } from "@mantine/core";
 import { invokeCommand, IpcError } from "../../ipc/client";
-import type { NetworkPreferences } from "../../types/domain";
+import type {
+  ConnectionCheck,
+  NetworkConnectionTestResult,
+  NetworkPreferences,
+} from "../../types/domain";
 import { validateProxyUrl } from "./validateProxyUrl";
 
 const defaults: NetworkPreferences = { proxyMode: "default", proxyUrl: "" };
@@ -14,6 +18,8 @@ export function NetworkPreferencesPanel() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<NetworkConnectionTestResult | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -39,9 +45,11 @@ export function NetworkPreferencesPanel() {
     setPreferences(next);
     setSaved(false);
     setError(null);
+    setTestResult(null);
   }
 
   async function persist(next: NetworkPreferences) {
+    if (loading || saving || testing) return;
     setSaved(false);
     const validation = next.proxyMode === "custom" ? validateProxyUrl(next.proxyUrl) : null;
     if (validation) {
@@ -50,6 +58,7 @@ export function NetworkPreferencesPanel() {
     }
     setSaving(true);
     setError(null);
+    setTestResult(null);
     try {
       const value = await invokeCommand<NetworkPreferences>("save_network_preferences", {
         preferences: { ...next, proxyUrl: next.proxyMode === "custom" ? next.proxyUrl.trim() : "" },
@@ -64,7 +73,34 @@ export function NetworkPreferencesPanel() {
     }
   }
 
-  const disabled = loading || saving || !loaded;
+  async function testConnection() {
+    if (!loaded || loading || saving || testing) return;
+    const validation =
+      preferences.proxyMode === "custom" ? validateProxyUrl(preferences.proxyUrl) : null;
+    setTestResult(null);
+    if (validation) {
+      setError(validation);
+      return;
+    }
+    setTesting(true);
+    setError(null);
+    try {
+      setTestResult(
+        await invokeCommand<NetworkConnectionTestResult>("test_network_connection", {
+          preferences: {
+            ...preferences,
+            proxyUrl: preferences.proxyMode === "custom" ? preferences.proxyUrl.trim() : "",
+          },
+        }),
+      );
+    } catch (reason) {
+      setError(reason instanceof IpcError ? reason.contextMessage : "无法完成连接测试，请重试。");
+    } finally {
+      setTesting(false);
+    }
+  }
+
+  const disabled = loading || saving || testing || !loaded;
   return (
     <Paper component="section" aria-label="网络与代理" withBorder radius="md" p="md">
       <Stack gap="sm">
@@ -114,6 +150,18 @@ export function NetworkPreferencesPanel() {
         <Text size="xs" c="dimmed">
           保存后对新启动和重试的请求生效，正在运行的任务不受影响。代理仅解决网络连接问题，不代表可以访问所有视频。
         </Text>
+        <Text size="xs" c="dimmed">
+          测试当前填写的配置，不自动保存。测试会向 YouTube 发起一次不带 Cookie 的 HTTPS 请求，通常在
+          12 秒内完成，不下载视频。
+        </Text>
+        {testResult && (
+          <Paper component="section" aria-label="连接测试结果" withBorder p="sm">
+            <Stack gap="sm" aria-live="polite">
+              <ConnectionCheckRow title="代理端点（TCP）" result={testResult.proxy} />
+              <ConnectionCheckRow title="YouTube 访问" result={testResult.youtube} />
+            </Stack>
+          </Paper>
+        )}
         {error && (
           <Text c="red" size="sm" role="alert">
             {error}
@@ -139,10 +187,18 @@ export function NetworkPreferencesPanel() {
           )}
           <Button
             variant="subtle"
-            disabled={loading || saving}
+            disabled={loading || saving || testing}
             onClick={() => void persist(defaults)}
           >
             恢复默认网络
+          </Button>
+          <Button
+            variant="light"
+            loading={testing}
+            disabled={disabled}
+            onClick={() => void testConnection()}
+          >
+            测试连接
           </Button>
           <Button loading={saving} disabled={disabled} onClick={() => void persist(preferences)}>
             保存网络设置
@@ -150,5 +206,37 @@ export function NetworkPreferencesPanel() {
         </Group>
       </Stack>
     </Paper>
+  );
+}
+
+function ConnectionCheckRow({ title, result }: { title: string; result: ConnectionCheck }) {
+  const styles = {
+    success: { color: "green", label: "通过" },
+    failed: { color: "red", label: "失败" },
+    limited: { color: "yellow", label: "受限" },
+    skipped: { color: "gray", label: "未执行" },
+  } as const;
+  const style = styles[result.status];
+  return (
+    <Stack gap={3}>
+      <Group justify="space-between" wrap="wrap">
+        <Text size="sm" fw={600}>
+          {title}
+        </Text>
+        <Group gap="xs">
+          {result.durationMs !== null && (
+            <Text size="xs" c="dimmed">
+              耗时 {result.durationMs} ms
+            </Text>
+          )}
+          <Badge color={style.color} variant="light">
+            {style.label}
+          </Badge>
+        </Group>
+      </Group>
+      <Text size="sm" c="dimmed">
+        {result.message}
+      </Text>
+    </Stack>
   );
 }

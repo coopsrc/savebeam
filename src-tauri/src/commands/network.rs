@@ -18,3 +18,11 @@ pub fn save_network_preferences(
 ) -> CommandResult<NetworkPreferences> {
     network_preferences::save_network_preferences(database.database()?, &preferences)
 }
+
+#[tauri::command]
+pub async fn test_network_connection(
+    preferences: NetworkPreferences,
+    tester: State<'_, crate::services::network_connection_test::NetworkConnectionTester>,
+) -> CommandResult<crate::domain::network::NetworkConnectionTestResult> {
+    tester.test(&preferences).await
+}

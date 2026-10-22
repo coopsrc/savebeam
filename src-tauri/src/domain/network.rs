@@ -16,3 +16,28 @@ pub struct NetworkPreferences {
     pub proxy_mode: ProxyMode,
     pub proxy_url: String,
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ConnectionCheckStatus {
+    Success,
+    Failed,
+    Limited,
+    Skipped,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConnectionCheck {
+    pub status: ConnectionCheckStatus,
+    pub message: String,
+    pub duration_ms: Option<u64>,
+    pub http_status: Option<u16>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NetworkConnectionTestResult {
+    pub proxy: ConnectionCheck,
+    pub youtube: ConnectionCheck,
+}
