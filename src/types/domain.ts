@@ -109,6 +109,12 @@ export interface PlaylistEntry {
   available: boolean;
 }
 
+export interface PlaylistSizeItem {
+  index: number;
+  id: string | null;
+  bytes: number | null;
+}
+
 export type DownloadTaskStatus =
   | "queued"
   | "preparing"

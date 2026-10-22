@@ -43,6 +43,7 @@ pub struct YtDlpProcessEngine {
     javascript_runtime_path: Option<PathBuf>,
     playlist_limit: usize,
     network_preferences: NetworkPreferences,
+    size_estimate_selector: Option<String>,
 }
 
 impl YtDlpProcessEngine {
@@ -55,6 +56,7 @@ impl YtDlpProcessEngine {
             javascript_runtime_path,
             playlist_limit: 51,
             network_preferences: NetworkPreferences::default(),
+            size_estimate_selector: None,
         }
     }
 
@@ -67,6 +69,19 @@ impl YtDlpProcessEngine {
     pub fn with_network_preferences(mut self, preferences: NetworkPreferences) -> Self {
         self.network_preferences = preferences;
         self
+    }
+
+    pub fn for_size_estimate(mut self, indices: &[u32]) -> Result<Self, AppError> {
+        let selected = crate::security::playlist_indices::validate_indices(indices)?;
+        self.size_estimate_selector = Some(
+            selected
+                .iter()
+                .map(u32::to_string)
+                .collect::<Vec<_>>()
+                .join(","),
+        );
+        self.playlist_limit = 51;
+        Ok(self)
     }
 
     /// Reads yt-dlp JSON without downloading media or loading user configuration.
@@ -115,16 +130,35 @@ impl YtDlpProcessEngine {
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
-        command.args([
-            "--ignore-config",
-            "--no-warnings",
-            "--no-progress",
-            "--flat-playlist",
-            "--playlist-end",
-            &self.playlist_limit.to_string(),
-            "--dump-single-json",
-            "--skip-download",
-        ]);
+        if let Some(selector) = &self.size_estimate_selector {
+            command.args([
+                "--ignore-config",
+                "--no-warnings",
+                "--no-progress",
+                "--no-flat-playlist",
+                "--yes-playlist",
+                "--playlist-end",
+                "51",
+                "--playlist-items",
+                selector,
+                "--format",
+                "bestvideo+bestaudio/best",
+                "--ignore-errors",
+                "--dump-single-json",
+                "--skip-download",
+            ]);
+        } else {
+            command.args([
+                "--ignore-config",
+                "--no-warnings",
+                "--no-progress",
+                "--flat-playlist",
+                "--playlist-end",
+                &self.playlist_limit.to_string(),
+                "--dump-single-json",
+                "--skip-download",
+            ]);
+        }
         command.args(crate::security::network_proxy::proxy_args(
             &self.network_preferences,
         )?);
@@ -421,6 +455,41 @@ mod tests {
         let error = invalid.inspect("https://example.com/watch").unwrap_err();
         assert_eq!(error.code, ErrorCode::InvalidUrl);
         assert!(!error.message.contains("secret"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn size_estimate_is_bounded_metadata_only_and_preserves_sparse_positions() {
+        use crate::domain::network::{NetworkPreferences, ProxyMode};
+        let executable = write_script(
+            "yt-dlp",
+            r#"
+[ "$4" = "--no-flat-playlist" ] || exit 11
+[ "$8" = "--playlist-items" ] || exit 12
+[ "$9" = "2,9" ] || exit 13
+[ "${10}" = "--format" ] || exit 14
+[ "${11}" = "bestvideo+bestaudio/best" ] || exit 15
+[ "${14}" = "--skip-download" ] || exit 16
+[ "${15}" = "--proxy" ] || exit 17
+[ "${16}" = "" ] || exit 18
+[ "${17}" = "https://example.invalid/series?a=1&b=2" ] || exit 19
+printf '%s' '{"entries":[{"id":"nine","playlist_index":9,"filesize":80}]}'
+"#,
+        );
+        let engine = YtDlpProcessEngine::new(&executable, None).with_network_preferences(
+            NetworkPreferences {
+                proxy_mode: ProxyMode::Direct,
+                proxy_url: String::new(),
+            },
+        );
+        assert!(engine.clone().for_size_estimate(&[0]).is_err());
+        let raw = engine
+            .for_size_estimate(&[9, 2])
+            .unwrap()
+            .inspect("https://example.invalid/series?a=1&b=2")
+            .unwrap();
+        assert_eq!(raw["entries"][0]["playlist_index"], 9);
+        let _ = fs::remove_dir_all(executable.parent().unwrap());
     }
 
     #[cfg(unix)]

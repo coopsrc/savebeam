@@ -5,4 +5,5 @@
 
 pub mod download_args;
 pub mod network_proxy;
+pub mod playlist_indices;
 pub mod redaction;

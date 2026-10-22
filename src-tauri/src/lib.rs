@@ -17,6 +17,7 @@ pub fn run() {
         .manage(infrastructure::database::DatabaseManager::default())
         .manage(commands::subscriptions::SubscriptionOperations::default())
         .manage(services::network_connection_test::NetworkConnectionTester::default())
+        .manage(services::playlist_size::PlaylistSizeOperations::default())
         .setup(|app| {
             let app_data = app.path().resolve(".", BaseDirectory::AppData)?;
             let database_manager = app.state::<infrastructure::database::DatabaseManager>();
@@ -46,6 +47,7 @@ pub fn run() {
             commands::components::clear_component_custom_path,
             commands::components::remove_managed_component,
             commands::media::inspect_media,
+            commands::media::estimate_playlist_size,
             commands::subscriptions::list_subscriptions,
             commands::subscriptions::get_subscription_candidates,
             commands::subscriptions::subscribe_series,

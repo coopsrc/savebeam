@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import {
   Alert,
   Button,
@@ -15,13 +15,25 @@ import {
 } from "@mantine/core";
 import { IconAlertCircle, IconLink, IconPhotoOff, IconSearch } from "@tabler/icons-react";
 import { IpcError } from "../../ipc/client";
-import type { DownloadOptions, DownloadTask, MediaInfo } from "../../types/domain";
+import type {
+  DownloadOptions,
+  DownloadTask,
+  MediaInfo,
+  PlaylistSizeItem,
+} from "../../types/domain";
 import { useNavigate, useLocation } from "react-router-dom";
 import { invokeCommand } from "../../ipc/client";
 import { useAppStore } from "../../stores/appStore";
 import { inspectMedia } from "./mediaApi";
 import { getMediaUrlError, validateMediaUrl } from "./validateMediaUrl";
 import { selectedEntries } from "./outputPreview";
+import {
+  applyPlaylistSizes,
+  estimateOutputBytes,
+  summarizePlaylistBytes,
+  type PlaylistSizeCache,
+} from "./outputEstimate";
+import { formatBytes } from "../../utils/formatBytes";
 import {
   AUTOMATIC_AUDIO,
   audioFormats,
@@ -53,6 +65,11 @@ export function DownloadPage() {
   const [embedMetadata, setEmbedMetadata] = useState(false);
   const [keepIntermediateFiles, setKeepIntermediateFiles] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
+  const [playlistSizes, setPlaylistSizes] = useState<PlaylistSizeCache>({});
+  const [estimatingSize, setEstimatingSize] = useState(false);
+  const [sizeError, setSizeError] = useState<string | null>(null);
+  const sizeEpoch = useRef(0);
+  const estimatingRef = useRef(false);
   const upsertDownloadTask = useAppStore((state) => state.upsertDownloadTask);
   const navigate = useNavigate();
   const validation = hasSubmitted ? validateMediaUrl(url) : null;
@@ -77,6 +94,9 @@ export function DownloadPage() {
     setWriteInfoJson(false);
     setEmbedMetadata(false);
     setKeepIntermediateFiles(false);
+    const epoch = ++sizeEpoch.current;
+    setPlaylistSizes({});
+    setSizeError(null);
 
     const checked = validateMediaUrl(url);
     if (!checked.valid) return;
@@ -84,6 +104,7 @@ export function DownloadPage() {
     setIsInspecting(true);
     try {
       const result = await inspectMedia(checked.normalizedUrl);
+      if (epoch !== sizeEpoch.current) return;
       setMediaInfo(result);
       setPlaylistItems(
         result.playlist?.entries?.filter((entry) => entry.available).map((entry) => entry.index) ??
@@ -102,6 +123,9 @@ export function DownloadPage() {
   }
 
   function handleChange(value: string) {
+    sizeEpoch.current++;
+    setPlaylistSizes({});
+    setSizeError(null);
     setUrl(value);
     setMediaInfo(null);
     setPlaylistConfirmed(false);
@@ -156,6 +180,44 @@ export function DownloadPage() {
   const chosenEntries = mediaInfo?.playlist
     ? selectedEntries(mediaInfo.playlist, playlistItems)
     : [];
+  const bytes = selection ? estimateOutputBytes(selection, audioOnly) : null;
+  const seriesBytes = summarizePlaylistBytes(chosenEntries, playlistSizes);
+  const sizeText = audioOnly
+    ? "预计文件大小：MP3 转换后待定"
+    : mediaInfo?.playlist
+      ? !chosenEntries.length
+        ? "预计文件大小：未选择条目"
+        : seriesBytes.unknownCount === 0
+          ? `所选 ${chosenEntries.length} 项合计：约 ${formatBytes(seriesBytes.knownBytes!)}`
+          : seriesBytes.knownBytes !== null
+            ? `已知大小：约 ${formatBytes(seriesBytes.knownBytes)}，${seriesBytes.unknownCount} 项待估算`
+            : `所选 ${chosenEntries.length} 项：大小待估算`
+      : `预计文件大小：${bytes === null ? "暂无法估算" : `约 ${formatBytes(bytes)}`}`;
+
+  async function estimatePlaylistSize() {
+    if (!mediaInfo?.playlist || !chosenEntries.length || audioOnly || estimatingRef.current) return;
+    const epoch = sizeEpoch.current;
+    const requested = [...chosenEntries];
+    estimatingRef.current = true;
+    setEstimatingSize(true);
+    setSizeError(null);
+    try {
+      const response = await invokeCommand<PlaylistSizeItem[]>("estimate_playlist_size", {
+        url: mediaInfo.webpageUrl,
+        items: requested.map(({ index, id }) => ({ index, id })),
+      });
+      if (epoch === sizeEpoch.current)
+        setPlaylistSizes((current) => applyPlaylistSizes(current, requested, response));
+    } catch (reason) {
+      if (epoch === sizeEpoch.current)
+        setSizeError(
+          reason instanceof IpcError ? reason.contextMessage : "大小估算失败，可稍后重试。",
+        );
+    } finally {
+      estimatingRef.current = false;
+      setEstimatingSize(false);
+    }
+  }
   function changePlaylistItems(items: number[]) {
     setPlaylistItems(items);
     setPlaylistConfirmed(false);
@@ -540,10 +602,38 @@ export function DownloadPage() {
               </Paper>
               <Group
                 className="download-start-actions"
-                justify="flex-end"
+                justify="space-between"
                 role="group"
                 aria-label="下载操作"
               >
+                <Text
+                  component="div"
+                  size="sm"
+                  c="dimmed"
+                  aria-live="polite"
+                  className="download-size-hint"
+                  title="估算最终媒体大小，不含字幕、封面、JSON 和保留的中间文件；封装后可能略有差异，源格式可能随时间变化。"
+                >
+                  <span>{sizeText}</span>
+                  {mediaInfo.playlist && !audioOnly && (
+                    <Button
+                      type="button"
+                      variant="subtle"
+                      size="compact-xs"
+                      ml="xs"
+                      onClick={() => void estimatePlaylistSize()}
+                      loading={estimatingSize}
+                      disabled={!chosenEntries.length || estimatingSize}
+                    >
+                      {seriesBytes.knownCount ? "重新估算" : "估算大小"}
+                    </Button>
+                  )}
+                  {sizeError && (
+                    <Text component="span" c="red" size="xs" ml="xs" role="alert">
+                      {sizeError}
+                    </Text>
+                  )}
+                </Text>
                 <Button
                   type="button"
                   onClick={handleStartDownload}

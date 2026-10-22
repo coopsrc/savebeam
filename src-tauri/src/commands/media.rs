@@ -24,6 +24,10 @@ use crate::{
 
 /// Called on a blocking worker; follows the same configured component paths as media parsing.
 pub(crate) fn subscription_engine(app: &AppHandle) -> CommandResult<YtDlpProcessEngine> {
+    Ok(configured_media_engine(app)?.for_subscription())
+}
+
+pub(crate) fn configured_media_engine(app: &AppHandle) -> CommandResult<YtDlpProcessEngine> {
     let registry = app.state::<ComponentRegistry>();
     let custom = registry
         .custom_paths
@@ -56,9 +60,7 @@ pub(crate) fn subscription_engine(app: &AppHandle) -> CommandResult<YtDlpProcess
         .and_then(|item| item.executable_path.as_ref())
         .map(PathBuf::from);
     let network = load_network_preferences(app.state::<DatabaseManager>().database()?)?;
-    Ok(YtDlpProcessEngine::new(executable, runtime)
-        .for_subscription()
-        .with_network_preferences(network))
+    Ok(YtDlpProcessEngine::new(executable, runtime).with_network_preferences(network))
 }
 
 #[tauri::command]
@@ -137,5 +139,50 @@ pub async fn inspect_media(
     .map_err(|error| {
         AppError::new(ErrorCode::Unknown, "解析媒体信息时发生错误。", true)
             .with_diagnostic(error.to_string())
+    })?
+}
+
+#[tauri::command]
+pub async fn estimate_playlist_size(
+    app: AppHandle,
+    operations: State<'_, crate::services::playlist_size::PlaylistSizeOperations>,
+    url: String,
+    items: Vec<crate::services::playlist_size::PlaylistSizeRequestItem>,
+) -> CommandResult<Vec<crate::services::playlist_size::PlaylistSizeItem>> {
+    use crate::services::playlist_size::{map_sizes, validate_indices};
+    if url.len() > 4096 || !(url.starts_with("http://") || url.starts_with("https://")) {
+        return Err(AppError::new(
+            ErrorCode::InvalidUrl,
+            "请输入有效的 http 或 https 系列链接。",
+            false,
+        ));
+    }
+    let indices = validate_indices(&items.iter().map(|item| item.index).collect::<Vec<_>>())?;
+    if items.iter().any(|item| {
+        item.id
+            .as_ref()
+            .is_some_and(|id| id.is_empty() || id.len() > 512)
+    }) {
+        return Err(AppError::new(
+            ErrorCode::InvalidUrl,
+            "系列条目 ID 无效，请重新解析。",
+            false,
+        ));
+    }
+    let guard = operations.begin()?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let _guard = guard;
+        let cookies = load_cookie_preferences(app.state::<DatabaseManager>().inner())?;
+        let engine = configured_media_engine(&app)?.for_size_estimate(&indices)?;
+        let raw = engine.inspect_with_cookies(&url, &cookies)?;
+        Ok(map_sizes(&raw, &items))
+    })
+    .await
+    .map_err(|_| {
+        AppError::new(
+            ErrorCode::Unknown,
+            "无法完成系列大小估算，请稍后重试。",
+            true,
+        )
     })?
 }

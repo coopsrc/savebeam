@@ -165,7 +165,8 @@ try {
       await page.getByRole("button", { name: "解析视频信息", exact: true }).click();
       await page.getByRole("region", { name: "媒体与格式", exact: true }).waitFor();
       assert.equal(await page.getByRole("region", { name: "预计输出", exact: true }).count(), 0);
-      assert.equal(await page.getByText(/预计文件名|预计文件大小/).count(), 0);
+      assert.equal(await page.getByText(/预计文件名/).count(), 0);
+      assert.equal(await page.locator(".download-size-hint").count(), 1);
       assert.equal(await page.getByText(/登录 Cookie 在|保存位置：|保存结构：/).count(), 0);
       await page
         .getByText("需要 FFmpeg 和 ffprobe 进行音频提取与转换。", { exact: true })

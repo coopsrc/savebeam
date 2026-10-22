@@ -165,7 +165,7 @@ fn map_formats(value: Option<&Value>, duration: Option<f64>) -> Vec<FormatOption
         .collect()
 }
 
-fn estimate_format_bytes(format: &Value, duration: Option<f64>) -> Option<u64> {
+pub(crate) fn estimate_format_bytes(format: &Value, duration: Option<f64>) -> Option<u64> {
     let duration = positive_number(format.get("duration")).or(duration)?;
     let bitrate = positive_number(format.get("tbr")).or_else(|| {
         match (codec(format.get("vcodec")), codec(format.get("acodec"))) {
