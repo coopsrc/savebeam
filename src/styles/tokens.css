@@ -73,12 +73,110 @@ body {
   display: grid;
   min-height: 100%;
   place-items: start center;
-  padding: clamp(24px, 6vh, 64px) var(--sb-space-page);
+  padding: 24px var(--sb-space-page);
 }
 
 .download-card {
-  width: min(100%, 720px);
-  padding: clamp(24px, 4vw, 40px);
+  width: min(100%, 820px);
+  min-width: 0;
+  padding: clamp(16px, 2vw, 28px);
+}
+
+.download-card--series {
+  width: min(100%, 1240px);
+}
+
+.download-url-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: start;
+}
+
+.download-url-row > button {
+  margin-top: 24px;
+}
+
+.download-workbench {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "media" "options";
+  gap: 20px;
+  align-items: start;
+}
+
+.download-workbench > *,
+.download-media-details,
+.download-url-row > * {
+  min-width: 0;
+}
+
+.download-workbench--series {
+  grid-template-areas: "media" "list" "options";
+}
+
+.download-source-panel {
+  grid-area: media;
+}
+
+.download-options-panel {
+  grid-area: options;
+}
+
+.download-series-panel {
+  grid-area: list;
+}
+
+.download-media-details {
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+
+.download-thumbnail {
+  width: 144px;
+  height: 81px;
+  flex-shrink: 0;
+}
+
+.download-playlist-list {
+  max-height: clamp(260px, 48vh, 520px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  padding: 4px;
+}
+
+.download-playlist-list > * + * {
+  margin-top: 14px;
+}
+
+.download-playlist-list .mantine-Checkbox-label,
+.download-playlist-list .mantine-Checkbox-description {
+  overflow-wrap: anywhere;
+}
+
+@media (min-width: 1200px) {
+  .download-workbench--series {
+    grid-template-columns: minmax(0, 0.9fr) minmax(340px, 1.1fr);
+    grid-template-areas: "media list" "options list";
+    grid-template-rows: auto 1fr;
+  }
+}
+
+@media (max-width: 680px) {
+  .download-url-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .download-url-row > button {
+    justify-self: end;
+    margin-top: 0;
+  }
+
+  .download-workbench .download-media-header {
+    flex-direction: column;
+  }
 }
 
 .media-info-card {
@@ -86,8 +184,8 @@ body {
 }
 
 .media-thumbnail-placeholder {
-  width: 180px;
-  height: 102px;
+  width: 144px;
+  height: 81px;
   flex-shrink: 0;
   border-radius: var(--mantine-radius-sm);
   color: var(--sb-color-muted);

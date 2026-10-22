@@ -21,9 +21,7 @@ import { invokeCommand } from "../../ipc/client";
 import { useAppStore } from "../../stores/appStore";
 import { inspectMedia } from "./mediaApi";
 import { getMediaUrlError, validateMediaUrl } from "./validateMediaUrl";
-import { estimateOutputBytes } from "./outputEstimate";
-import { formatBytes } from "../../utils/formatBytes";
-import { outputPreview, selectedEntries } from "./outputPreview";
+import { selectedEntries } from "./outputPreview";
 import {
   AUTOMATIC_AUDIO,
   audioFormats,
@@ -154,13 +152,10 @@ export function DownloadPage() {
   const automaticSelection = mediaInfo
     ? selectDownload(mediaInfo, selectedVideoId, AUTOMATIC_AUDIO, audioOnly)
     : null;
-  const estimatedBytes = selection ? estimateOutputBytes(selection, audioOnly) : null;
   const playlistEntries = mediaInfo?.playlist?.entries ?? [];
   const chosenEntries = mediaInfo?.playlist
     ? selectedEntries(mediaInfo.playlist, playlistItems)
     : [];
-  const preview =
-    mediaInfo && selection ? outputPreview(mediaInfo, selection.extension, playlistItems) : null;
   function changePlaylistItems(items: number[]) {
     setPlaylistItems(items);
     setPlaylistConfirmed(false);
@@ -193,36 +188,40 @@ export function DownloadPage() {
     : [];
   return (
     <main className="download-page">
-      <Paper className="download-card" shadow="sm" radius="lg" withBorder>
+      <Paper
+        className={`download-card${mediaInfo?.playlist ? " download-card--series" : ""}`}
+        shadow="sm"
+        radius="lg"
+        withBorder
+      >
         <Stack gap="xl">
-          <Stack gap={6}>
+          <Group align="flex-start" wrap="nowrap" className="download-heading">
             <div className="download-heading-icon" aria-hidden="true">
               <IconLink size={21} stroke={1.8} />
             </div>
-            <Title order={2}>添加视频链接</Title>
-            <Text c="dimmed" size="sm">
-              输入公开的视频页面网址，读取标题、封面、可用格式和字幕。此步骤不会下载媒体。
-            </Text>
-          </Stack>
+            <Stack gap={4}>
+              <Title order={2}>添加视频链接</Title>
+              <Text c="dimmed" size="sm">
+                输入公开的视频页面网址，读取标题、封面、可用格式和字幕。此步骤不会下载媒体。
+              </Text>
+            </Stack>
+          </Group>
 
           <form onSubmit={handleSubmit} noValidate>
             <Stack gap="md">
-              <TextInput
-                autoComplete="url"
-                autoCapitalize="off"
-                spellCheck={false}
-                label="视频链接"
-                placeholder="https://example.com/video"
-                value={url}
-                onChange={(event) => handleChange(event.currentTarget.value)}
-                error={validationError}
-                inputMode="url"
-                aria-describedby="url-input-hint"
-              />
-              <Text id="url-input-hint" size="xs" c="dimmed">
-                仅支持 http:// 和 https://；需要已在设置中配置 yt-dlp。
-              </Text>
-              <div className="download-actions">
+              <div className="download-url-row">
+                <TextInput
+                  autoComplete="url"
+                  autoCapitalize="off"
+                  spellCheck={false}
+                  label="视频链接"
+                  placeholder="https://example.com/video"
+                  value={url}
+                  onChange={(event) => handleChange(event.currentTarget.value)}
+                  error={validationError}
+                  inputMode="url"
+                  aria-describedby="url-input-hint"
+                />
                 <Button
                   type="submit"
                   loading={isInspecting}
@@ -231,6 +230,9 @@ export function DownloadPage() {
                   解析视频信息
                 </Button>
               </div>
+              <Text id="url-input-hint" size="xs" c="dimmed">
+                仅支持 http:// 和 https://；需要已在设置中配置 yt-dlp。
+              </Text>
 
               {requestError && (
                 <Alert
@@ -243,140 +245,70 @@ export function DownloadPage() {
                   {requestError}
                 </Alert>
               )}
+            </Stack>
+          </form>
 
-              {mediaInfo && (
-                <Paper className="media-info-card" withBorder radius="md" p="md">
-                  <Stack gap="md">
-                    <Group align="flex-start" wrap="nowrap">
-                      {mediaInfo.thumbnailDataUrl && !thumbnailFailed ? (
-                        <Image
-                          src={mediaInfo.thumbnailDataUrl}
-                          alt="视频封面"
-                          w={180}
-                          h={102}
-                          radius="sm"
-                          fit="cover"
-                          style={{ flexShrink: 0 }}
-                          onError={() => setThumbnailFailed(true)}
-                        />
-                      ) : (
-                        <Stack
-                          className="media-thumbnail-placeholder"
-                          gap={4}
-                          align="center"
-                          justify="center"
-                        >
-                          <IconPhotoOff size={24} aria-hidden="true" />
-                          <Text size="xs">封面暂不可用</Text>
-                        </Stack>
-                      )}
-                      <div>
-                        <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
-                          媒体信息
+          {mediaInfo && (
+            <div
+              className={`download-workbench${mediaInfo.playlist ? " download-workbench--series" : ""}`}
+            >
+              <Paper
+                className="media-info-card download-source-panel"
+                component="section"
+                aria-label="媒体与格式"
+                withBorder
+                radius="md"
+                p="md"
+              >
+                <Stack gap="md">
+                  <Group align="flex-start" wrap="nowrap" className="download-media-header">
+                    {mediaInfo.thumbnailDataUrl && !thumbnailFailed ? (
+                      <Image
+                        src={mediaInfo.thumbnailDataUrl}
+                        alt="视频封面"
+                        className="download-thumbnail"
+                        w={144}
+                        h={81}
+                        radius="sm"
+                        fit="cover"
+                        style={{ flexShrink: 0 }}
+                        onError={() => setThumbnailFailed(true)}
+                      />
+                    ) : (
+                      <Stack
+                        className="media-thumbnail-placeholder"
+                        gap={4}
+                        align="center"
+                        justify="center"
+                      >
+                        <IconPhotoOff size={24} aria-hidden="true" />
+                        <Text size="xs">封面暂不可用</Text>
+                      </Stack>
+                    )}
+                    <div className="download-media-details">
+                      <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
+                        媒体信息
+                      </Text>
+                      <Title order={3} mt={4}>
+                        {mediaInfo.title}
+                      </Title>
+                      {mediaInfo.uploader && (
+                        <Text size="sm" c="dimmed">
+                          {mediaInfo.uploader}
                         </Text>
-                        <Title order={3} mt={4}>
-                          {mediaInfo.title}
-                        </Title>
-                        {mediaInfo.uploader && (
-                          <Text size="sm" c="dimmed">
-                            {mediaInfo.uploader}
-                          </Text>
-                        )}
-                        {mediaInfo.durationSeconds && (
-                          <Text size="sm" c="dimmed">
-                            时长 {Math.floor(mediaInfo.durationSeconds / 60)}:
-                            {String(Math.floor(mediaInfo.durationSeconds % 60)).padStart(2, "0")}
-                          </Text>
-                        )}
-                      </div>
-                    </Group>
-                    {mediaInfo.playlist ? (
-                      <Paper component="section" aria-label="选择系列视频" withBorder p="sm">
-                        <Stack gap="sm">
-                          <Group justify="space-between">
-                            <Button
-                              type="button"
-                              size="xs"
-                              variant="light"
-                              onClick={() =>
-                                navigate(
-                                  `/subscriptions?url=${encodeURIComponent(mediaInfo.webpageUrl)}`,
-                                )
-                              }
-                            >
-                              订阅此系列
-                            </Button>
-                            <Text fw={600}>选择下载条目（已选 {chosenEntries.length} 项）</Text>
-                            <Group gap="xs">
-                              <Button
-                                type="button"
-                                size="xs"
-                                variant="subtle"
-                                onClick={() =>
-                                  changePlaylistItems(
-                                    playlistEntries
-                                      .filter((entry) => entry.available)
-                                      .map((entry) => entry.index),
-                                  )
-                                }
-                              >
-                                全选
-                              </Button>
-                              <Button
-                                type="button"
-                                size="xs"
-                                variant="subtle"
-                                onClick={() => changePlaylistItems([])}
-                              >
-                                取消全选
-                              </Button>
-                            </Group>
-                          </Group>
-                          <Text size="sm">
-                            {mediaInfo.playlist.truncated
-                              ? "系列超过安全上限，当前最多展示前 50 项，可勾选其中一部分。"
-                              : `检测到 ${mediaInfo.playlist.totalCount ?? playlistEntries.length} 项，可勾选需要下载的条目。`}
-                          </Text>
-                          <Stack gap="sm" mah={240} style={{ overflowY: "auto" }}>
-                            {playlistEntries.map((entry, offset) => (
-                              <Checkbox
-                                key={`${entry.index}-${offset}`}
-                                label={`第 ${entry.index} 项 · ${entry.title}`}
-                                description={
-                                  entry.available
-                                    ? entry.id
-                                      ? `视频 ID：${entry.id}`
-                                      : "视频 ID 待解析"
-                                    : "条目信息不可用或不在支持范围，暂不可选"
-                                }
-                                checked={entry.available && playlistItems.includes(entry.index)}
-                                disabled={!entry.available}
-                                onChange={(event) => {
-                                  const checked = event.currentTarget.checked;
-                                  changePlaylistItems(
-                                    checked
-                                      ? [...playlistItems, entry.index]
-                                      : playlistItems.filter((index) => index !== entry.index),
-                                  );
-                                }}
-                              />
-                            ))}
-                            {!playlistEntries.length && (
-                              <Text c="dimmed" size="sm">
-                                未返回可选条目，请重新解析链接。
-                              </Text>
-                            )}
-                          </Stack>
-                          <Checkbox
-                            checked={playlistConfirmed}
-                            disabled={chosenEntries.length === 0}
-                            onChange={(event) => setPlaylistConfirmed(event.currentTarget.checked)}
-                            label={`我确认下载所选 ${chosenEntries.length} 项`}
-                          />
-                        </Stack>
-                      </Paper>
-                    ) : videos.length > 0 || audios.length > 0 ? (
+                      )}
+                      {mediaInfo.durationSeconds && (
+                        <Text size="sm" c="dimmed">
+                          时长 {Math.floor(mediaInfo.durationSeconds / 60)}:
+                          {String(Math.floor(mediaInfo.durationSeconds % 60)).padStart(2, "0")}
+                        </Text>
+                      )}
+                    </div>
+                  </Group>
+                  {!mediaInfo.playlist &&
+                    (videos.length > 0 || audios.length > 0 ? (
                       <Stack gap="sm">
+                        <Text fw={600}>视频与音轨</Text>
                         {!audioOnly && (
                           <Select
                             label="视频画质"
@@ -435,189 +367,201 @@ export function DownloadPage() {
                       <Alert color="yellow" title="没有可选格式">
                         网站没有返回可供下载的媒体格式。
                       </Alert>
-                    )}
-                    <Stack gap="xs">
-                      <Checkbox
-                        checked={audioOnly}
-                        disabled={!mediaInfo.playlist && videos.length === 0}
-                        onChange={(event) => {
-                          setAudioOnly(event.currentTarget.checked);
-                          setPlaylistConfirmed(false);
-                          setSelectedAudioId(AUTOMATIC_AUDIO);
-                          setManualAudio(false);
-                        }}
-                        label="仅下载音频（MP3）"
-                        description="需要 FFmpeg 和 ffprobe 进行音频提取与转换。"
-                      />
-                      {subtitleOptions.length > 0 && (
-                        <>
-                          <MultiSelect
-                            label="下载字幕"
-                            placeholder="不下载字幕"
-                            data={subtitleOptions}
-                            value={subtitleLanguages}
-                            onChange={setSubtitleLanguages}
-                            searchable
-                            clearable
-                          />
-                          {subtitleLanguages.length > 0 &&
-                            mediaInfo.subtitles.some(
-                              (track) =>
-                                track.automatic && subtitleLanguages.includes(track.language),
-                            ) && (
-                              <Checkbox
-                                checked={writeAutomaticSubtitles}
-                                onChange={(event) =>
-                                  setWriteAutomaticSubtitles(event.currentTarget.checked)
-                                }
-                                label="同时下载自动生成的字幕"
-                              />
-                            )}
-                        </>
-                      )}
-                      <Checkbox
-                        checked={writeThumbnail}
-                        onChange={(event) => setWriteThumbnail(event.currentTarget.checked)}
-                        label="另存缩略图文件"
-                      />
-                      <Checkbox
-                        checked={writeInfoJson}
-                        onChange={(event) => setWriteInfoJson(event.currentTarget.checked)}
-                        label="另存媒体信息 JSON"
-                      />
-                      <Checkbox
-                        checked={embedMetadata}
-                        onChange={(event) => setEmbedMetadata(event.currentTarget.checked)}
-                        label="将媒体元数据写入文件"
-                      />
-                      <Checkbox
-                        checked={keepIntermediateFiles}
-                        onChange={(event) => setKeepIntermediateFiles(event.currentTarget.checked)}
-                        label="保留中间文件"
-                        description="保留合并或转换前的源文件，会占用额外空间；分轨文件在合并成功后按格式 ID、编码、分辨率和码率命名。"
-                      />
-                    </Stack>
-                    <Text size="sm" c="dimmed">
-                      登录 Cookie 在“设置 → Cookie 与登录”中配置，全局用于解析媒体信息与下载。
-                    </Text>
-                    <Text size="xs" c="dimmed">
-                      保存位置：默认下载目录，可在设置中更改。部分后处理选项需要 FFmpeg。
-                    </Text>
-                    <Text size="xs" c="dimmed">
-                      {mediaInfo.playlist
-                        ? "保存结构：系列名称 [系列ID]/序号-视频标题 [视频ID].扩展名"
-                        : "保存结构：视频标题 [视频ID].扩展名"}
-                      。字幕、封面和 JSON 使用相同前缀；缺失的 ID 将省略。
-                    </Text>
-                    {selection && (
-                      <Paper
-                        component="section"
-                        aria-label="预计输出"
-                        withBorder
-                        radius="sm"
-                        p="sm"
-                        mih={mediaInfo.playlist ? 340 : 200}
-                        aria-live="polite"
-                      >
-                        <Text fw={600} size="sm">
-                          预计输出：
-                          {selection.extension
-                            ? `${selection.extension.toUpperCase()}（.${selection.extension}）`
-                            : "逐项自动匹配"}
-                        </Text>
-                        {preview &&
-                          (mediaInfo.playlist ? (
-                            <>
-                              <Text
-                                size="sm"
-                                lineClamp={2}
-                                mih={40}
-                                title={preview.directory ?? undefined}
-                              >
-                                保存子目录：{preview.directory}/
-                              </Text>
-                              <Text size="sm">
-                                已选 {preview.files.length} 个文件，保留系列原始序号：
-                              </Text>
-                              <Stack
-                                gap={4}
-                                h={128}
-                                style={{ overflowY: "auto" }}
-                                aria-label="预计文件列表"
-                              >
-                                {preview.files.length ? (
-                                  preview.files.map((name, index) => (
-                                    <Text key={index} size="xs" title={name} truncate>
-                                      {name}
-                                    </Text>
-                                  ))
-                                ) : (
-                                  <Text size="sm" c="dimmed">
-                                    尚未选择下载条目
-                                  </Text>
-                                )}
-                              </Stack>
-                            </>
-                          ) : (
-                            <Text size="sm" lineClamp={2} mih={40} title={preview.files[0]}>
-                              预计文件名：{preview.files[0]}
-                            </Text>
-                          ))}
-                        <Text size="sm" c="dimmed">
-                          {mediaInfo.playlist
-                            ? audioOnly
-                              ? "每项自动选择源音频并转换 MP3"
-                              : "每项自动选择视频与音频"
-                            : audioOnly
-                              ? `${codecLabel(selection.audio?.audioCodec ?? null)} → MP3（转换音频）`
-                              : `${codecLabel(selection.video?.videoCodec ?? null)}${selection.audio ? ` + ${codecLabel(selection.audio.audioCodec)}` : " · 无音频"}`}
-                        </Text>
-                        <Text size="sm">
-                          预计文件大小：
-                          {estimatedBytes !== null
-                            ? `约 ${formatBytes(estimatedBytes)}`
-                            : mediaInfo.playlist
-                              ? "待逐项解析"
-                              : audioOnly
-                                ? "转换后待定"
-                                : "暂无法估算"}
-                        </Text>
-                        <Text size="xs" c="dimmed">
-                          {mediaInfo.playlist
-                            ? "输出格式和大小在各项解析后确定。"
-                            : audioOnly
-                              ? "转换后体积以实际生成的 MP3 为准。"
-                              : selection.mergeContainer
-                                ? "下载后合并，保留原始音视频编码。"
-                                : "保留原始媒体格式。"}
-                        </Text>
-                        <Text size="xs" c="dimmed">
-                          大小不含字幕、封面和 JSON，封装后可能略有差异。
-                        </Text>
-                        <Text size="xs" c="dimmed">
-                          文件名为预览；标题、特殊字符清理和最终后缀以下载时 yt-dlp 解析结果为准。
-                        </Text>
-                      </Paper>
-                    )}
-                    <Group justify="flex-end">
+                    ))}
+                </Stack>
+              </Paper>
+              {mediaInfo.playlist && (
+                <Paper
+                  component="section"
+                  aria-label="选择系列视频"
+                  withBorder
+                  p="md"
+                  className="download-series-panel"
+                >
+                  <Stack gap="sm">
+                    <Text fw={600}>选择下载条目（已选 {chosenEntries.length} 项）</Text>
+                    <Group justify="space-between">
                       <Button
-                        onClick={handleStartDownload}
-                        loading={isStartingDownload}
-                        disabled={
-                          !selection ||
-                          (mediaInfo.playlist &&
-                            (!playlistConfirmed || chosenEntries.length === 0)) ||
-                          (writeAutomaticSubtitles && subtitleLanguages.length === 0)
+                        type="button"
+                        size="xs"
+                        variant="light"
+                        onClick={() =>
+                          navigate(`/subscriptions?url=${encodeURIComponent(mediaInfo.webpageUrl)}`)
                         }
                       >
-                        开始下载
+                        订阅此系列
                       </Button>
+                      <Group gap="xs">
+                        <Button
+                          type="button"
+                          size="xs"
+                          variant="subtle"
+                          onClick={() =>
+                            changePlaylistItems(
+                              playlistEntries
+                                .filter((entry) => entry.available)
+                                .map((entry) => entry.index),
+                            )
+                          }
+                        >
+                          全选
+                        </Button>
+                        <Button
+                          type="button"
+                          size="xs"
+                          variant="subtle"
+                          onClick={() => changePlaylistItems([])}
+                        >
+                          取消全选
+                        </Button>
+                      </Group>
                     </Group>
+                    <Text size="sm">
+                      {mediaInfo.playlist.truncated
+                        ? "系列超过安全上限，当前最多展示前 50 项，可勾选其中一部分。"
+                        : `检测到 ${mediaInfo.playlist.totalCount ?? playlistEntries.length} 项，可勾选需要下载的条目。`}
+                    </Text>
+                    <div className="download-playlist-list" role="group" aria-label="可选视频条目">
+                      {playlistEntries.map((entry, offset) => (
+                        <Checkbox
+                          key={`${entry.index}-${offset}`}
+                          label={`第 ${entry.index} 项 · ${entry.title}`}
+                          description={
+                            entry.available
+                              ? entry.id
+                                ? `视频 ID：${entry.id}`
+                                : "视频 ID 待解析"
+                              : "条目信息不可用或不在支持范围，暂不可选"
+                          }
+                          checked={entry.available && playlistItems.includes(entry.index)}
+                          disabled={!entry.available}
+                          onChange={(event) => {
+                            const checked = event.currentTarget.checked;
+                            changePlaylistItems(
+                              checked
+                                ? [...playlistItems, entry.index]
+                                : playlistItems.filter((index) => index !== entry.index),
+                            );
+                          }}
+                        />
+                      ))}
+                      {!playlistEntries.length && (
+                        <Text c="dimmed" size="sm">
+                          未返回可选条目，请重新解析链接。
+                        </Text>
+                      )}
+                    </div>
+                    <Checkbox
+                      checked={playlistConfirmed}
+                      disabled={chosenEntries.length === 0}
+                      onChange={(event) => setPlaylistConfirmed(event.currentTarget.checked)}
+                      label={`我确认下载所选 ${chosenEntries.length} 项`}
+                    />
                   </Stack>
                 </Paper>
               )}
-            </Stack>
-          </form>
+              <Paper
+                className="download-options-panel"
+                component="section"
+                aria-label="下载选项"
+                withBorder
+                radius="md"
+                p="md"
+              >
+                <Stack gap="md">
+                  <Title order={3}>下载选项</Title>
+                  <Stack gap="xs">
+                    <Checkbox
+                      checked={audioOnly}
+                      disabled={!mediaInfo.playlist && videos.length === 0}
+                      onChange={(event) => {
+                        setAudioOnly(event.currentTarget.checked);
+                        setPlaylistConfirmed(false);
+                        setSelectedAudioId(AUTOMATIC_AUDIO);
+                        setManualAudio(false);
+                      }}
+                      label="仅下载音频（MP3）"
+                      description="需要 FFmpeg 和 ffprobe 进行音频提取与转换。"
+                    />
+                    {subtitleOptions.length > 0 && (
+                      <>
+                        <MultiSelect
+                          label="下载字幕"
+                          placeholder="不下载字幕"
+                          data={subtitleOptions}
+                          value={subtitleLanguages}
+                          onChange={setSubtitleLanguages}
+                          searchable
+                          clearable
+                        />
+                        {subtitleLanguages.length > 0 &&
+                          mediaInfo.subtitles.some(
+                            (track) =>
+                              track.automatic && subtitleLanguages.includes(track.language),
+                          ) && (
+                            <Checkbox
+                              checked={writeAutomaticSubtitles}
+                              onChange={(event) =>
+                                setWriteAutomaticSubtitles(event.currentTarget.checked)
+                              }
+                              label="同时下载自动生成的字幕"
+                            />
+                          )}
+                      </>
+                    )}
+                    <Checkbox
+                      checked={writeThumbnail}
+                      onChange={(event) => setWriteThumbnail(event.currentTarget.checked)}
+                      label="另存缩略图文件"
+                    />
+                    <Checkbox
+                      checked={writeInfoJson}
+                      onChange={(event) => setWriteInfoJson(event.currentTarget.checked)}
+                      label="另存媒体信息 JSON"
+                    />
+                    <Checkbox
+                      checked={embedMetadata}
+                      onChange={(event) => setEmbedMetadata(event.currentTarget.checked)}
+                      label="将媒体元数据写入文件"
+                    />
+                    <Checkbox
+                      checked={keepIntermediateFiles}
+                      onChange={(event) => setKeepIntermediateFiles(event.currentTarget.checked)}
+                      label="保留中间文件"
+                      description="保留合并或转换前的源文件，会占用额外空间；分轨文件在合并成功后按格式 ID、编码、分辨率和码率命名。"
+                    />
+                  </Stack>
+                  <Text size="sm" c="dimmed">
+                    登录 Cookie 在“设置 → Cookie 与登录”中配置，全局用于解析媒体信息与下载。
+                  </Text>
+                  <Text size="xs" c="dimmed">
+                    保存位置：默认下载目录，可在设置中更改。部分后处理选项需要 FFmpeg。
+                  </Text>
+                  <Text size="xs" c="dimmed">
+                    {mediaInfo.playlist
+                      ? "保存结构：系列名称 [系列ID]/序号-视频标题 [视频ID].扩展名"
+                      : "保存结构：视频标题 [视频ID].扩展名"}
+                    。字幕、封面和 JSON 使用相同前缀；缺失的 ID 将省略。
+                  </Text>
+                  <Group justify="flex-end">
+                    <Button
+                      type="button"
+                      onClick={handleStartDownload}
+                      loading={isStartingDownload}
+                      disabled={
+                        !selection ||
+                        (mediaInfo.playlist &&
+                          (!playlistConfirmed || chosenEntries.length === 0)) ||
+                        (writeAutomaticSubtitles && subtitleLanguages.length === 0)
+                      }
+                    >
+                      开始下载
+                    </Button>
+                  </Group>
+                </Stack>
+              </Paper>
+            </div>
+          )}
         </Stack>
       </Paper>
     </main>
