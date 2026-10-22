@@ -50,6 +50,64 @@ const fixture = {
   ],
   playlist: null,
 };
+
+async function assertAlignedPanels(page, width, seriesMode) {
+  // Allow React's responsive navigation profile to catch up after viewport resize.
+  await page.evaluate(
+    () =>
+      new Promise((resolve) =>
+        window.requestAnimationFrame(() => window.requestAnimationFrame(resolve)),
+      ),
+  );
+  await page.locator(".app-sidebar").evaluate(async (element) => {
+    await Promise.all(
+      element.getAnimations().map((animation) => animation.finished.catch(() => {})),
+    );
+  });
+  const source = await page.getByRole("region", { name: "媒体与格式", exact: true }).boundingBox();
+  const options = await page.getByRole("region", { name: "下载选项", exact: true }).boundingBox();
+  const actions = page.getByRole("group", { name: "下载操作", exact: true });
+  const footer = await actions.boundingBox();
+  const button = await actions.getByRole("button", { name: "开始下载", exact: true }).boundingBox();
+  assert.equal(
+    await page
+      .getByRole("region", { name: "下载选项", exact: true })
+      .getByRole("button", { name: "开始下载", exact: true })
+      .count(),
+    0,
+    "Start is outside the options card",
+  );
+  assert.ok(footer.y >= options.y + options.height + 12, "Start footer follows both panels");
+  assert.ok(
+    Math.abs(button.x + button.width - footer.x - footer.width) <= 1,
+    "Start is right-aligned",
+  );
+  let edge = options;
+  if (seriesMode) {
+    const series = await page
+      .getByRole("region", { name: "选择系列视频", exact: true })
+      .boundingBox();
+    if (width >= 1200) {
+      assert.ok(Math.abs(series.y - source.y) <= 1, "List top aligns with media top");
+      assert.ok(
+        Math.abs(series.y + series.height - options.y - options.height) <= 1,
+        JSON.stringify({ source, series, options }),
+      );
+      edge = series;
+    }
+    assert.ok(footer.y >= series.y + series.height + 12, "Start is below the list, not inside it");
+    const content = await page.locator(".download-series-content").boundingBox();
+    assert.ok(
+      content.y + content.height <= series.y + series.height + 1,
+      "Controls fit inside the list card",
+    );
+  }
+  assert.ok(
+    Math.abs(button.x + button.width - edge.x - edge.width) <= 1,
+    `Start aligns with the outer content right edge: ${JSON.stringify({ width, button, edge })}`,
+  );
+}
+
 try {
   for (const mode of ["series", "single"]) {
     for (const width of [1600, 1280, 1200, 1199, 1100, 800, 560]) {
@@ -75,6 +133,7 @@ try {
       }
       await page.addInitScript((media) => {
         window.isTauri = true;
+        window.layoutMedia = media;
         window.calls = [];
         window.__TAURI_EVENT_PLUGIN_INTERNALS__ = { unregisterListener() {} };
         window.__TAURI_INTERNALS__ = {
@@ -84,7 +143,7 @@ try {
           unregisterCallback() {},
           async invoke(command, args = {}) {
             window.calls.push({ command, args });
-            if (command === "inspect_media") return media;
+            if (command === "inspect_media") return window.layoutMedia;
             if (command === "start_download")
               return {
                 id: "layout-task",
@@ -187,6 +246,7 @@ try {
         .locator(".page-content")
         .evaluate((element) => ({ scroll: element.scrollWidth, client: element.clientWidth }));
       assert.ok(overflow.scroll <= overflow.client + 1, JSON.stringify({ width, overflow }));
+      await assertAlignedPanels(page, width, mode === "series");
       if (mode === "single") {
         await page.getByRole("checkbox", { name: "手动选择音频", exact: true }).check();
         await page.getByRole("combobox", { name: "音频轨道", exact: true }).waitFor();
@@ -196,6 +256,12 @@ try {
           element.scrollTop = 0;
         });
         await page.screenshot({ path: `/tmp/savebeam-download-${mode}-${width}.png` });
+        if (width === 1600) {
+          await page
+            .getByRole("button", { name: "开始下载", exact: true })
+            .scrollIntoViewIfNeeded();
+          await page.screenshot({ path: `/tmp/savebeam-download-${mode}-${width}-controls.png` });
+        }
       }
       const mp3 = width === 800;
       if (mp3) {
@@ -269,6 +335,55 @@ try {
       );
       assert.deepEqual(errors, []);
       process.stdout.write(`${mode} ${width}: passed\n`);
+      if (mode === "series" && width === 1600) {
+        // Left content controls the height for empty, short and 50-item lists too.
+        for (const count of [0, 1, 50]) {
+          const variant = structuredClone(media);
+          variant.playlist.entries = Array.from({ length: count }, (_, index) => ({
+            index: index + 1,
+            id: `BVstress${index + 1}`,
+            title: `第 ${index + 1} 个视频：自然行高和独立滚动测试`,
+            available: true,
+          }));
+          variant.playlist.totalCount = count;
+          variant.playlist.downloadCount = count;
+          if (count === 50) {
+            variant.title = fixture.title.repeat(4);
+            variant.subtitles = [
+              { language: "zh-Hans", name: "中文", extension: "vtt", automatic: true },
+            ];
+          }
+          await page.evaluate((value) => {
+            window.layoutMedia = value;
+          }, variant);
+          await page.goto(`${base}#/download`);
+          await page.getByRole("textbox", { name: "视频链接", exact: true }).fill(media.webpageUrl);
+          await page.getByRole("button", { name: "解析视频信息", exact: true }).click();
+          await page.getByText(`选择下载条目（已选 ${count} 项）`, { exact: true }).waitFor();
+          if (count === 50) {
+            const subtitles = page.getByRole("combobox", { name: "下载字幕", exact: true });
+            await subtitles.click();
+            await page.getByRole("option", { name: "zh-Hans — 中文", exact: true }).click();
+            await subtitles.press("Escape");
+            await page
+              .getByRole("checkbox", { name: "同时下载自动生成的字幕", exact: true })
+              .waitFor();
+          }
+          await assertAlignedPanels(page, 1600, true);
+          await page.setViewportSize({ width: 1200, height: 600 });
+          await assertAlignedPanels(page, 1200, true);
+          await page.setViewportSize({ width: 800, height: 600 });
+          await assertAlignedPanels(page, 800, true);
+          await page.setViewportSize({ width: 1600, height: 960 });
+          await assertAlignedPanels(page, 1600, true);
+          assert.equal(
+            await page.getByRole("button", { name: "开始下载", exact: true }).isDisabled(),
+            true,
+          );
+          assert.deepEqual(errors, []);
+          process.stdout.write(`series ${count} items, resize 1600/1200/800/1600: passed\n`);
+        }
+      }
       await page.close();
     }
   }

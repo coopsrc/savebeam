@@ -100,7 +100,7 @@ body {
 .download-workbench {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-areas: "media" "options";
+  grid-template-areas: "media" "options" "actions";
   gap: 20px;
   align-items: start;
 }
@@ -112,7 +112,7 @@ body {
 }
 
 .download-workbench--series {
-  grid-template-areas: "media" "list" "options";
+  grid-template-areas: "media" "list" "options" "actions";
 }
 
 .download-source-panel {
@@ -125,6 +125,10 @@ body {
 
 .download-series-panel {
   grid-area: list;
+}
+
+.download-start-actions {
+  grid-area: actions;
 }
 
 .download-media-details {
@@ -158,8 +162,32 @@ body {
 @media (min-width: 1200px) {
   .download-workbench--series {
     grid-template-columns: minmax(0, 0.9fr) minmax(340px, 1.1fr);
-    grid-template-areas: "media list" "options list";
-    grid-template-rows: auto 1fr;
+    grid-template-areas: "media list" "options list" "actions actions";
+    grid-template-rows: auto auto auto;
+  }
+
+  .download-workbench--series .download-series-panel {
+    /* The left panels determine row heights; long lists must not enlarge them. */
+    contain: size;
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .download-workbench--series .download-series-content {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .download-workbench--series .download-series-content > * {
+    flex-shrink: 0;
+  }
+
+  .download-workbench--series .download-playlist-list {
+    flex: 1;
+    min-height: 0;
+    max-height: none;
   }
 }
 
@@ -441,8 +469,8 @@ body {
 .dev-platform-switcher {
   position: fixed;
   z-index: 900;
+  top: 20px;
   right: 14px;
-  bottom: 48px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -532,7 +560,6 @@ body {
 
   .dev-platform-switcher {
     right: 8px;
-    bottom: 42px;
     gap: 6px;
     padding: 5px;
   }

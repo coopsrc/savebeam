@@ -378,7 +378,7 @@ export function DownloadPage() {
                   p="md"
                   className="download-series-panel"
                 >
-                  <Stack gap="sm">
+                  <Stack gap="sm" className="download-series-content">
                     <Text fw={600}>选择下载条目（已选 {chosenEntries.length} 项）</Text>
                     <Group justify="space-between">
                       <Button
@@ -543,23 +543,27 @@ export function DownloadPage() {
                       : "保存结构：视频标题 [视频ID].扩展名"}
                     。字幕、封面和 JSON 使用相同前缀；缺失的 ID 将省略。
                   </Text>
-                  <Group justify="flex-end">
-                    <Button
-                      type="button"
-                      onClick={handleStartDownload}
-                      loading={isStartingDownload}
-                      disabled={
-                        !selection ||
-                        (mediaInfo.playlist &&
-                          (!playlistConfirmed || chosenEntries.length === 0)) ||
-                        (writeAutomaticSubtitles && subtitleLanguages.length === 0)
-                      }
-                    >
-                      开始下载
-                    </Button>
-                  </Group>
                 </Stack>
               </Paper>
+              <Group
+                className="download-start-actions"
+                justify="flex-end"
+                role="group"
+                aria-label="下载操作"
+              >
+                <Button
+                  type="button"
+                  onClick={handleStartDownload}
+                  loading={isStartingDownload}
+                  disabled={
+                    !selection ||
+                    (mediaInfo.playlist && (!playlistConfirmed || chosenEntries.length === 0)) ||
+                    (writeAutomaticSubtitles && subtitleLanguages.length === 0)
+                  }
+                >
+                  开始下载
+                </Button>
+              </Group>
             </div>
           )}
         </Stack>
