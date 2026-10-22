@@ -58,6 +58,16 @@ try {
           },
           unregisterCallback() {},
           async invoke(command, args = {}) {
+            if (command === "get_download_option_defaults")
+              return {
+                audioOnly: false,
+                subtitleLanguages: [],
+                writeAutomaticSubtitles: false,
+                writeThumbnail: false,
+                writeInfoJson: false,
+                embedMetadata: false,
+                keepIntermediateFiles: false,
+              };
             window.calls.push({ command, args });
             if (command === "get_download_tasks")
               return scenario === "states"

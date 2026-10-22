@@ -103,6 +103,21 @@ pub fn get_download_preferences(
 }
 
 #[tauri::command]
+pub fn get_download_option_defaults(
+    database: State<'_, DatabaseManager>,
+) -> CommandResult<crate::domain::download_defaults::DownloadOptionDefaults> {
+    crate::services::download_defaults::load(database.database()?)
+}
+
+#[tauri::command]
+pub fn save_download_option_defaults(
+    options: crate::domain::download_defaults::DownloadOptionDefaults,
+    database: State<'_, DatabaseManager>,
+) -> CommandResult<crate::domain::download_defaults::DownloadOptionDefaults> {
+    crate::services::download_defaults::save(database.database()?, options)
+}
+
+#[tauri::command]
 pub fn save_download_preferences(
     preferences: DownloadPreferences,
     database: State<'_, DatabaseManager>,
@@ -388,6 +403,7 @@ fn launch_next_task(app: AppHandle, components: ComponentRegistry, tasks: Downlo
 }
 
 fn validate_task_options(options: &DownloadOptions) -> CommandResult<()> {
+    crate::services::download_defaults::validate(&options.into())?;
     crate::security::download_args::playlist_selector(options)?;
     if options.title.trim().is_empty() || options.title.chars().count() > 1024 {
         return Err(AppError::new(
@@ -403,13 +419,6 @@ fn validate_task_options(options: &DownloadOptions) -> CommandResult<()> {
         return Err(AppError::new(
             ErrorCode::InvalidPath,
             "播放列表下载数量必须在 1 到 50 之间。",
-            false,
-        ));
-    }
-    if options.write_automatic_subtitles && options.subtitle_languages.is_empty() {
-        return Err(AppError::new(
-            ErrorCode::InvalidPath,
-            "选择自动字幕前，请先指定至少一种字幕语言。",
             false,
         ));
     }

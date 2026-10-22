@@ -18,6 +18,9 @@ import { IconRefresh, IconRss } from "@tabler/icons-react";
 import { subscriptionApi, type SeriesCandidate, type SeriesSubscription } from "./subscriptionApi";
 import { isPending } from "./selection";
 import { useAppStore } from "../../stores/appStore";
+import type { DownloadOptionDefaults } from "../../types/domain";
+import { DownloadOptionsModal } from "../download/DownloadOptionsModal";
+import { useDownloadOptions } from "../download/useDownloadOptions";
 
 function message(error: unknown) {
   return error instanceof Error ? error.message : "订阅操作失败，请重试。";
@@ -37,6 +40,16 @@ export function SubscriptionsPage() {
   const [showDownloaded, setShowDownloaded] = useState(false);
   const [expanded, setExpanded] = useState<Record<number, boolean>>({});
   const [proxyChoices, setProxyChoices] = useState<Record<number, boolean>>({});
+  const {
+    options: defaultOptions,
+    loading: loadingDefaults,
+    error: defaultsError,
+    retry: retryDefaults,
+  } = useDownloadOptions();
+  const [optionOverrides, setOptionOverrides] = useState<Record<number, DownloadOptionDefaults>>(
+    {},
+  );
+  const [editingOptions, setEditingOptions] = useState<number | null>(null);
   const [removing, setRemoving] = useState<SeriesSubscription | null>(null);
   const stopChecks = useRef(false);
   const [checkProgress, setCheckProgress] = useState("");
@@ -164,6 +177,14 @@ export function SubscriptionsPage() {
         {error && (
           <Alert color="red" role="alert" title="操作失败">
             {error}
+          </Alert>
+        )}
+        {defaultsError && (
+          <Alert color="red" role="alert" title="无法读取下载选项">
+            {defaultsError}
+            <Button variant="subtle" onClick={retryDefaults}>
+              重新读取下载选项
+            </Button>
           </Alert>
         )}
         {notice && (
@@ -405,7 +426,14 @@ export function SubscriptionsPage() {
                     }}
                   />
                   <Button
-                    disabled={!!busy || !chosen.length}
+                    variant="default"
+                    disabled={!!busy || loadingDefaults || !!defaultsError}
+                    onClick={() => setEditingOptions(item.id)}
+                  >
+                    高级设置
+                  </Button>
+                  <Button
+                    disabled={!!busy || !chosen.length || loadingDefaults || !!defaultsError}
                     loading={busy === `download-${item.id}`}
                     onClick={() =>
                       void act(`download-${item.id}`, async () => {
@@ -413,6 +441,7 @@ export function SubscriptionsPage() {
                           item.id,
                           chosen,
                           proxyChoices[item.id] ?? false,
+                          optionOverrides[item.id] ?? defaultOptions,
                         );
                         result.tasks.forEach((task) =>
                           useAppStore.getState().upsertDownloadTask(task),
@@ -435,6 +464,15 @@ export function SubscriptionsPage() {
           );
         })}
       </Stack>
+      {editingOptions !== null && (
+        <DownloadOptionsModal
+          value={optionOverrides[editingOptions] ?? defaultOptions}
+          onClose={() => setEditingOptions(null)}
+          onApply={(value) =>
+            setOptionOverrides((previous) => ({ ...previous, [editingOptions]: value }))
+          }
+        />
+      )}
       <Modal
         opened={!!removing}
         onClose={() => {

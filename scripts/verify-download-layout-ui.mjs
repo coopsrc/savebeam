@@ -67,24 +67,17 @@ async function assertAlignedPanels(page, width, seriesMode) {
     );
   });
   const source = await page.getByRole("region", { name: "媒体与格式", exact: true }).boundingBox();
-  const options = await page.getByRole("region", { name: "下载选项", exact: true }).boundingBox();
   const actions = page.getByRole("group", { name: "下载操作", exact: true });
   const footer = await actions.boundingBox();
   const button = await actions.getByRole("button", { name: "开始下载", exact: true }).boundingBox();
-  assert.equal(
-    await page
-      .getByRole("region", { name: "下载选项", exact: true })
-      .getByRole("button", { name: "开始下载", exact: true })
-      .count(),
-    0,
-    "Start is outside the options card",
-  );
-  assert.ok(footer.y >= options.y + options.height + 12, "Start footer follows both panels");
+  assert.equal(await page.locator(".download-options-panel").count(), 0);
+  assert.equal(await actions.getByRole("button", { name: "高级设置", exact: true }).count(), 1);
+  assert.ok(footer.y >= source.y + source.height + 12, "Start footer follows media");
   assert.ok(
     Math.abs(button.x + button.width - footer.x - footer.width) <= 1,
     "Start is right-aligned",
   );
-  let edge = options;
+  let edge = source;
   if (seriesMode) {
     const series = await page
       .getByRole("region", { name: "选择系列视频", exact: true })
@@ -92,8 +85,8 @@ async function assertAlignedPanels(page, width, seriesMode) {
     if (width >= 1200) {
       assert.ok(Math.abs(series.y - source.y) <= 1, "List top aligns with media top");
       assert.ok(
-        Math.abs(series.y + series.height - options.y - options.height) <= 1,
-        JSON.stringify({ source, series, options }),
+        Math.abs(series.y + series.height - source.y - source.height) <= 1,
+        JSON.stringify({ source, series }),
       );
       edge = series;
     }
@@ -145,6 +138,16 @@ try {
           unregisterCallback() {},
           async invoke(command, args = {}) {
             window.calls.push({ command, args });
+            if (command === "get_download_option_defaults")
+              return {
+                audioOnly: false,
+                subtitleLanguages: [],
+                writeAutomaticSubtitles: false,
+                writeThumbnail: false,
+                writeInfoJson: false,
+                embedMetadata: false,
+                keepIntermediateFiles: false,
+              };
             if (command === "inspect_media") return window.layoutMedia;
             if (command === "start_download")
               return {
@@ -168,9 +171,11 @@ try {
       assert.equal(await page.getByText(/预计文件名/).count(), 0);
       assert.equal(await page.locator(".download-size-hint").count(), 1);
       assert.equal(await page.getByText(/登录 Cookie 在|保存位置：|保存结构：/).count(), 0);
+      await page.getByRole("button", { name: "高级设置", exact: true }).click();
       await page
         .getByText("需要 FFmpeg 和 ffprobe 进行音频提取与转换。", { exact: true })
         .waitFor();
+      await page.getByRole("button", { name: "取消", exact: true }).click();
       if (mode === "series") {
         const list = page.locator(".download-playlist-list");
         const geometry = await list.evaluate((element) => ({
@@ -255,9 +260,6 @@ try {
       const source = await page
         .getByRole("region", { name: "媒体与格式", exact: true })
         .boundingBox();
-      const options = await page
-        .getByRole("region", { name: "下载选项", exact: true })
-        .boundingBox();
       const details = await page.locator(".download-media-details").boundingBox();
       const thumbnail = await page
         .getByRole("img", { name: "视频封面", exact: true })
@@ -271,8 +273,6 @@ try {
         "Media title escapes its panel",
       );
       assert.ok(thumbnail.width <= 160 && thumbnail.height <= 100, JSON.stringify(thumbnail));
-      assert.ok(options.y >= source.y + source.height + 12, JSON.stringify({ source, options }));
-      assert.ok(Math.abs(options.x - source.x) <= 1, "Options must stay below media");
       if (mode === "series") {
         const series = await page
           .getByRole("region", { name: "选择系列视频", exact: true })
@@ -282,7 +282,6 @@ try {
           assert.ok(Math.abs(series.y - source.y) <= 1);
         } else {
           assert.ok(series.y >= source.y + source.height + 12);
-          assert.ok(options.y >= series.y + series.height + 12, "Start follows video list");
         }
       } else {
         assert.equal(
@@ -336,10 +335,13 @@ try {
         }
       }
       const mp3 = width === 800;
+      await page.getByRole("button", { name: "高级设置", exact: true }).click();
       if (mp3) {
-        if (mode === "series")
-          await page.getByRole("checkbox", { name: "我确认下载所选 17 项", exact: true }).check();
         await page.getByRole("checkbox", { name: "仅下载音频（MP3）", exact: true }).check();
+      }
+      await page.getByRole("checkbox", { name: "保留中间文件", exact: true }).check();
+      await page.getByRole("button", { name: "应用到本次下载", exact: true }).click();
+      if (mp3) {
         if (mode === "series")
           assert.equal(
             await page
@@ -358,7 +360,6 @@ try {
           );
         }
       }
-      await page.getByRole("checkbox", { name: "保留中间文件", exact: true }).check();
       let indices = null;
       if (mode === "series") {
         assert.equal(
@@ -434,13 +435,15 @@ try {
           await page.getByRole("button", { name: "解析视频信息", exact: true }).click();
           await page.getByText(`选择下载条目（已选 ${count} 项）`, { exact: true }).waitFor();
           if (count === 50) {
+            await page.getByRole("button", { name: "高级设置", exact: true }).click();
             const subtitles = page.getByRole("combobox", { name: "下载字幕", exact: true });
             await subtitles.click();
-            await page.getByRole("option", { name: "zh-Hans — 中文", exact: true }).click();
+            await page.getByRole("option", { name: "zh-Hans", exact: true }).click();
             await subtitles.press("Escape");
             await page
               .getByRole("checkbox", { name: "同时下载自动生成的字幕", exact: true })
               .waitFor();
+            await page.getByRole("button", { name: "应用到本次下载", exact: true }).click();
           }
           await assertAlignedPanels(page, 1600, true);
           if (count <= 1) {

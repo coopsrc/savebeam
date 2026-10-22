@@ -199,6 +199,7 @@ pub async fn download_subscription_items(
     id: i64,
     media_ids: Vec<String>,
     use_proxy: Option<bool>,
+    download_options: Option<crate::domain::download_defaults::DownloadOptionDefaults>,
 ) -> CommandResult<QueuedSubscriptionItems> {
     worker(app, move |app| {
         let wanted: HashSet<_> = media_ids.iter().collect();
@@ -207,6 +208,13 @@ pub async fn download_subscription_items(
         }
         let database = app.state::<DatabaseManager>();
         let repo = SubscriptionRepository(database.database()?);
+        let download_options = match download_options {
+            Some(value) => {
+                crate::services::download_defaults::validate(&value)?;
+                value
+            }
+            None => crate::services::download_defaults::load(database.database()?)?,
+        };
         let subscription = repo.get(id)?;
         let use_proxy = Some(use_proxy.unwrap_or(false));
         let cookies = load_cookie_preferences(app.state::<DatabaseManager>().inner())?;
@@ -269,19 +277,25 @@ pub async fn download_subscription_items(
             error: None,
         };
         for entry in chosen {
-            let options = DownloadOptions {
+            let mut options = DownloadOptions {
                 title: format!("{} · {}", current.title, entry.title)
                     .chars()
                     .take(1024)
                     .collect(),
                 url: subscription.url.clone(),
-                format_id: "bestvideo+bestaudio/best".into(),
+                format_id: if download_options.audio_only {
+                    "bestaudio/best"
+                } else {
+                    "bestvideo+bestaudio/best"
+                }
+                .into(),
                 playlist_item_count: Some(1),
                 playlist_items: Some(vec![entry.index]),
                 expected_media_id: Some(entry.id.clone()),
                 use_proxy,
                 ..Default::default()
             };
+            download_options.apply_to(&mut options);
             match queue_download(
                 app.clone(),
                 options,

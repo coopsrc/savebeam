@@ -27,6 +27,16 @@ try {
         unregisterCallback() {},
         async invoke(command, args = {}) {
           window.calls.push({ command, args });
+          if (command === "get_download_option_defaults")
+            return {
+              audioOnly: false,
+              subtitleLanguages: [],
+              writeAutomaticSubtitles: false,
+              writeThumbnail: false,
+              writeInfoJson: false,
+              embedMetadata: false,
+              keepIntermediateFiles: false,
+            };
           if (command === "inspect_media" && args.useProxy && window.missingProxy)
             throw {
               code: "invalid_url",
@@ -188,7 +198,9 @@ try {
       await page.getByRole("option", { name: /#audio（兼容推荐）/ }).click();
       await text("预计文件大小：约 2.0 MB");
     }
+    await page.getByRole("button", { name: "高级设置", exact: true }).click();
     await page.getByRole("checkbox", { name: "仅下载音频（MP3）", exact: true }).check();
+    await page.getByRole("button", { name: "应用到本次下载", exact: true }).click();
     await text("MP3 转换后待定");
     assert.equal(await page.getByRole("region", { name: "预计输出", exact: true }).count(), 0);
     await page.screenshot({

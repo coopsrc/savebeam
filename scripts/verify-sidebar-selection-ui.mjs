@@ -32,6 +32,16 @@ try {
             },
             unregisterCallback() {},
             async invoke(command) {
+              if (command === "get_download_option_defaults")
+                return {
+                  audioOnly: false,
+                  subtitleLanguages: [],
+                  writeAutomaticSubtitles: false,
+                  writeThumbnail: false,
+                  writeInfoJson: false,
+                  embedMetadata: false,
+                  keepIntermediateFiles: false,
+                };
               if (command === "get_network_preferences")
                 return { proxyMode: "default", proxyUrl: "" };
               if (command === "get_cookie_preferences")

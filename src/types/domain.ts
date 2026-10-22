@@ -164,6 +164,17 @@ export interface DownloadPreferences {
   conflictStrategy: "skip" | "overwrite";
 }
 
+export type DownloadOptionDefaults = Pick<
+  DownloadOptions,
+  | "audioOnly"
+  | "subtitleLanguages"
+  | "writeAutomaticSubtitles"
+  | "writeThumbnail"
+  | "writeInfoJson"
+  | "embedMetadata"
+  | "keepIntermediateFiles"
+>;
+
 export interface CookiePreferences {
   cookiesFilePath: string | null;
   cookiesBrowser: CookieBrowser | null;

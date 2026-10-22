@@ -101,7 +101,7 @@ body {
 .download-workbench {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-areas: "media" "options" "actions";
+  grid-template-areas: "media" "actions";
   gap: 20px;
   align-items: start;
 }
@@ -113,15 +113,11 @@ body {
 }
 
 .download-workbench--series {
-  grid-template-areas: "media" "list" "options" "actions";
+  grid-template-areas: "media" "list" "actions";
 }
 
 .download-source-panel {
   grid-area: media;
-}
-
-.download-options-panel {
-  grid-area: options;
 }
 
 .download-series-panel {
@@ -138,7 +134,14 @@ body {
   overflow-wrap: anywhere;
 }
 
-.download-start-actions > button {
+.download-advanced-fields {
+  max-height: min(60vh, 580px);
+  overflow-y: auto;
+  padding: 4px 8px 4px 2px;
+}
+
+.download-action-buttons {
+  flex-shrink: 0;
   margin-left: auto;
 }
 
@@ -205,17 +208,21 @@ body {
 @media (min-width: 1200px) {
   .download-workbench--series {
     grid-template-columns: minmax(0, 0.9fr) minmax(340px, 1.1fr);
-    grid-template-areas: "media list" "options list" "actions actions";
-    grid-template-rows: auto auto auto;
+    grid-template-areas: "media list" "actions actions";
+    grid-template-rows: auto auto;
+  }
+
+  .download-workbench--series .download-source-panel {
+    align-self: stretch;
   }
 
   .download-workbench--series .download-series-panel {
-    /* The left panels determine row heights; long lists must not enlarge them. */
+    /* Equal-height columns, without letting long lists enlarge the media card. */
     contain: size;
     align-self: stretch;
     display: flex;
     flex-direction: column;
-    min-height: 0;
+    min-height: 400px;
   }
 
   .download-workbench--series .download-series-content {

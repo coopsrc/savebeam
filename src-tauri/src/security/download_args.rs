@@ -287,7 +287,7 @@ fn validate_cookies_file(path: &str) -> Result<(), AppError> {
     Ok(())
 }
 
-fn validate_subtitle_languages(languages: &[String]) -> Result<(), AppError> {
+pub(crate) fn validate_subtitle_languages(languages: &[String]) -> Result<(), AppError> {
     let valid = languages.len() <= 10
         && languages.iter().all(|language| {
             !language.is_empty()

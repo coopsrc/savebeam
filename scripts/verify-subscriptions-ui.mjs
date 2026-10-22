@@ -92,6 +92,16 @@ try {
           unregisterCallback() {},
           async invoke(command, args = {}) {
             window.calls.push({ command, args });
+            if (command === "get_download_option_defaults")
+              return {
+                audioOnly: false,
+                subtitleLanguages: [],
+                writeAutomaticSubtitles: false,
+                writeThumbnail: false,
+                writeInfoJson: false,
+                embedMetadata: false,
+                keepIntermediateFiles: false,
+              };
             if (command === "list_subscriptions") return structuredClone(window.rows);
             if (command === "get_subscription_candidates")
               return [{ url: fixture.url, title: fixture.title }];
@@ -160,6 +170,13 @@ try {
         );
         if (scenario === "selection-proxy")
           await card.getByRole("checkbox", { name: "使用代理", exact: true }).check();
+        if (scenario === "selection-proxy") {
+          await card.getByRole("button", { name: "高级设置", exact: true }).click();
+          const dialog = page.getByRole("dialog", { name: "高级设置", exact: true });
+          await dialog.getByRole("checkbox", { name: "仅下载音频（MP3）", exact: true }).check();
+          await dialog.getByRole("checkbox", { name: "保留中间文件", exact: true }).check();
+          await dialog.getByRole("button", { name: "应用到本次下载", exact: true }).click();
+        }
         await card.getByRole("button", { name: "选择新增", exact: true }).click();
         await card.getByRole("button", { name: /展开条目/ }).click();
         assert.equal(
@@ -186,6 +203,15 @@ try {
           id: 1,
           mediaIds: ["v72"],
           useProxy: scenario === "selection-proxy",
+          downloadOptions: {
+            audioOnly: scenario === "selection-proxy",
+            subtitleLanguages: [],
+            writeAutomaticSubtitles: false,
+            writeThumbnail: false,
+            writeInfoJson: false,
+            embedMetadata: false,
+            keepIntermediateFiles: scenario === "selection-proxy",
+          },
         });
         assert.equal(
           await card

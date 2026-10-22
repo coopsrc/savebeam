@@ -5,7 +5,6 @@ import {
   Checkbox,
   Group,
   Image,
-  MultiSelect,
   Paper,
   Select,
   Stack,
@@ -27,6 +26,8 @@ import { useAppStore } from "../../stores/appStore";
 import { inspectMedia } from "./mediaApi";
 import { getMediaUrlError, validateMediaUrl } from "./validateMediaUrl";
 import { selectedEntries } from "./outputPreview";
+import { DownloadOptionsModal } from "./DownloadOptionsModal";
+import { useDownloadOptions } from "./useDownloadOptions";
 import {
   applyPlaylistSizes,
   estimateOutputBytes,
@@ -58,13 +59,15 @@ export function DownloadPage() {
   const [manualAudio, setManualAudio] = useState(false);
   const [playlistConfirmed, setPlaylistConfirmed] = useState(false);
   const [playlistItems, setPlaylistItems] = useState<number[]>([]);
-  const [audioOnly, setAudioOnly] = useState(false);
-  const [subtitleLanguages, setSubtitleLanguages] = useState<string[]>([]);
-  const [writeAutomaticSubtitles, setWriteAutomaticSubtitles] = useState(false);
-  const [writeThumbnail, setWriteThumbnail] = useState(false);
-  const [writeInfoJson, setWriteInfoJson] = useState(false);
-  const [embedMetadata, setEmbedMetadata] = useState(false);
-  const [keepIntermediateFiles, setKeepIntermediateFiles] = useState(false);
+  const {
+    options: advancedOptions,
+    setOptions: setAdvancedOptions,
+    loading: loadingDefaults,
+    error: defaultsError,
+    retry: retryDefaults,
+  } = useDownloadOptions();
+  const { audioOnly, subtitleLanguages, writeAutomaticSubtitles } = advancedOptions;
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
   const [playlistSizes, setPlaylistSizes] = useState<PlaylistSizeCache>({});
   const [estimatingSize, setEstimatingSize] = useState(false);
@@ -88,19 +91,12 @@ export function DownloadPage() {
     setManualAudio(false);
     setPlaylistConfirmed(false);
     setPlaylistItems([]);
-    setAudioOnly(false);
-    setSubtitleLanguages([]);
-    setWriteAutomaticSubtitles(false);
-    setWriteThumbnail(false);
-    setWriteInfoJson(false);
-    setEmbedMetadata(false);
-    setKeepIntermediateFiles(false);
     const epoch = ++sizeEpoch.current;
     setPlaylistSizes({});
     setSizeError(null);
 
     const checked = validateMediaUrl(url);
-    if (!checked.valid) return;
+    if (!checked.valid || loadingDefaults || defaultsError) return;
 
     setIsInspecting(true);
     try {
@@ -113,9 +109,8 @@ export function DownloadPage() {
       );
       const videos = videoFormats(result.formats);
       setSelectedVideoId(videos[0]?.formatId ?? null);
-      setAudioOnly(
-        !result.playlist && !videos.length && audioFormats(result.formats, true).length > 0,
-      );
+      if (!result.playlist && !videos.length && audioFormats(result.formats, true).length > 0)
+        setAdvancedOptions((current) => ({ ...current, audioOnly: true }));
     } catch (error: unknown) {
       if (epoch === sizeEpoch.current)
         setRequestError(
@@ -140,6 +135,9 @@ export function DownloadPage() {
   async function handleStartDownload() {
     if (
       !mediaInfo ||
+      loadingDefaults ||
+      defaultsError ||
+      isStartingDownload ||
       !selection ||
       (mediaInfo.playlist && (!playlistConfirmed || chosenEntries.length === 0))
     )
@@ -154,13 +152,7 @@ export function DownloadPage() {
       outputDirectory: "",
       playlistItemCount: mediaInfo.playlist ? chosenEntries.length : null,
       playlistItems: mediaInfo.playlist ? chosenEntries.map((entry) => entry.index) : null,
-      audioOnly,
-      subtitleLanguages,
-      writeAutomaticSubtitles,
-      writeThumbnail,
-      writeInfoJson,
-      embedMetadata,
-      keepIntermediateFiles,
+      ...advancedOptions,
       useProxy,
       conflictStrategy: "skip",
     };
@@ -293,6 +285,7 @@ export function DownloadPage() {
                 <Button
                   type="submit"
                   loading={isInspecting}
+                  disabled={loadingDefaults || !!defaultsError || isStartingDownload}
                   leftSection={<IconSearch size={16} stroke={1.8} />}
                 >
                   解析视频信息
@@ -312,6 +305,15 @@ export function DownloadPage() {
               <Text id="url-input-hint" size="xs" c="dimmed">
                 仅支持 http:// 和 https://；需要已在设置中配置 yt-dlp。
               </Text>
+
+              {defaultsError && (
+                <Alert color="red" title="无法读取下载选项" role="alert">
+                  {defaultsError}
+                  <Button variant="subtle" onClick={retryDefaults}>
+                    重新读取下载选项
+                  </Button>
+                </Alert>
+              )}
 
               {requestError && (
                 <Alert
@@ -544,79 +546,6 @@ export function DownloadPage() {
                   </Stack>
                 </Paper>
               )}
-              <Paper
-                className="download-options-panel"
-                component="section"
-                aria-label="下载选项"
-                withBorder
-                radius="md"
-                p="md"
-              >
-                <Stack gap="md">
-                  <Title order={3}>下载选项</Title>
-                  <Stack gap="xs">
-                    <Checkbox
-                      checked={audioOnly}
-                      disabled={!mediaInfo.playlist && videos.length === 0}
-                      onChange={(event) => {
-                        setAudioOnly(event.currentTarget.checked);
-                        setPlaylistConfirmed(false);
-                        setSelectedAudioId(AUTOMATIC_AUDIO);
-                        setManualAudio(false);
-                      }}
-                      label="仅下载音频（MP3）"
-                      description="需要 FFmpeg 和 ffprobe 进行音频提取与转换。"
-                    />
-                    {subtitleOptions.length > 0 && (
-                      <>
-                        <MultiSelect
-                          label="下载字幕"
-                          placeholder="不下载字幕"
-                          data={subtitleOptions}
-                          value={subtitleLanguages}
-                          onChange={setSubtitleLanguages}
-                          searchable
-                          clearable
-                        />
-                        {subtitleLanguages.length > 0 &&
-                          mediaInfo.subtitles.some(
-                            (track) =>
-                              track.automatic && subtitleLanguages.includes(track.language),
-                          ) && (
-                            <Checkbox
-                              checked={writeAutomaticSubtitles}
-                              onChange={(event) =>
-                                setWriteAutomaticSubtitles(event.currentTarget.checked)
-                              }
-                              label="同时下载自动生成的字幕"
-                            />
-                          )}
-                      </>
-                    )}
-                    <Checkbox
-                      checked={writeThumbnail}
-                      onChange={(event) => setWriteThumbnail(event.currentTarget.checked)}
-                      label="另存缩略图文件"
-                    />
-                    <Checkbox
-                      checked={writeInfoJson}
-                      onChange={(event) => setWriteInfoJson(event.currentTarget.checked)}
-                      label="另存媒体信息 JSON"
-                    />
-                    <Checkbox
-                      checked={embedMetadata}
-                      onChange={(event) => setEmbedMetadata(event.currentTarget.checked)}
-                      label="将媒体元数据写入文件"
-                    />
-                    <Checkbox
-                      checked={keepIntermediateFiles}
-                      onChange={(event) => setKeepIntermediateFiles(event.currentTarget.checked)}
-                      label="保留中间文件"
-                      description="保留合并或转换前的源文件，会占用额外空间；分轨文件在合并成功后按格式 ID、编码、分辨率和码率命名。"
-                    />
-                  </Stack>
-                </Stack>
-              </Paper>
               <Group
                 className="download-start-actions"
                 justify="space-between"
@@ -651,23 +580,52 @@ export function DownloadPage() {
                     </Text>
                   )}
                 </Text>
-                <Button
-                  type="button"
-                  onClick={handleStartDownload}
-                  loading={isStartingDownload}
-                  disabled={
-                    !selection ||
-                    (mediaInfo.playlist && (!playlistConfirmed || chosenEntries.length === 0)) ||
-                    (writeAutomaticSubtitles && subtitleLanguages.length === 0)
-                  }
-                >
-                  开始下载
-                </Button>
+                <Group className="download-action-buttons" gap="sm" wrap="nowrap">
+                  <Button
+                    type="button"
+                    variant="default"
+                    disabled={isStartingDownload || loadingDefaults || !!defaultsError}
+                    onClick={() => setAdvancedOpen(true)}
+                  >
+                    高级设置
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={handleStartDownload}
+                    loading={isStartingDownload}
+                    disabled={
+                      !selection ||
+                      (mediaInfo.playlist && (!playlistConfirmed || chosenEntries.length === 0)) ||
+                      (writeAutomaticSubtitles && subtitleLanguages.length === 0)
+                    }
+                  >
+                    开始下载
+                  </Button>
+                </Group>
               </Group>
             </div>
           )}
         </Stack>
       </Paper>
+      {advancedOpen && (
+        <DownloadOptionsModal
+          value={advancedOptions}
+          subtitleOptions={subtitleOptions}
+          audioOnlyRequired={
+            !!mediaInfo && !mediaInfo.playlist && videos.length === 0 && audios.length > 0
+          }
+          onClose={() => setAdvancedOpen(false)}
+          onApply={(next) => {
+            setAdvancedOptions(next);
+            setPlaylistConfirmed(false);
+            setSizeError(null);
+            if (next.audioOnly !== audioOnly) {
+              setSelectedAudioId(AUTOMATIC_AUDIO);
+              setManualAudio(false);
+            }
+          }}
+        />
+      )}
     </main>
   );
 }

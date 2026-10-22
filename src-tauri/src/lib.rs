@@ -58,6 +58,8 @@ pub fn run() {
             commands::downloads::start_download,
             commands::downloads::get_download_tasks,
             commands::downloads::get_download_preferences,
+            commands::downloads::get_download_option_defaults,
+            commands::downloads::save_download_option_defaults,
             commands::downloads::save_download_preferences,
             commands::downloads::get_cookie_preferences,
             commands::downloads::save_cookie_preferences,

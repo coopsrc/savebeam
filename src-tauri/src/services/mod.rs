@@ -11,6 +11,7 @@ pub mod component_install_registry;
 pub mod component_installer;
 pub mod component_paths;
 pub mod component_probe;
+pub mod download_defaults;
 pub mod download_registry;
 pub mod download_verifier;
 pub mod history_deletion;

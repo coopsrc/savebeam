@@ -32,6 +32,16 @@ async function fixture({ failLoad = false, failSave = false, delay = 0 } = {}) {
         async invoke(command, args = {}) {
           const state = window.proxyFixture;
           state.calls.push({ command, args });
+          if (command === "get_download_option_defaults")
+            return {
+              audioOnly: false,
+              subtitleLanguages: [],
+              writeAutomaticSubtitles: false,
+              writeThumbnail: false,
+              writeInfoJson: false,
+              embedMetadata: false,
+              keepIntermediateFiles: false,
+            };
           if (command === "get_network_preferences") {
             if (state.failLoad) throw { code: "unknown", message: "读取失败", retryable: true };
             return state.preferences;

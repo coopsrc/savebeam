@@ -545,6 +545,123 @@ mod tests {
     }
 
     #[test]
+    fn advanced_snapshot_survives_global_changes_restart_cancel_retry_and_completion() {
+        use crate::{
+            domain::download_defaults::DownloadOptionDefaults,
+            infrastructure::database::{Database, repositories::DownloadTaskRepository},
+            services::download_defaults,
+        };
+        let directory = std::env::temp_dir().join(format!(
+            "savebeam-option-lifecycle-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&directory).unwrap();
+        let path = directory.join("tasks.sqlite3");
+        let selected = DownloadOptionDefaults {
+            audio_only: true,
+            subtitle_languages: vec!["en".into(), "zh-Hans".into()],
+            write_automatic_subtitles: true,
+            write_thumbnail: true,
+            write_info_json: true,
+            embed_metadata: true,
+            keep_intermediate_files: true,
+        };
+        let mut records = Vec::new();
+        {
+            let db = Database::open(&path).unwrap();
+            download_defaults::save(db.clone(), selected.clone()).unwrap();
+            let registry = DownloadTaskRegistry::default();
+            registry.initialize_from_database(db.clone()).unwrap();
+            for status in [
+                DownloadTaskStatus::Queued,
+                DownloadTaskStatus::Preparing,
+                DownloadTaskStatus::Cancelled,
+                DownloadTaskStatus::Completed,
+            ] {
+                let mut options = test_options(
+                    "https://example.invalid/video",
+                    "Snapshot",
+                    "bestaudio/best",
+                );
+                options.output_directory = directory.to_string_lossy().into();
+                download_defaults::load(db.clone())
+                    .unwrap()
+                    .apply_to(&mut options);
+                // This task-only override must survive too, independently of global defaults.
+                options.write_info_json = false;
+                let task = registry.create(options.clone()).unwrap();
+                match status {
+                    DownloadTaskStatus::Preparing => {
+                        registry.transition(&task.id, status).unwrap();
+                    }
+                    DownloadTaskStatus::Cancelled => {
+                        registry.cancel(&task.id).unwrap();
+                    }
+                    DownloadTaskStatus::Completed => {
+                        registry
+                            .transition(&task.id, DownloadTaskStatus::Preparing)
+                            .unwrap();
+                        registry
+                            .transition(&task.id, DownloadTaskStatus::Downloading)
+                            .unwrap();
+                        registry
+                            .transition(&task.id, DownloadTaskStatus::PostProcessing)
+                            .unwrap();
+                        registry.transition(&task.id, status).unwrap();
+                    }
+                    _ => {}
+                }
+                records.push((task.id, status, options));
+            }
+            download_defaults::save(db, DownloadOptionDefaults::default()).unwrap();
+        }
+        let db = Database::open(&path).unwrap();
+        let registry = DownloadTaskRegistry::default();
+        registry.initialize_from_database(db.clone()).unwrap();
+        let repository = DownloadTaskRepository::new(db.clone());
+        for (id, status, expected) in &records {
+            assert_eq!(repository.get(id).unwrap().unwrap().1, *expected);
+            if matches!(
+                status,
+                DownloadTaskStatus::Preparing | DownloadTaskStatus::Cancelled
+            ) {
+                assert_eq!(registry.retry(id).unwrap().1, *expected);
+            }
+            let args =
+                crate::security::download_args::build_download_args(expected, &Default::default())
+                    .unwrap();
+            for flag in [
+                "--extract-audio",
+                "--write-subs",
+                "--write-auto-subs",
+                "--write-thumbnail",
+                "--embed-metadata",
+                "--keep-video",
+            ] {
+                assert!(args.iter().any(|arg| arg == flag), "{flag}");
+            }
+            assert!(!args.iter().any(|arg| arg == "--write-info-json"));
+        }
+        assert_eq!(registry.claim_next().unwrap().unwrap().1, records[0].2);
+        assert_eq!(
+            registry.task(&records[3].0).unwrap().status,
+            DownloadTaskStatus::Completed
+        );
+        assert_eq!(
+            download_defaults::load(db.clone()).unwrap(),
+            DownloadOptionDefaults::default()
+        );
+        drop(repository);
+        drop(registry);
+        drop(db);
+        let _ = std::fs::remove_dir_all(directory);
+    }
+
+    #[test]
     fn cancelled_queued_tasks_are_skipped_and_concurrency_is_bounded() {
         let registry = DownloadTaskRegistry::default();
         let first = registry

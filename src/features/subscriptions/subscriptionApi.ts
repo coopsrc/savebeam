@@ -1,5 +1,5 @@
 import { invokeCommand, IpcError } from "../../ipc/client";
-import type { DownloadTask } from "../../types/domain";
+import type { DownloadTask, DownloadOptionDefaults } from "../../types/domain";
 
 export interface SubscriptionEntry {
   id: string;
@@ -45,6 +45,11 @@ export const subscriptionApi = {
   subscribe: (url: string) => invoke<number>("subscribe_series", { url }),
   check: (id: number) => invoke<void>("check_subscription", { id }),
   remove: (id: number) => invoke<void>("unsubscribe_series", { id }),
-  download: (id: number, mediaIds: string[], useProxy = false) =>
-    invoke<QueuedItems>("download_subscription_items", { id, mediaIds, useProxy }),
+  download: (
+    id: number,
+    mediaIds: string[],
+    useProxy = false,
+    downloadOptions?: DownloadOptionDefaults,
+  ) =>
+    invoke<QueuedItems>("download_subscription_items", { id, mediaIds, useProxy, downloadOptions }),
 };
