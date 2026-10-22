@@ -23,6 +23,20 @@ const INTERMEDIATE_TEMPLATE: &str = concat!(
 const SERIES_OUTPUT_TEMPLATE: &str = "%(playlist_title,series,playlist|未命名系列)s%(playlist_id,series_id& [{}]|)s/%(playlist_index,episode_number|1)d-%(title)s%(id& [{}]|)s.%(ext)s";
 
 /// Builds fixed, shell-free argv for a download task.
+pub fn build_download_args_with_network(
+    options: &DownloadOptions,
+    cookies: &CookiePreferences,
+    network: &crate::domain::network::NetworkPreferences,
+) -> Result<Vec<OsString>, AppError> {
+    let mut args = build_download_args(options, cookies)?;
+    let index = args.len() - 2; // Keep proxy switches before the fixed -- URL delimiter.
+    args.splice(
+        index..index,
+        crate::security::network_proxy::proxy_args(network)?,
+    );
+    Ok(args)
+}
+
 pub fn build_download_args(
     options: &DownloadOptions,
     cookies: &CookiePreferences,
@@ -369,6 +383,49 @@ mod tests {
             cookies_browser: None,
             cookie_access_confirmed: false,
         }
+    }
+
+    #[test]
+    fn global_proxy_is_a_single_argument_before_url_and_preserves_cookie_and_format_options() {
+        use crate::domain::network::{NetworkPreferences, ProxyMode};
+        let directory = temp_directory();
+        let options = options(&directory);
+        let cookies = CookiePreferences {
+            cookies_browser: Some(crate::domain::download::CookieBrowser::Chrome),
+            access_confirmed: true,
+            ..Default::default()
+        };
+        for (mode, url) in [
+            (ProxyMode::Custom, "http://127.0.0.1:7890/"),
+            (ProxyMode::Direct, ""),
+        ] {
+            let network = NetworkPreferences {
+                proxy_mode: mode,
+                proxy_url: url.into(),
+            };
+            let args =
+                super::build_download_args_with_network(&options, &cookies, &network).unwrap();
+            assert_eq!(args[args.len() - 4], "--proxy");
+            assert_eq!(args[args.len() - 3], url);
+            assert_eq!(args[args.len() - 2], "--");
+            assert_eq!(args[args.len() - 1], options.url.as_str());
+            assert!(
+                args.windows(2)
+                    .any(|pair| pair[0] == "--cookies-from-browser" && pair[1] == "chrome")
+            );
+            assert!(
+                args.windows(2)
+                    .any(|pair| pair[0] == "--format" && pair[1] == options.format_id.as_str())
+            );
+        }
+        let defaults = super::build_download_args_with_network(
+            &options,
+            &cookies,
+            &NetworkPreferences::default(),
+        )
+        .unwrap();
+        assert!(!defaults.iter().any(|arg| arg == "--proxy"));
+        let _ = fs::remove_dir_all(directory);
     }
 
     #[test]

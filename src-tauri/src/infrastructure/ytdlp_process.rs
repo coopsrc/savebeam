@@ -17,6 +17,7 @@ use serde_json::Value;
 use crate::domain::{
     download::CookiePreferences,
     error::{AppError, ErrorCode},
+    network::NetworkPreferences,
 };
 
 const INSPECT_TIMEOUT: Duration = Duration::from_secs(60);
@@ -41,6 +42,7 @@ pub struct YtDlpProcessEngine {
     executable_path: PathBuf,
     javascript_runtime_path: Option<PathBuf>,
     playlist_limit: usize,
+    network_preferences: NetworkPreferences,
 }
 
 impl YtDlpProcessEngine {
@@ -52,12 +54,18 @@ impl YtDlpProcessEngine {
             executable_path: executable_path.into(),
             javascript_runtime_path,
             playlist_limit: 51,
+            network_preferences: NetworkPreferences::default(),
         }
     }
 
     /// Subscription checks have a separate, explicit 1000-entry scan budget.
     pub fn for_subscription(mut self) -> Self {
         self.playlist_limit = 1001;
+        self
+    }
+
+    pub fn with_network_preferences(mut self, preferences: NetworkPreferences) -> Self {
+        self.network_preferences = preferences;
         self
     }
 
@@ -117,6 +125,9 @@ impl YtDlpProcessEngine {
             "--dump-single-json",
             "--skip-download",
         ]);
+        command.args(crate::security::network_proxy::proxy_args(
+            &self.network_preferences,
+        )?);
 
         if let Some(runtime_path) = &self.javascript_runtime_path
             && let Some(runtime) = runtime_argument(runtime_path)
@@ -371,6 +382,45 @@ mod tests {
                 .parent()
                 .expect("fake executable has a directory"),
         );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn inspect_and_subscription_pass_exact_proxy_arguments_and_never_start_on_invalid_proxy() {
+        use crate::domain::network::{NetworkPreferences, ProxyMode};
+        for (mode, value, expected) in [
+            (
+                ProxyMode::Custom,
+                "socks5h://127.0.0.1:1080",
+                "socks5h://127.0.0.1:1080/",
+            ),
+            (ProxyMode::Direct, "", ""),
+        ] {
+            let executable = write_script(
+                "yt-dlp",
+                &format!(
+                    "[ \"${{6}}\" = \"1001\" ] || exit 10\n[ \"${{9}}\" = \"--proxy\" ] || exit 11\n[ \"${{10}}\" = \"{expected}\" ] || exit 12\n[ \"${{11}}\" = \"https://example.com/watch?v=a&b=c\" ] || exit 13\nprintf '%s' '{{\"id\":\"proxy-test\"}}'"
+                ),
+            );
+            let engine = YtDlpProcessEngine::new(&executable, None)
+                .for_subscription()
+                .with_network_preferences(NetworkPreferences {
+                    proxy_mode: mode,
+                    proxy_url: value.into(),
+                });
+            let response = engine.inspect("https://example.com/watch?v=a&b=c").unwrap();
+            assert_eq!(response["id"], "proxy-test");
+            let _ = fs::remove_dir_all(executable.parent().unwrap());
+        }
+        // This nonexistent executable must never be reached; validation wins first.
+        let invalid = YtDlpProcessEngine::new("/nonexistent-savebeam-ytdlp", None)
+            .with_network_preferences(NetworkPreferences {
+                proxy_mode: ProxyMode::Custom,
+                proxy_url: "http://user:secret@localhost".into(),
+            });
+        let error = invalid.inspect("https://example.com/watch").unwrap_err();
+        assert_eq!(error.code, ErrorCode::InvalidUrl);
+        assert!(!error.message.contains("secret"));
     }
 
     #[cfg(unix)]

@@ -31,6 +31,7 @@ import type {
   DownloadPreferences,
 } from "../../types/domain";
 import { IPC_EVENTS, listenToEvent } from "../../ipc/events";
+import { NetworkPreferencesPanel } from "./NetworkPreferencesPanel";
 
 const componentNames: Record<ComponentKind, string> = {
   yt_dlp: "yt-dlp",
@@ -265,6 +266,7 @@ export function ComponentsSettings() {
       <Stack gap="lg">
         <CookiePreferencesPanel />
         <DownloadPreferencesPanel />
+        <NetworkPreferencesPanel />
         <DiagnosticsPanel />
         <Group justify="space-between" align="flex-start">
           <div>

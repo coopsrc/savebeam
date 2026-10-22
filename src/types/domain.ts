@@ -163,6 +163,11 @@ export interface CookiePreferences {
   accessConfirmed: boolean;
 }
 
+export interface NetworkPreferences {
+  proxyMode: "default" | "direct" | "custom";
+  proxyUrl: string;
+}
+
 export interface DownloadProgress {
   taskId: string;
   status: DownloadTaskStatus;

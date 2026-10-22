@@ -30,11 +30,11 @@ use crate::{
         repositories::{HistoryRepository, SettingsRepository},
     },
     infrastructure::process_supervisor::ProcessSupervisor,
-    security::download_args::build_download_args,
+    security::download_args::build_download_args_with_network,
     services::{
         component_detector::ComponentDetector, component_paths::ComponentPaths,
         component_probe::probe_all, download_registry::DownloadTaskRegistry,
-        download_verifier::verify_download_outputs,
+        download_verifier::verify_download_outputs, network_preferences::load_network_preferences,
     },
 };
 
@@ -446,7 +446,8 @@ fn run_task(
             required_component(&installations, ComponentKind::Ffprobe)?;
         }
         let cookies = load_cookie_preferences(app.state::<DatabaseManager>().inner())?;
-        let mut args = build_download_args(&options, &cookies)?;
+        let network = load_network_preferences(app.state::<DatabaseManager>().database()?)?;
+        let mut args = build_download_args_with_network(&options, &cookies, &network)?;
         append_option_before_url(&mut args, "--ffmpeg-location", Path::new(ffmpeg))?;
         let executable = PathBuf::from(ytdlp);
         let cancellation = tasks.cancellation_token(&task_id)?;

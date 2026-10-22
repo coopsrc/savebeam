@@ -2,7 +2,11 @@
 
 Savebeam 是一个本地优先的桌面媒体下载器。应用使用 Tauri 2、React、TypeScript 和 Rust 构建；yt-dlp、FFmpeg、ffprobe 与 JavaScript runtime 作为独立组件管理，不随当前开发包内置。
 
-项目目前处于工程基线阶段，尚未实现实际下载功能。技术方案参见[软件设计说明书](docs/software-design.md)，任务与里程碑参见[实施计划](docs/implementation-plan.md)。
+已提供媒体解析、下载队列、历史记录、系列订阅和本地组件管理。技术方案参见[软件设计说明书](docs/software-design.md)，任务与里程碑参见[实施计划](docs/implementation-plan.md)；开发验证不等同于跨平台正式发行验收。
+
+## 媒体代理
+
+“设置 → 网络与代理”支持默认网络、直连和自定义代理，例如 `http://127.0.0.1:7890`、`socks5h://127.0.0.1:1080`（请按实际代理软件填写端口）。保存后用于新启动/重试的媒体解析、下载、订阅检查和封面请求；正在运行的任务不受影响。首版不支持代理账号密码，不修改系统代理，也不接管组件和应用更新。代理不能代替 Cookie 授权或保证所有 YouTube 视频可下载。详见[代理验证与边界](docs/verification/network-proxy.md)。
 
 ## 开发环境
 

@@ -3,15 +3,25 @@
 
 use std::{io::Read, time::Duration};
 
+use crate::{domain::network::NetworkPreferences, security::network_proxy::proxy_argument};
 use base64::{Engine, engine::general_purpose::STANDARD};
 use reqwest::{Url, blocking::Client, redirect::Policy};
 
 const MAX_IMAGE_BYTES: u64 = 4 * 1024 * 1024;
 
 pub fn load_thumbnail(url: &str, webpage_url: &str, user_agent: Option<&str>) -> Option<String> {
+    load_thumbnail_with_network(url, webpage_url, user_agent, &NetworkPreferences::default())
+}
+
+pub fn load_thumbnail_with_network(
+    url: &str,
+    webpage_url: &str,
+    user_agent: Option<&str>,
+    network: &NetworkPreferences,
+) -> Option<String> {
     let page = web_url(webpage_url)?;
     let image = web_url(page.join(url).ok()?.as_str())?;
-    let client = Client::builder()
+    let builder = Client::builder()
         .timeout(Duration::from_secs(8))
         .connect_timeout(Duration::from_secs(4))
         .referer(false)
@@ -21,9 +31,13 @@ pub fn load_thumbnail(url: &str, webpage_url: &str, user_agent: Option<&str>) ->
             } else {
                 attempt.follow()
             }
-        }))
-        .build()
-        .ok()?;
+        }));
+    let builder = match proxy_argument(network).ok()? {
+        None => builder,
+        Some(value) if value.is_empty() => builder.no_proxy(),
+        Some(value) => builder.no_proxy().proxy(reqwest::Proxy::all(value).ok()?),
+    };
+    let client = builder.build().ok()?;
     let response = client
         .get(image)
         .header(
@@ -129,5 +143,121 @@ mod tests {
         assert!(!request.contains("cookie:"));
         assert!(!request.contains("authorization:"));
         assert!(!request.contains("token=private"));
+    }
+
+    #[test]
+    fn thumbnail_uses_the_configured_http_proxy_without_cookie_or_proxy_credentials() {
+        use crate::domain::network::{NetworkPreferences, ProxyMode};
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        let worker = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            stream
+                .set_read_timeout(Some(std::time::Duration::from_secs(2)))
+                .unwrap();
+            let mut request = Vec::new();
+            let mut chunk = [0; 1024];
+            while !request.windows(4).any(|part| part == b"\r\n\r\n") {
+                let count = stream.read(&mut chunk).unwrap();
+                assert_ne!(count, 0);
+                request.extend_from_slice(&chunk[..count]);
+            }
+            stream.write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 8\r\nConnection: close\r\n\r\n\x89PNG\r\n\x1a\n").unwrap();
+            String::from_utf8(request).unwrap().to_lowercase()
+        });
+        let preferences = NetworkPreferences {
+            proxy_mode: ProxyMode::Custom,
+            proxy_url: format!("http://{address}"),
+        };
+        let image = super::load_thumbnail_with_network(
+            "http://cover.invalid/cover.png",
+            "https://www.youtube.com/watch?v=test",
+            None,
+            &preferences,
+        )
+        .unwrap();
+        assert!(image.starts_with("data:image/png;base64,"));
+        let request = worker.join().unwrap();
+        assert!(request.starts_with("get http://cover.invalid/cover.png http/1.1"));
+        assert!(request.contains("referer: https://www.youtube.com/"));
+        assert!(!request.contains("cookie:"));
+        assert!(!request.contains("authorization:"));
+    }
+
+    #[test]
+    fn rejected_or_unreachable_proxy_does_not_fall_back_to_the_target_server() {
+        use crate::domain::network::{NetworkPreferences, ProxyMode};
+        let target = TcpListener::bind("127.0.0.1:0").unwrap();
+        target.set_nonblocking(true).unwrap();
+        let url = format!("http://{}/cover.png", target.local_addr().unwrap());
+        let unavailable = TcpListener::bind("127.0.0.1:0").unwrap();
+        let dead_proxy = format!("http://{}", unavailable.local_addr().unwrap());
+        drop(unavailable);
+        for proxy in ["http://user:secret@localhost".to_string(), dead_proxy] {
+            let value = NetworkPreferences {
+                proxy_mode: ProxyMode::Custom,
+                proxy_url: proxy,
+            };
+            assert!(
+                super::load_thumbnail_with_network(&url, "https://example.com", None, &value)
+                    .is_none()
+            );
+            assert!(target.accept().is_err());
+        }
+    }
+
+    #[test]
+    fn thumbnail_socks5h_sends_the_hostname_to_the_proxy_instead_of_resolving_it_locally() {
+        use crate::domain::network::{NetworkPreferences, ProxyMode};
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        let worker = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            stream
+                .set_read_timeout(Some(std::time::Duration::from_secs(2)))
+                .unwrap();
+            let mut greeting = [0; 2];
+            stream.read_exact(&mut greeting).unwrap();
+            assert_eq!(greeting[0], 5);
+            let mut methods = vec![0; greeting[1] as usize];
+            stream.read_exact(&mut methods).unwrap();
+            assert!(methods.contains(&0));
+            stream.write_all(&[5, 0]).unwrap();
+            let mut header = [0; 4];
+            stream.read_exact(&mut header).unwrap();
+            assert_eq!(header, [5, 1, 0, 3]);
+            let mut count = [0; 1];
+            stream.read_exact(&mut count).unwrap();
+            let mut hostname = vec![0; count[0] as usize];
+            stream.read_exact(&mut hostname).unwrap();
+            assert_eq!(hostname, b"cover.invalid");
+            let mut port = [0; 2];
+            stream.read_exact(&mut port).unwrap();
+            assert_eq!(u16::from_be_bytes(port), 80);
+            stream
+                .write_all(&[5, 0, 0, 1, 127, 0, 0, 1, 0, 80])
+                .unwrap();
+            let mut request = Vec::new();
+            let mut byte = [0; 1];
+            while !request.ends_with(b"\r\n\r\n") {
+                stream.read_exact(&mut byte).unwrap();
+                request.push(byte[0]);
+            }
+            stream.write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 8\r\nConnection: close\r\n\r\n\x89PNG\r\n\x1a\n").unwrap();
+        });
+        let preferences = NetworkPreferences {
+            proxy_mode: ProxyMode::Custom,
+            proxy_url: format!("socks5h://{address}"),
+        };
+        assert!(
+            super::load_thumbnail_with_network(
+                "http://cover.invalid/test.png",
+                "https://example.com",
+                None,
+                &preferences
+            )
+            .is_some()
+        );
+        worker.join().unwrap();
     }
 }

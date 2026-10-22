@@ -17,7 +17,8 @@ use crate::{
     services::{
         component_detector::ComponentDetector, component_paths::ComponentPaths,
         component_probe::probe_all, media_mapper::map_media_info,
-        thumbnail_preview::load_thumbnail,
+        network_preferences::load_network_preferences,
+        thumbnail_preview::load_thumbnail_with_network,
     },
 };
 
@@ -54,7 +55,10 @@ pub(crate) fn subscription_engine(app: &AppHandle) -> CommandResult<YtDlpProcess
         })
         .and_then(|item| item.executable_path.as_ref())
         .map(PathBuf::from);
-    Ok(YtDlpProcessEngine::new(executable, runtime).for_subscription())
+    let network = load_network_preferences(app.state::<DatabaseManager>().database()?)?;
+    Ok(YtDlpProcessEngine::new(executable, runtime)
+        .for_subscription()
+        .with_network_preferences(network))
 }
 
 #[tauri::command]
@@ -81,6 +85,7 @@ pub async fn inspect_media(
         .map_err(|_| AppError::new(ErrorCode::Unknown, "组件设置暂时不可用。", true))?
         .clone();
     let cookies = load_cookie_preferences(database.inner())?;
+    let network = load_network_preferences(database.database()?)?;
 
     tauri::async_runtime::spawn_blocking(move || {
         let detector =
@@ -113,15 +118,17 @@ pub async fn inspect_media(
             .and_then(|item| item.executable_path.as_ref())
             .map(PathBuf::from);
         let raw = YtDlpProcessEngine::new(executable, runtime_path)
+            .with_network_preferences(network.clone())
             .inspect_with_cookies(&url, &cookies)?;
         let mut media = map_media_info(&raw, &url)?;
         media.thumbnail_data_url = media.thumbnail_url.as_deref().and_then(|thumbnail| {
-            load_thumbnail(
+            load_thumbnail_with_network(
                 thumbnail,
                 &media.webpage_url,
                 raw.get("http_headers")
                     .and_then(|headers| headers.get("User-Agent"))
                     .and_then(serde_json::Value::as_str),
+                &network,
             )
         });
         Ok(media)
