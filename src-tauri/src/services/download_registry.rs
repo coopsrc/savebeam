@@ -594,6 +594,7 @@ mod tests {
                 // This task-only override must survive too, independently of global defaults.
                 options.write_info_json = false;
                 options.quality_policy = Some(crate::domain::playlist_quality::PlaylistQuality {
+                    automatic_recommendations: true,
                     max_height: Some(720),
                     max_video_bitrate_kbps: Some(2000),
                     max_audio_bitrate_kbps: Some(128),

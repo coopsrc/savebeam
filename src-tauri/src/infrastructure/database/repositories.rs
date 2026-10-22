@@ -536,6 +536,7 @@ mod tests {
             expected_media_id: Some("expected-id".into()),
             use_proxy: Some(true),
             quality_policy: Some(crate::domain::playlist_quality::PlaylistQuality {
+                automatic_recommendations: true,
                 max_height: Some(1080),
                 max_video_bitrate_kbps: Some(5000),
                 max_audio_bitrate_kbps: Some(128),

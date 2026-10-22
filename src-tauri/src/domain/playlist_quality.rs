@@ -5,6 +5,8 @@ use super::error::{AppError, ErrorCode};
 #[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct PlaylistQuality {
+    #[serde(default)]
+    pub automatic_recommendations: bool,
     pub resolution_height: Option<u32>,
     pub frame_rate: Option<u32>,
     pub video_extension: Option<String>,

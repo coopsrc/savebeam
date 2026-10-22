@@ -258,6 +258,17 @@ try {
     const { page, errors } = await fixture(scenario);
     const policy = page.getByRole("region", { name: "系列画质策略", exact: true });
     await policy.waitFor();
+    for (const [label, preferred] of [
+      ["视频格式", "MP4"],
+      ["视频编码", "HEVC"],
+      ["音频格式", "M4A"],
+      ["音频编码", "AAC"],
+    ]) {
+      assert.equal(
+        await policy.getByRole("combobox", { name: label, exact: true }).inputValue(),
+        `自动推荐（优先 ${preferred}）`,
+      );
+    }
     if (scenario === "read-error") {
       await page.getByRole("alert").filter({ hasText: "条目详情读取失败" }).waitFor();
       assert.equal(
@@ -306,11 +317,11 @@ try {
           await page.getByRole("button", { name: "开始下载", exact: true }).isDisabled(),
           true,
         );
-        await policy.getByRole("button", { name: "视频恢复 Best", exact: true }).click();
+        await policy.getByRole("button", { name: "视频恢复默认", exact: true }).click();
         await confirmed(page, 3);
         await choose(page, policy, "音频编码", "OPUS");
         await page.getByText("没有符合所选条件的音视频组合", { exact: true }).first().waitFor();
-        await policy.getByRole("button", { name: "音频恢复 Best", exact: true }).click();
+        await policy.getByRole("button", { name: "音频恢复默认", exact: true }).click();
         await confirmed(page, 3);
       }
       await choose(page, policy, "分辨率", "720p");
@@ -350,7 +361,7 @@ try {
         await confirmed(page, 2);
         await page.getByRole("button", { name: "第 3 项单独设置", exact: true }).click();
         dialog = page.getByRole("dialog", { name: "第 3 项 · 单独画质设置", exact: true });
-        await dialog.getByRole("button", { name: "视频恢复 Best", exact: true }).click();
+        await dialog.getByRole("button", { name: "视频恢复默认", exact: true }).click();
         await dialog
           .getByRole("combobox", { name: "帧率（FPS）", exact: true })
           .and(page.locator('input[value="Best（最佳可用）"]'))
@@ -397,6 +408,7 @@ try {
       assert.equal(queued.length, scenario === "profiles" ? 3 : 2);
       assert.equal(queued[0].formatId, "v720+a128");
       assert.equal(queued[0].policy.resolutionHeight, 720);
+      assert.equal(queued[0].policy.automaticRecommendations, true);
       assert.equal(queued[0].policy.frameRate, 30);
       assert.equal(queued[0].policy.videoExtension, "mp4");
       assert.equal(queued[0].policy.videoCodec, "h264");

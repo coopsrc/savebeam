@@ -483,7 +483,8 @@ export function DownloadPage() {
                   <Stack gap="sm">
                     <Title order={3}>系列画质策略</Title>
                     <Text size="sm" c="dimmed">
-                      视频、音频分别选择 Best 或指定条件；每项独立匹配。少数例外可点右侧“单独设置”。
+                      分辨率和 FPS 可选
+                      Best；格式与编码自动推荐，也可手动指定。少数例外可点右侧“单独设置”。
                     </Text>
                     <PlaylistQualityFields
                       value={quality}

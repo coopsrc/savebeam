@@ -164,15 +164,7 @@ fn audio_allowed(f: &FormatOption, p: &PlaylistQuality) -> bool {
         && codec_allowed(f.audio_codec.as_deref(), p.audio_codec.as_deref())
 }
 fn video_allowed(f: &FormatOption, p: &PlaylistQuality) -> bool {
-    let height = f.height.map(f64::from).or_else(|| {
-        let resolution = f.resolution.as_deref()?;
-        resolution
-            .split('x')
-            .next_back()?
-            .trim_end_matches('p')
-            .parse::<f64>()
-            .ok()
-    });
+    let height = video_height(f);
     bounded(height, p.max_height)
         && bounded(f.video_bitrate_kbps, p.max_video_bitrate_kbps)
         && p.resolution_height
@@ -184,6 +176,17 @@ fn video_allowed(f: &FormatOption, p: &PlaylistQuality) -> bool {
         })
         && extension_allowed(f, &p.video_extension)
         && codec_allowed(f.video_codec.as_deref(), p.video_codec.as_deref())
+}
+fn video_height(f: &FormatOption) -> Option<f64> {
+    f.height.map(f64::from).or_else(|| {
+        let resolution = f.resolution.as_deref()?;
+        resolution
+            .split('x')
+            .next_back()?
+            .trim_end_matches('p')
+            .parse::<f64>()
+            .ok()
+    })
 }
 fn container(v: &FormatOption, a: &FormatOption) -> MergeContainer {
     let v = v
@@ -219,6 +222,9 @@ fn tracks<'a>(
     p: &PlaylistQuality,
     audio_only: bool,
 ) -> Option<(&'a FormatOption, Option<&'a FormatOption>)> {
+    if p.automatic_recommendations {
+        return recommended_tracks(formats, p, audio_only);
+    }
     let audio_ok = |f: &&FormatOption| audio_allowed(f, p);
     if audio_only {
         return formats
@@ -255,6 +261,65 @@ fn tracks<'a>(
         .find(|f| has_video(f) && has_audio(f) && video_allowed(f, p) && audio_allowed(f, p))
         .map(|v| (v, None))
 }
+
+fn recommended_audio<'a>(
+    formats: &'a [FormatOption],
+    p: &PlaylistQuality,
+    video: Option<&FormatOption>,
+    separate: bool,
+) -> Option<&'a FormatOption> {
+    formats
+        .iter()
+        .enumerate()
+        .filter(|(_, f)| (!separate || !has_video(f)) && audio_allowed(f, p))
+        .max_by_key(|(index, f)| {
+            (
+                p.audio_extension.is_none() && f.extension.eq_ignore_ascii_case("m4a"),
+                p.audio_codec.is_none() && codec_allowed(f.audio_codec.as_deref(), Some("aac")),
+                video.is_some_and(|v| container(v, f).extension() == v.extension),
+                *index,
+            )
+        })
+        .map(|(_, f)| f)
+}
+
+fn recommended_tracks<'a>(
+    formats: &'a [FormatOption],
+    p: &PlaylistQuality,
+    audio_only: bool,
+) -> Option<(&'a FormatOption, Option<&'a FormatOption>)> {
+    if audio_only {
+        return recommended_audio(formats, p, None, true)
+            .or_else(|| recommended_audio(formats, p, None, false))
+            .map(|a| (a, None));
+    }
+    formats
+        .iter()
+        .enumerate()
+        .filter(|(_, v)| has_video(v) && video_allowed(v, p))
+        .filter_map(|(index, v)| {
+            let audio = if has_audio(v) {
+                if !audio_allowed(v, p) {
+                    return None;
+                }
+                None
+            } else {
+                Some(recommended_audio(formats, p, Some(v), true)?)
+            };
+            // Quality first. Format/codec preferences only break equal height/FPS ties.
+            let key = (
+                video_height(v).unwrap_or(0.0) as u32,
+                v.fps.unwrap_or(0.0).round() as u32,
+                p.video_extension.is_none() && v.extension.eq_ignore_ascii_case("mp4"),
+                p.video_codec.is_none() && codec_allowed(v.video_codec.as_deref(), Some("hevc")),
+                !has_audio(v),
+                index,
+            );
+            Some((key, (v, audio)))
+        })
+        .max_by_key(|(key, _)| *key)
+        .map(|(_, tracks)| tracks)
+}
 fn bytes(f: &FormatOption) -> Option<u64> {
     [f.file_size_bytes, f.approximate_file_size_bytes]
         .into_iter()
@@ -268,7 +333,16 @@ pub fn select(item: &PlaylistDetails, policy: &PlaylistQuality, audio_only: bool
     let matched = first.or_else(|| {
         policy
             .allow_exceed
-            .then(|| tracks(&item.formats, &PlaylistQuality::default(), audio_only))
+            .then(|| {
+                tracks(
+                    &item.formats,
+                    &PlaylistQuality {
+                        automatic_recommendations: policy.automatic_recommendations,
+                        ..Default::default()
+                    },
+                    audio_only,
+                )
+            })
             .flatten()
     });
     let mut result = PlaylistMatch {
@@ -766,5 +840,94 @@ mod tests {
         .unwrap();
         assert_eq!(options.quality_policy, Some(policy));
         assert_eq!(options.format_id, "higher+a256");
+    }
+
+    #[test]
+    fn automatic_recommendations_are_soft_preferences_after_resolution_and_fps() {
+        let mut item = item(1, 2160);
+        item.formats = map_formats(
+            Some(&json!([
+                {"format_id":"aac","ext":"m4a","acodec":"mp4a.40.2","vcodec":"none","abr":128,"filesize":10},
+                {"format_id":"opus","ext":"webm","acodec":"opus","vcodec":"none","abr":160,"filesize":20},
+                {"format_id":"hevc-low","ext":"mp4","vcodec":"hvc1","acodec":"none","height":720,"fps":60,"filesize":50},
+                {"format_id":"hevc30","ext":"mp4","vcodec":"hvc1","acodec":"none","height":2160,"fps":30,"filesize":90},
+                {"format_id":"hevc60","ext":"mp4","vcodec":"hvc1","acodec":"none","height":2160,"fps":59.94,"filesize":100},
+                {"format_id":"avc60","ext":"mp4","vcodec":"avc1","acodec":"none","height":2160,"fps":60,"filesize":150},
+                {"format_id":"av1","ext":"webm","vcodec":"av01","acodec":"none","height":2160,"fps":60,"filesize":120}
+            ])),
+            Some(10.0),
+        );
+        let policy = PlaylistQuality {
+            automatic_recommendations: true,
+            ..Default::default()
+        };
+        let result = select(&item, &policy, false);
+        assert_eq!(result.format_id.as_deref(), Some("hevc60+aac"));
+        assert_eq!(result.bytes, Some(110));
+        assert!(!result.fallback_used);
+        // Old snapshots keep upstream ordering; new recommendation semantics are explicit.
+        assert_eq!(
+            select(&item, &Default::default(), false)
+                .format_id
+                .as_deref(),
+            Some("av1+opus")
+        );
+        item.formats.retain(|f| f.format_id != "hevc60");
+        assert_eq!(
+            select(&item, &policy, false).format_id.as_deref(),
+            Some("avc60+aac")
+        );
+        item.formats.retain(|f| !f.format_id.starts_with("hevc"));
+        assert!(!select(&item, &policy, false).fallback_used);
+        let explicit = PlaylistQuality {
+            video_codec: Some("av1".into()),
+            audio_codec: Some("opus".into()),
+            ..policy.clone()
+        };
+        assert_eq!(
+            select(&item, &explicit, false).format_id.as_deref(),
+            Some("av1+opus")
+        );
+        let unavailable = PlaylistQuality {
+            video_codec: Some("hevc".into()),
+            ..policy.clone()
+        };
+        assert!(select(&item, &unavailable, false).format_id.is_none());
+        let fallback = PlaylistQuality {
+            allow_exceed: true,
+            ..unavailable
+        };
+        let result = select(&item, &fallback, false);
+        assert!(result.fallback_used);
+        assert_eq!(result.format_id.as_deref(), Some("avc60+aac"));
+        assert_eq!(
+            select(&item, &policy, true).format_id.as_deref(),
+            Some("aac")
+        );
+    }
+
+    #[test]
+    fn recommendation_does_not_choose_lower_quality_separate_video_over_better_muxed_video() {
+        let mut item = item(1, 1080);
+        item.formats.push(map_formats(Some(&json!([
+            {"format_id":"mux4k","ext":"mp4","vcodec":"avc1","acodec":"aac","height":2160,"fps":60,"filesize":1000}
+        ])), None).remove(0));
+        let policy = PlaylistQuality {
+            automatic_recommendations: true,
+            ..Default::default()
+        };
+        assert_eq!(
+            select(&item, &policy, false).format_id.as_deref(),
+            Some("mux4k")
+        );
+        let options = task_options(
+            "https://example.invalid/list",
+            &item,
+            &policy,
+            &Default::default(),
+            false,
+        )
+        .unwrap();
+        assert!(options.quality_policy.unwrap().automatic_recommendations);
     }
 }

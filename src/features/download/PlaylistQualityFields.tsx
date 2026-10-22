@@ -6,8 +6,12 @@ const numbers = (values: number[], unit: string) => [
   best,
   ...values.map((value) => ({ value: String(value), label: `${value}${unit}` })),
 ];
-const extensions = (values: string[]) => [
-  best,
+const automatic = (preferred: string) => ({
+  value: "auto",
+  label: `自动推荐（优先 ${preferred}）`,
+});
+const extensions = (values: string[], preferred: string) => [
+  automatic(preferred),
   ...values.map((value) => ({ value, label: value })),
 ];
 
@@ -29,7 +33,7 @@ export function PlaylistQualityFields({
   const setText = (
     key: "videoExtension" | "videoCodec" | "audioExtension" | "audioCodec",
     v: string | null,
-  ) => onChange({ ...value, [key]: !v || v === "best" ? null : v });
+  ) => onChange({ ...value, automaticRecommendations: true, [key]: !v || v === "auto" ? null : v });
   return (
     <Stack gap="sm">
       <Stack component="section" aria-label="视频选择策略" gap="xs">
@@ -38,11 +42,12 @@ export function PlaylistQualityFields({
           <Button
             size="compact-xs"
             variant="subtle"
-            aria-label="视频恢复 Best"
+            aria-label="视频恢复默认"
             disabled={disabled || audioOnly}
             onClick={() =>
               onChange({
                 ...value,
+                automaticRecommendations: true,
                 resolutionHeight: null,
                 frameRate: null,
                 videoExtension: null,
@@ -52,7 +57,7 @@ export function PlaylistQualityFields({
               })
             }
           >
-            恢复 Best
+            恢复默认
           </Button>
         </Group>
         <SimpleGrid cols={2} spacing="sm">
@@ -74,8 +79,8 @@ export function PlaylistQualityFields({
           />
           <Select
             label="视频格式"
-            data={extensions(["mp4", "webm", "mkv", "mov", "flv", "ts", "m4v"])}
-            value={value.videoExtension ?? "best"}
+            data={extensions(["mp4", "webm", "mkv", "mov", "flv", "ts", "m4v"], "MP4")}
+            value={value.videoExtension ?? "auto"}
             onChange={(v) => setText("videoExtension", v)}
             allowDeselect={false}
             disabled={disabled || audioOnly}
@@ -83,7 +88,7 @@ export function PlaylistQualityFields({
           <Select
             label="视频编码"
             data={[
-              best,
+              automatic("HEVC"),
               { value: "h264", label: "H.264 / AVC" },
               { value: "hevc", label: "H.265 / HEVC" },
               { value: "av1", label: "AV1" },
@@ -91,7 +96,7 @@ export function PlaylistQualityFields({
               { value: "vp8", label: "VP8" },
               { value: "mpeg4", label: "MPEG-4" },
             ]}
-            value={value.videoCodec ?? "best"}
+            value={value.videoCodec ?? "auto"}
             onChange={(v) => setText("videoCodec", v)}
             allowDeselect={false}
             disabled={disabled || audioOnly}
@@ -105,25 +110,29 @@ export function PlaylistQualityFields({
           <Button
             size="compact-xs"
             variant="subtle"
-            aria-label="音频恢复 Best"
+            aria-label="音频恢复默认"
             disabled={disabled}
             onClick={() =>
               onChange({
                 ...value,
+                automaticRecommendations: true,
                 audioExtension: null,
                 audioCodec: null,
                 maxAudioBitrateKbps: null,
               })
             }
           >
-            恢复 Best
+            恢复默认
           </Button>
         </Group>
         <SimpleGrid cols={2} spacing="sm">
           <Select
             label="音频格式"
-            data={extensions(["m4a", "webm", "mp3", "ogg", "opus", "flac", "wav", "mp4", "aac"])}
-            value={value.audioExtension ?? "best"}
+            data={extensions(
+              ["m4a", "webm", "mp3", "ogg", "opus", "flac", "wav", "mp4", "aac"],
+              "M4A",
+            )}
+            value={value.audioExtension ?? "auto"}
             onChange={(v) => setText("audioExtension", v)}
             allowDeselect={false}
             disabled={disabled}
@@ -131,12 +140,12 @@ export function PlaylistQualityFields({
           <Select
             label="音频编码"
             data={[
-              best,
+              automatic("AAC"),
               ...["aac", "opus", "vorbis", "mp3", "flac", "alac", "ac3", "eac3", "pcm"].map(
                 (codec) => ({ value: codec, label: codec.toUpperCase() }),
               ),
             ]}
-            value={value.audioCodec ?? "best"}
+            value={value.audioCodec ?? "auto"}
             onChange={(v) => setText("audioCodec", v)}
             allowDeselect={false}
             disabled={disabled}
@@ -167,7 +176,8 @@ export function PlaylistQualityFields({
       <Text size="xs" c="dimmed">
         分辨率按源视频高度匹配；30/60 FPS 包含 29.97/59.94
         等近似帧率。格式和编码指源轨道，不转码；最终容器按音视频兼容性决定。音频码率在上限内选最佳；MP3
-        模式只应用音频条件，转换后大小待定。
+        模式只应用音频条件，转换后大小待定。 自动推荐在同等分辨率与 FPS 下优先 MP4、HEVC，音频优先
+        M4A、AAC；没有推荐项时自动选其他可用项，不因此跳过。
       </Text>
     </Stack>
   );

@@ -1,6 +1,7 @@
 import type { PlaylistQuality } from "../../types/domain";
 
 export const DEFAULT_PLAYLIST_QUALITY: PlaylistQuality = {
+  automaticRecommendations: true,
   resolutionHeight: null,
   frameRate: null,
   videoExtension: null,

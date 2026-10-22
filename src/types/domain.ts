@@ -118,6 +118,7 @@ export interface PlaylistSizeItem {
 }
 
 export interface PlaylistQuality {
+  automaticRecommendations?: boolean;
   resolutionHeight?: number | null;
   frameRate?: number | null;
   videoExtension?: string | null;
