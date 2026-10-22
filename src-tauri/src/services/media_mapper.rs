@@ -32,10 +32,7 @@ pub fn map_media_info(raw: &Value, requested_url: &str) -> Result<MediaInfo, App
         uploader: nonempty_string(raw.get("uploader"))
             .or_else(|| nonempty_string(raw.get("channel"))),
         formats: map_formats(raw.get("formats"), positive_number(raw.get("duration"))),
-        subtitles: map_subtitles(raw.get("subtitles"), false)
-            .into_iter()
-            .chain(map_subtitles(raw.get("automatic_captions"), true))
-            .collect(),
+        subtitles: map_subtitle_tracks(raw),
         playlist: None,
     })
 }
@@ -189,6 +186,14 @@ pub(crate) fn estimate_format_bytes(format: &Value, duration: Option<f64>) -> Op
     (bytes.is_finite() && bytes >= 1.0 && bytes < u64::MAX as f64).then_some(bytes.round() as u64)
 }
 
+pub fn map_subtitle_tracks(raw: &Value) -> Vec<SubtitleTrack> {
+    map_subtitles(raw.get("subtitles"), false)
+        .into_iter()
+        .chain(map_subtitles(raw.get("automatic_captions"), true))
+        .take(512)
+        .collect()
+}
+
 fn map_subtitles(value: Option<&Value>, automatic: bool) -> Vec<SubtitleTrack> {
     let mut seen = BTreeSet::new();
     let mut tracks = Vec::new();
@@ -197,10 +202,15 @@ fn map_subtitles(value: Option<&Value>, automatic: bool) -> Vec<SubtitleTrack> {
     };
 
     for (language, variants) in languages {
-        if language.is_empty() {
+        if language.is_empty()
+            || language.len() > 64
+            || !language
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'_' | b'.' | b'-'))
+        {
             continue;
         }
-        for variant in variants.as_array().into_iter().flatten() {
+        for variant in variants.as_array().into_iter().flatten().take(32) {
             let extension = nonempty_string(variant.get("ext"));
             let name = nonempty_string(variant.get("name"));
             let key = (language.to_owned(), extension.clone(), name.clone());
@@ -211,6 +221,9 @@ fn map_subtitles(value: Option<&Value>, automatic: bool) -> Vec<SubtitleTrack> {
                     extension,
                     automatic,
                 });
+            }
+            if tracks.len() >= 512 {
+                return tracks;
             }
         }
     }

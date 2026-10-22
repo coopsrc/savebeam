@@ -2,11 +2,14 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use super::{media_mapper::map_formats, playlist_size::PlaylistSizeRequestItem};
+use super::{
+    media_mapper::{map_formats, map_subtitle_tracks},
+    playlist_size::PlaylistSizeRequestItem,
+};
 use crate::domain::{
     download::MergeContainer,
     error::{AppError, ErrorCode},
-    media::FormatOption,
+    media::{FormatOption, SubtitleTrack},
     playlist_quality::PlaylistQuality,
 };
 
@@ -18,6 +21,8 @@ pub struct PlaylistDetails {
     pub title: Option<String>,
     pub duration_seconds: Option<f64>,
     pub formats: Vec<FormatOption>,
+    #[serde(default)]
+    pub subtitles: Vec<SubtitleTrack>,
     pub error: Option<String>,
 }
 
@@ -102,6 +107,11 @@ pub fn map_details(raw: &Value, requested: &[PlaylistSizeRequestItem]) -> Vec<Pl
                 },
                 duration_seconds: duration,
                 formats,
+                subtitles: if valid {
+                    entry.map(map_subtitle_tracks).unwrap_or_default()
+                } else {
+                    Vec::new()
+                },
                 error: if !valid {
                     Some("条目不可用、原始序号或视频 ID 已变化，请重新解析列表。".into())
                 } else if format_error {
@@ -407,6 +417,7 @@ pub fn validate_request(
     }
     if items.iter().any(|item| {
         item.formats.len() > 512
+            || item.subtitles.len() > 512
             || item
                 .title
                 .as_ref()
@@ -497,6 +508,7 @@ mod tests {
                 ])),
                 Some(10.0),
             ),
+            subtitles: Vec::new(),
         }
     }
     #[test]
@@ -929,5 +941,28 @@ mod tests {
         )
         .unwrap();
         assert!(options.quality_policy.unwrap().automatic_recommendations);
+    }
+
+    #[test]
+    fn series_details_project_subtitle_languages_sources_and_formats_without_urls() {
+        let raw = json!({"entries":[{
+            "playlist_index":1, "id":"one", "title":"Title",
+            "subtitles":{"en":[{"ext":"srt","name":"English","url":"https://private.invalid/sub","http_headers":{"Cookie":"secret"}}]},
+            "automatic_captions":{"ja":[{"ext":"vtt","url":"https://private.invalid/auto"}]}
+        }]});
+        let details = map_details(
+            &raw,
+            &[PlaylistSizeRequestItem {
+                index: 1,
+                id: Some("one".into()),
+            }],
+        );
+        assert_eq!(details[0].subtitles.len(), 2);
+        assert!(!details[0].subtitles[0].automatic);
+        assert!(details[0].subtitles[1].automatic);
+        assert_eq!(details[0].subtitles[0].extension.as_deref(), Some("srt"));
+        let serialized = serde_json::to_string(&details).unwrap();
+        assert!(!serialized.contains("private.invalid"));
+        assert!(!serialized.contains("Cookie"));
     }
 }

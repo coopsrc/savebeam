@@ -250,14 +250,9 @@ export function DownloadPage() {
           ? "（兼容推荐）"
           : ""),
   }));
-  const subtitleOptions = mediaInfo
-    ? Array.from(new Map(mediaInfo.subtitles.map((track) => [track.language, track])).values()).map(
-        (track) => ({
-          value: track.language,
-          label: `${track.language}${track.name ? ` — ${track.name}` : ""}`,
-        }),
-      )
-    : [];
+  const subtitleTracks = mediaInfo?.playlist
+    ? Object.values(series.details).flatMap((item) => item.subtitles ?? [])
+    : (mediaInfo?.subtitles ?? []);
   return (
     <main className="download-page">
       <Paper
@@ -727,7 +722,8 @@ export function DownloadPage() {
       {advancedOpen && (
         <DownloadOptionsModal
           value={advancedOptions}
-          subtitleOptions={subtitleOptions}
+          subtitleTracks={subtitleTracks}
+          subtitleScope={mediaInfo?.playlist ? "series" : "video"}
           audioOnlyRequired={
             !!mediaInfo && !mediaInfo.playlist && videos.length === 0 && audios.length > 0
           }

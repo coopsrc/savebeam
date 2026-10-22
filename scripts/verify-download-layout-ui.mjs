@@ -510,9 +510,9 @@ try {
           if (count === 50) {
             await page.getByRole("button", { name: "高级设置", exact: true }).click();
             const subtitles = page.getByRole("combobox", { name: "下载字幕", exact: true });
-            await subtitles.click();
-            await page.getByRole("option", { name: "zh-Hans", exact: true }).click();
-            await subtitles.press("Escape");
+            await subtitles.fill("zh-Hans");
+            await page.getByRole("option", { name: /zh-Hans/ }).click();
+            await subtitles.press("Tab");
             await page
               .getByRole("checkbox", { name: "同时下载自动生成的字幕", exact: true })
               .waitFor();

@@ -199,7 +199,17 @@ pub fn build_download_args(
                 OsString::from("--sub-langs"),
             ],
         );
-        args.insert(4, options.subtitle_languages.join(",").into());
+        // yt-dlp treats language tags as regexes; UI selections are literal tags.
+        args.insert(
+            4,
+            options
+                .subtitle_languages
+                .iter()
+                .map(|language| language.replace('.', r"\."))
+                .collect::<Vec<_>>()
+                .join(",")
+                .into(),
+        );
     }
     if options.write_automatic_subtitles {
         args.splice(2..2, [OsString::from("--write-auto-subs")]);
@@ -687,6 +697,15 @@ mod tests {
         assert!(strings.contains(&"bestaudio/best".into()));
         assert!(strings.contains(&"mp3".into()));
         assert!(strings.contains(&"en-US,zh-Hans".into()));
+
+        download_options.subtitle_languages = vec!["en.US".into()];
+        let literal_args =
+            build_download_args(&download_options, &CookiePreferences::default()).unwrap();
+        assert!(
+            literal_args
+                .windows(2)
+                .any(|pair| pair == ["--sub-langs", r"en\.US"])
+        );
 
         download_options.subtitle_languages = vec!["en,all".into()];
         assert!(build_download_args(&download_options, &CookiePreferences::default()).is_err());

@@ -136,6 +136,7 @@ export interface PlaylistDetails {
   title: string | null;
   durationSeconds: number | null;
   formats: MediaFormat[];
+  subtitles?: SubtitleTrack[];
   error: string | null;
 }
 export interface PlaylistMatch {

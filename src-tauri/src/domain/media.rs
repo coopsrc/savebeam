@@ -59,7 +59,7 @@ pub struct FormatOption {
     pub approximate_file_size_bytes: Option<u64>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SubtitleTrack {
     pub language: String,

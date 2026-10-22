@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button, Group, Modal, Stack, Text } from "@mantine/core";
-import type { DownloadOptionDefaults } from "../../types/domain";
+import type { DownloadOptionDefaults, SubtitleTrack } from "../../types/domain";
+import type { SubtitleScope } from "./subtitleSelection";
 import { DownloadOptionFields } from "./DownloadOptionFields";
 import { copyDownloadOptions, validateDownloadOptions } from "./downloadOptionDefaults";
 import { loadDownloadOptions, optionError } from "./useDownloadOptions";
@@ -11,13 +12,15 @@ export function DownloadOptionsModal({
   onApply,
   onClose,
   audioOnlyRequired = false,
-  subtitleOptions,
+  subtitleTracks,
+  subtitleScope,
 }: {
   value: DownloadOptionDefaults;
   onApply: (value: DownloadOptionDefaults) => void;
   onClose: () => void;
   audioOnlyRequired?: boolean;
-  subtitleOptions?: { value: string; label: string }[];
+  subtitleTracks?: SubtitleTrack[];
+  subtitleScope?: SubtitleScope;
 }) {
   const [draft, setDraft] = useState(() => copyDownloadOptions(value));
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +52,8 @@ export function DownloadOptionsModal({
             }}
             disabled={loading}
             audioOnlyRequired={audioOnlyRequired}
-            subtitleOptions={subtitleOptions}
+            subtitleTracks={subtitleTracks}
+            subtitleScope={subtitleScope}
           />
         </div>
         {error && (

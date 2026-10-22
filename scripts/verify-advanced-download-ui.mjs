@@ -20,6 +20,7 @@ const defaults = {
 };
 async function fixture(mode, width = 1280) {
   const page = await browser.newPage({ viewport: { width, height: 850 } });
+  page.setDefaultTimeout(15_000);
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.addInitScript(
@@ -83,7 +84,12 @@ async function fixture(mode, width = 1280) {
                       },
                     ]),
               ],
-              subtitles: [{ language: "en", name: "English", extension: "vtt", automatic: true }],
+              subtitles: [
+                { language: "en", name: "English", extension: "vtt", automatic: true },
+                { language: "en", name: "English", extension: "srt", automatic: false },
+                { language: "zh-Hans", name: "简体中文", extension: "vtt", automatic: false },
+                { language: "ja", name: "日语", extension: "vtt", automatic: true },
+              ],
               playlist: null,
             };
           if (command === "start_download")
@@ -167,10 +173,56 @@ try {
     );
     if (mode === "single") {
       const languages = dialog.getByRole("combobox", { name: "下载字幕", exact: true });
+      const inspectionsBeforeSearch = await page.evaluate(
+        () => window.optionFixture.calls.filter((call) => call.command === "inspect_media").length,
+      );
+      await languages.click();
+      assert.equal(await page.getByRole("option").count(), 3, "same-language sources are grouped");
       await languages.fill("--exec=bad");
+      await page.getByText("没有匹配的字幕语言", { exact: true }).waitFor();
       await languages.press("Enter");
-      await dialog.getByRole("button", { name: "应用到本次下载", exact: true }).click();
-      await dialog.getByRole("alert").filter({ hasText: "字幕语言最多 10 项" }).waitFor();
+      assert.equal(
+        await page.evaluate(
+          () =>
+            window.optionFixture.calls.filter((call) => call.command === "inspect_media").length,
+        ),
+        inspectionsBeforeSearch,
+        "Enter in subtitle search must not submit the page form",
+      );
+      assert.equal(
+        await dialog.getByRole("button", { name: /移除字幕/ }).count(),
+        1,
+        "search never creates a language",
+      );
+      await languages.fill("zh-Hans");
+      await page.getByRole("option", { name: /简体中文（zh-Hans）/ }).click();
+      await languages.press("Tab");
+      await dialog.getByRole("checkbox", { name: "同时下载自动生成的字幕", exact: true }).uncheck();
+      await languages.fill("ja");
+      await page.getByRole("option", { name: /日语（ja）/ }).click();
+      await languages.press("Tab");
+      await dialog
+        .getByRole("checkbox", { name: "同时下载自动生成的字幕", exact: true })
+        .and(page.locator("input:checked"))
+        .waitFor();
+      await dialog.screenshot({ path: "/tmp/savebeam-subtitle-multiselect.png" });
+      await languages.click();
+      await page.getByRole("option", { name: /English（en）/ }).waitFor();
+      await page.screenshot({ path: "/tmp/savebeam-subtitle-dropdown.png" });
+      await languages.press("Tab");
+      await dialog.getByRole("button", { name: "移除字幕 ja", exact: true }).click();
+      await dialog
+        .getByRole("button", { name: "移除字幕 ja", exact: true })
+        .waitFor({ state: "hidden" });
+      assert.equal(
+        await dialog.getByRole("button", { name: "移除字幕 ja", exact: true }).count(),
+        0,
+      );
+      await dialog.getByRole("button", { name: "清空字幕选择", exact: true }).click();
+      await dialog
+        .getByRole("checkbox", { name: "同时下载自动生成的字幕", exact: true })
+        .and(page.locator("input:disabled"))
+        .waitFor();
       await dialog.getByRole("button", { name: "取消", exact: true }).click();
       await advanced.click();
       dialog = page.getByRole("dialog", { name: "高级设置", exact: true });
@@ -257,6 +309,38 @@ try {
   await page.goto(`${base}#/settings`);
   let panel = page.getByRole("region", { name: "下载选项默认配置", exact: true });
   await panel.waitFor();
+  const subtitleChoices = panel.getByRole("region", { name: "字幕选择", exact: true });
+  const subtitleInput = subtitleChoices.getByRole("combobox", { name: "下载字幕", exact: true });
+  for (const code of [
+    "zh-Hans",
+    "zh-Hant",
+    "zh",
+    "zh-CN",
+    "zh-TW",
+    "zh-HK",
+    "en-US",
+    "en-GB",
+    "ja",
+  ]) {
+    await subtitleInput.fill(code);
+    await page.getByRole("option", { name: new RegExp(`（${code}）`) }).click();
+  }
+  await subtitleInput.fill("");
+  await subtitleChoices
+    .getByText("已选满 10 种；取消一项后可继续选择。", { exact: true })
+    .waitFor();
+  assert.ok(
+    (await page.getByRole("option").and(page.locator("[data-combobox-disabled]")).count()) > 0,
+  );
+  await subtitleInput.press("Tab");
+  await subtitleChoices.getByRole("button", { name: "移除字幕 ja", exact: true }).click();
+  assert.equal(await subtitleChoices.getByRole("button", { name: /移除字幕/ }).count(), 9);
+  await panel.screenshot({ path: "/tmp/savebeam-subtitle-default-tags.png" });
+  await subtitleChoices.getByRole("button", { name: "清空字幕选择", exact: true }).click();
+  await subtitleInput.fill("en");
+  await page.getByRole("option", { name: /英语（en）/ }).click();
+  await subtitleInput.press("Tab");
+  await panel.getByRole("checkbox", { name: "同时下载自动生成的字幕", exact: true }).check();
   await panel.getByRole("checkbox", { name: "保留中间文件", exact: true }).check();
   await panel.getByRole("checkbox", { name: "另存缩略图文件", exact: true }).uncheck();
   await page.evaluate(() => {
