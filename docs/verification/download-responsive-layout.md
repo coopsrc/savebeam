@@ -42,6 +42,8 @@ node scripts/verify-download-layout-ui.mjs /path/to/playwright/index.mjs http://
 
 深色模式截图 `/tmp/savebeam-download-series-1600-dark.png` 同时验证滑块非悬停颜色为 `rgba(255, 255, 255, 0.32)`、两栏对齐不变。滚动条样式仍需在原生 macOS WebView 实际复核，本机 Chrome 的模拟 IPC 测试不代表 WebKit 已实测。
 
+补充端部验证：轨道顶部/底部各内缩 4px，轨道与滑块均有 8px 圆角。测试通过 `ignoreDefaultArgs: ["--hide-scrollbars"]` 显式启用浏览器滚动条显示，并检查 `/tmp/savebeam-scrollbar-top.png` 与 `/tmp/savebeam-scrollbar-bottom.png`：最顶部和最底部的滑块端部完整，无灰色方形轨道截面，确认区域仍在列表外。不能仅凭隐藏滚动条的截图判断此问题已解决。
+
 ## 验证边界
 
 `pnpm check`：格式、ESLint、Clippy、TypeScript/Vite、23 项前端测试、111 项 Rust 测试通过。Vite 仍有既有大包提示。

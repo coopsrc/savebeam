@@ -154,10 +154,14 @@ body {
 /* Keep native scrolling while removing the boxed macOS/WebKit scrollbar track. */
 .download-playlist-list::-webkit-scrollbar {
   width: 8px;
+  background: transparent;
 }
 
 .download-playlist-list::-webkit-scrollbar-track {
+  margin-top: 4px;
+  margin-bottom: 4px;
   border: 0;
+  border-radius: 8px;
   background: transparent;
 }
 

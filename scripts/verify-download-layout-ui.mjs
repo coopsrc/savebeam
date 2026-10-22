@@ -11,6 +11,7 @@ const browser = await chromium.launch({
   executablePath: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
   headless: true,
   args: ["--disable-smooth-scrolling"],
+  ignoreDefaultArgs: ["--hide-scrollbars"],
 });
 const fixture = {
   id: "BVfixture",
@@ -199,10 +200,16 @@ try {
           width: window.getComputedStyle(element, "::-webkit-scrollbar").width,
           track: window.getComputedStyle(element, "::-webkit-scrollbar-track").backgroundColor,
           radius: window.getComputedStyle(element, "::-webkit-scrollbar-thumb").borderRadius,
+          trackRadius: window.getComputedStyle(element, "::-webkit-scrollbar-track").borderRadius,
+          trackTop: window.getComputedStyle(element, "::-webkit-scrollbar-track").marginTop,
+          trackBottom: window.getComputedStyle(element, "::-webkit-scrollbar-track").marginBottom,
         }));
         assert.equal(scrollbar.width, "8px");
         assert.equal(scrollbar.track, "rgba(0, 0, 0, 0)");
         assert.equal(scrollbar.radius, "8px");
+        assert.equal(scrollbar.trackRadius, "8px");
+        assert.equal(scrollbar.trackTop, "4px");
+        assert.equal(scrollbar.trackBottom, "4px");
         await list.focus();
         await list.press("End");
         await page.waitForFunction(() => {
@@ -214,6 +221,13 @@ try {
           rowBottom: element.lastElementChild.getBoundingClientRect().bottom,
         }));
         assert.ok(last.rowBottom <= last.listBottom + 1, "Last video cannot be scrolled into view");
+        if (width === 1600) {
+          await page.getByText("选择下载条目（已选 17 项）", { exact: true }).click();
+          await list.hover();
+          await page
+            .getByRole("region", { name: "选择系列视频", exact: true })
+            .screenshot({ path: "/tmp/savebeam-scrollbar-bottom.png" });
+        }
         await list.press("Home");
         await page.waitForFunction(
           () => window.document.querySelector(".download-playlist-list").scrollTop <= 1,
@@ -287,6 +301,14 @@ try {
         await page.getByRole("combobox", { name: "音频轨道", exact: true }).waitFor();
       }
       if (width === 1600 || width === 560) {
+        if (mode === "series") {
+          await page.getByText("选择下载条目（已选 17 项）", { exact: true }).click();
+          await page.locator(".download-playlist-list").hover();
+          if (width === 1600)
+            await page
+              .getByRole("region", { name: "选择系列视频", exact: true })
+              .screenshot({ path: "/tmp/savebeam-scrollbar-top.png" });
+        }
         await page.locator(".page-content").evaluate((element) => {
           element.scrollTop = 0;
         });
