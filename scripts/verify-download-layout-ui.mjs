@@ -10,6 +10,7 @@ const base = process.argv[3] ?? "http://127.0.0.1:1421/";
 const browser = await chromium.launch({
   executablePath: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
   headless: true,
+  args: ["--disable-smooth-scrolling"],
 });
 const fixture = {
   id: "BVfixture",
@@ -164,6 +165,10 @@ try {
       await page.getByRole("region", { name: "媒体与格式", exact: true }).waitFor();
       assert.equal(await page.getByRole("region", { name: "预计输出", exact: true }).count(), 0);
       assert.equal(await page.getByText(/预计文件名|预计文件大小/).count(), 0);
+      assert.equal(await page.getByText(/登录 Cookie 在|保存位置：|保存结构：/).count(), 0);
+      await page
+        .getByText("需要 FFmpeg 和 ffprobe 进行音频提取与转换。", { exact: true })
+        .waitFor();
       if (mode === "series") {
         const list = page.locator(".download-playlist-list");
         const geometry = await list.evaluate((element) => ({
@@ -190,17 +195,47 @@ try {
           nextTop: element.nextElementSibling.getBoundingClientRect().top,
         }));
         assert.ok(following.nextTop >= following.listBottom - 0.5, "List overlaps confirmation");
-        await list.evaluate((element) => {
-          element.scrollTop = element.scrollHeight;
+        const scrollbar = await list.evaluate((element) => ({
+          width: window.getComputedStyle(element, "::-webkit-scrollbar").width,
+          track: window.getComputedStyle(element, "::-webkit-scrollbar-track").backgroundColor,
+          radius: window.getComputedStyle(element, "::-webkit-scrollbar-thumb").borderRadius,
+        }));
+        assert.equal(scrollbar.width, "8px");
+        assert.equal(scrollbar.track, "rgba(0, 0, 0, 0)");
+        assert.equal(scrollbar.radius, "8px");
+        await list.focus();
+        await list.press("End");
+        await page.waitForFunction(() => {
+          const element = window.document.querySelector(".download-playlist-list");
+          return element.scrollTop + element.clientHeight >= element.scrollHeight - 2;
         });
         const last = await list.evaluate((element) => ({
           listBottom: element.getBoundingClientRect().bottom,
           rowBottom: element.lastElementChild.getBoundingClientRect().bottom,
         }));
         assert.ok(last.rowBottom <= last.listBottom + 1, "Last video cannot be scrolled into view");
-        await list.evaluate((element) => {
-          element.scrollTop = 0;
+        await list.press("Home");
+        await page.waitForFunction(
+          () => window.document.querySelector(".download-playlist-list").scrollTop <= 1,
+        );
+        await list.hover();
+        const pageScroll = await page
+          .locator(".page-content")
+          .evaluate((element) => element.scrollTop);
+        await page.mouse.wheel(0, 10000);
+        await page.waitForFunction(() => {
+          const element = window.document.querySelector(".download-playlist-list");
+          return element.scrollTop + element.clientHeight >= element.scrollHeight - 2;
         });
+        assert.equal(
+          await page.locator(".page-content").evaluate((element) => element.scrollTop),
+          pageScroll,
+          "List wheel scrolling does not move the page",
+        );
+        await list.press("Home");
+        await page.waitForFunction(
+          () => window.document.querySelector(".download-playlist-list").scrollTop <= 1,
+        );
       }
       const source = await page
         .getByRole("region", { name: "媒体与格式", exact: true })
@@ -261,6 +296,20 @@ try {
             .getByRole("button", { name: "开始下载", exact: true })
             .scrollIntoViewIfNeeded();
           await page.screenshot({ path: `/tmp/savebeam-download-${mode}-${width}-controls.png` });
+        }
+        if (width === 1600 && mode === "series") {
+          await page.emulateMedia({ colorScheme: "dark" });
+          await page.mouse.move(0, 0);
+          await assertAlignedPanels(page, width, true);
+          const thumb = await page
+            .locator(".download-playlist-list")
+            .evaluate(
+              (element) =>
+                window.getComputedStyle(element, "::-webkit-scrollbar-thumb").backgroundColor,
+            );
+          assert.equal(thumb, "rgba(255, 255, 255, 0.32)");
+          await page.screenshot({ path: "/tmp/savebeam-download-series-1600-dark.png" });
+          await page.emulateMedia({ colorScheme: "light" });
         }
       }
       const mp3 = width === 800;
@@ -370,6 +419,16 @@ try {
               .waitFor();
           }
           await assertAlignedPanels(page, 1600, true);
+          if (count <= 1) {
+            const size = await page.locator(".download-playlist-list").evaluate((element) => ({
+              client: element.clientHeight,
+              scroll: element.scrollHeight,
+            }));
+            assert.ok(
+              size.scroll <= size.client + 1,
+              "Empty/short lists should not need a scrollbar",
+            );
+          }
           await page.setViewportSize({ width: 1200, height: 600 });
           await assertAlignedPanels(page, 1200, true);
           await page.setViewportSize({ width: 800, height: 600 });

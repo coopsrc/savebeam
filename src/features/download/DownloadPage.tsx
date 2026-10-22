@@ -421,7 +421,12 @@ export function DownloadPage() {
                         ? "系列超过安全上限，当前最多展示前 50 项，可勾选其中一部分。"
                         : `检测到 ${mediaInfo.playlist.totalCount ?? playlistEntries.length} 项，可勾选需要下载的条目。`}
                     </Text>
-                    <div className="download-playlist-list" role="group" aria-label="可选视频条目">
+                    <div
+                      className="download-playlist-list"
+                      role="group"
+                      aria-label="可选视频条目"
+                      tabIndex={0}
+                    >
                       {playlistEntries.map((entry, offset) => (
                         <Checkbox
                           key={`${entry.index}-${offset}`}
@@ -531,18 +536,6 @@ export function DownloadPage() {
                       description="保留合并或转换前的源文件，会占用额外空间；分轨文件在合并成功后按格式 ID、编码、分辨率和码率命名。"
                     />
                   </Stack>
-                  <Text size="sm" c="dimmed">
-                    登录 Cookie 在“设置 → Cookie 与登录”中配置，全局用于解析媒体信息与下载。
-                  </Text>
-                  <Text size="xs" c="dimmed">
-                    保存位置：默认下载目录，可在设置中更改。部分后处理选项需要 FFmpeg。
-                  </Text>
-                  <Text size="xs" c="dimmed">
-                    {mediaInfo.playlist
-                      ? "保存结构：系列名称 [系列ID]/序号-视频标题 [视频ID].扩展名"
-                      : "保存结构：视频标题 [视频ID].扩展名"}
-                    。字幕、封面和 JSON 使用相同前缀；缺失的 ID 将省略。
-                  </Text>
                 </Stack>
               </Paper>
               <Group

@@ -7,6 +7,7 @@
   --sb-color-text: #1d1d1f;
   --sb-color-muted: #64646a;
   --sb-color-border: rgb(0 0 0 / 8%);
+  --sb-color-scrollbar-thumb: rgb(0 0 0 / 28%);
   --sb-radius-control: 8px;
   --sb-radius-card: 16px;
   --sb-space-page: 32px;
@@ -147,7 +148,35 @@ body {
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
-  padding: 4px;
+  padding: 4px 8px 4px 4px;
+}
+
+/* Keep native scrolling while removing the boxed macOS/WebKit scrollbar track. */
+.download-playlist-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.download-playlist-list::-webkit-scrollbar-track {
+  border: 0;
+  background: transparent;
+}
+
+.download-playlist-list::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background: var(--sb-color-scrollbar-thumb);
+  background-clip: padding-box;
+}
+
+.download-playlist-list::-webkit-scrollbar-thumb:hover {
+  background-color: var(--sb-color-muted);
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  .download-playlist-list {
+    scrollbar-width: thin;
+    scrollbar-color: var(--sb-color-scrollbar-thumb) transparent;
+  }
 }
 
 .download-playlist-list > * + * {
@@ -536,6 +565,7 @@ body {
     --sb-color-text: #f5f5f7;
     --sb-color-muted: #aeaeb2;
     --sb-color-border: rgb(255 255 255 / 10%);
+    --sb-color-scrollbar-thumb: rgb(255 255 255 / 32%);
     --sb-color-accent-soft: rgb(10 93 203 / 24%);
   }
 }
