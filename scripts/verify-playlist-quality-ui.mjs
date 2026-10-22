@@ -10,7 +10,7 @@ const browser = await chromium.launch({
 });
 const base = process.argv[3] ?? "http://127.0.0.1:1421/";
 async function fixture(scenario) {
-  const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+  const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.addInitScript((scenario) => {
@@ -342,9 +342,9 @@ try {
         );
         await page.setViewportSize({ width: 1600, height: 1100 });
         await page.screenshot({ path: "/tmp/savebeam-playlist-quality.png" });
-        await page.setViewportSize({ width: 1280, height: 720 });
+        await page.setViewportSize({ width: 1280, height: 800 });
         await page.getByRole("button", { name: "开始下载", exact: true }).scrollIntoViewIfNeeded();
-        await page.screenshot({ path: "/tmp/savebeam-playlist-quality-1280x720.png" });
+        await page.screenshot({ path: "/tmp/savebeam-playlist-quality-1280x800.png" });
       }
       await page.getByRole("button", { name: "开始下载", exact: true }).click();
       if (scenario === "profiles") await page.waitForURL(/#\/tasks$/);
