@@ -118,6 +118,12 @@ export interface PlaylistSizeItem {
 }
 
 export interface PlaylistQuality {
+  resolutionHeight?: number | null;
+  frameRate?: number | null;
+  videoExtension?: string | null;
+  videoCodec?: string | null;
+  audioExtension?: string | null;
+  audioCodec?: string | null;
   maxHeight: number | null;
   maxVideoBitrateKbps: number | null;
   maxAudioBitrateKbps: number | null;

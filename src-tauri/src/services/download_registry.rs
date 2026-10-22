@@ -598,6 +598,12 @@ mod tests {
                     max_video_bitrate_kbps: Some(2000),
                     max_audio_bitrate_kbps: Some(128),
                     allow_exceed: false,
+                    resolution_height: Some(720),
+                    frame_rate: Some(30),
+                    video_extension: Some("webm".into()),
+                    video_codec: Some("vp9".into()),
+                    audio_extension: Some("webm".into()),
+                    audio_codec: Some("opus".into()),
                 });
                 let task = registry.create(options.clone()).unwrap();
                 match status {

@@ -483,7 +483,7 @@ export function DownloadPage() {
                   <Stack gap="sm">
                     <Title order={3}>系列画质策略</Title>
                     <Text size="sm" c="dimmed">
-                      统一设置，每项按自己的可用格式匹配。少数例外可点右侧“单独设置”。
+                      视频、音频分别选择 Best 或指定条件；每项独立匹配。少数例外可点右侧“单独设置”。
                     </Text>
                     <PlaylistQualityFields
                       value={quality}
@@ -585,13 +585,28 @@ export function DownloadPage() {
                       {playlistEntries.map((entry, offset) => {
                         const details = series.details[entry.index];
                         const matched = series.matches.find((row) => row.index === entry.index);
+                        const tracks = matched?.formatId
+                          ?.split("+")
+                          .map((id) => details?.formats.find((format) => format.formatId === id));
+                        const videoTrack = tracks?.find(
+                          (format) => format?.videoCodec && format.videoCodec !== "none",
+                        );
+                        const audioTrack = tracks?.find(
+                          (format) => format?.audioCodec && format.audioCodec !== "none",
+                        );
+                        const videoSpec = videoTrack
+                          ? ` · ${videoTrack.fps ? `${Number(videoTrack.fps.toFixed(3))} fps · ` : ""}${videoTrack.extension} · ${codecLabel(videoTrack.videoCodec)}`
+                          : "";
+                        const audioSpec = audioTrack
+                          ? ` · ${audioTrack.extension} · ${codecLabel(audioTrack.audioCodec)}`
+                          : "";
                         const bitrate = (value: number | null) =>
                           value === null ? "未知" : `${Math.round(value)} kbps`;
                         const info =
                           details?.error ??
                           matched?.error ??
                           (matched?.formatId
-                            ? `${audioOnly ? "MP3" : (matched.resolution ?? "分辨率未知")} · ${audioOnly ? "" : `视频 ${bitrate(matched.videoBitrateKbps)} · `}音频 ${bitrate(matched.audioBitrateKbps)} · ${matched.bytes === null ? "大小待定" : `约 ${formatBytes(matched.bytes)}`}${matched.fallbackUsed ? " · 超限回退" : ""}`
+                            ? `${audioOnly ? "MP3" : `${matched.resolution ?? "分辨率未知"}${videoSpec}`} · ${audioOnly ? "" : `视频 ${bitrate(matched.videoBitrateKbps)} · `}音频 ${bitrate(matched.audioBitrateKbps)}${audioSpec} · ${matched.bytes === null ? "大小待定" : `约 ${formatBytes(matched.bytes)}`}${matched.fallbackUsed ? " · 已回退 Best（未满足指定条件）" : ""}`
                             : details
                               ? "正在匹配规格…"
                               : "等待读取标题与格式…");

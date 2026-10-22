@@ -20,7 +20,7 @@ export function PlaylistQualityModal({
 }) {
   const [draft, setDraft] = useState({ ...value });
   return (
-    <Modal opened onClose={onClose} title={`第 ${index} 项 · 单独画质设置`} size="md" centered>
+    <Modal opened onClose={onClose} title={`第 ${index} 项 · 单独画质设置`} size="lg" centered>
       <Stack gap="md">
         <Text size="sm" c="dimmed">
           仅覆盖这一项，其余条目仍使用统一策略。

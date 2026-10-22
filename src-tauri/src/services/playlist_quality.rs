@@ -127,6 +127,42 @@ fn bounded(value: Option<f64>, limit: Option<u32>) -> bool {
         value.is_some_and(|v| v.is_finite() && v > 0.0 && v <= f64::from(limit))
     })
 }
+fn extension_allowed(f: &FormatOption, requested: &Option<String>) -> bool {
+    requested
+        .as_deref()
+        .is_none_or(|extension| f.extension.eq_ignore_ascii_case(extension))
+}
+fn codec_allowed(actual: Option<&str>, requested: Option<&str>) -> bool {
+    let Some(requested) = requested else {
+        return true;
+    };
+    let actual = actual.unwrap_or_default().to_ascii_lowercase();
+    let prefixes: &[&str] = match requested {
+        "h264" => &["avc", "h264", "h.264"],
+        "hevc" => &["hev", "hvc", "hevc", "h265", "h.265"],
+        "av1" => &["av01", "av1"],
+        "vp9" => &["vp09", "vp9"],
+        "vp8" => &["vp08", "vp8"],
+        "aac" => &["mp4a", "aac"],
+        "ac3" => &["ac3", "ac-3"],
+        "eac3" => &["eac3", "eac-3", "ec-3"],
+        "mpeg4" => &["mpeg4", "mp4v"],
+        "opus" => &["opus"],
+        "vorbis" => &["vorbis"],
+        "mp3" => &["mp3"],
+        "flac" => &["flac"],
+        "alac" => &["alac"],
+        "pcm" => &["pcm"],
+        _ => return false,
+    };
+    prefixes.iter().any(|prefix| actual.starts_with(prefix))
+}
+fn audio_allowed(f: &FormatOption, p: &PlaylistQuality) -> bool {
+    has_audio(f)
+        && bounded(f.audio_bitrate_kbps, p.max_audio_bitrate_kbps)
+        && extension_allowed(f, &p.audio_extension)
+        && codec_allowed(f.audio_codec.as_deref(), p.audio_codec.as_deref())
+}
 fn video_allowed(f: &FormatOption, p: &PlaylistQuality) -> bool {
     let height = f.height.map(f64::from).or_else(|| {
         let resolution = f.resolution.as_deref()?;
@@ -137,7 +173,17 @@ fn video_allowed(f: &FormatOption, p: &PlaylistQuality) -> bool {
             .parse::<f64>()
             .ok()
     });
-    bounded(height, p.max_height) && bounded(f.video_bitrate_kbps, p.max_video_bitrate_kbps)
+    bounded(height, p.max_height)
+        && bounded(f.video_bitrate_kbps, p.max_video_bitrate_kbps)
+        && p.resolution_height
+            .is_none_or(|requested| height == Some(f64::from(requested)))
+        && p.frame_rate.is_none_or(|requested| {
+            // Nominal 24/30/60 also accept broadcast rates 23.976/29.97/59.94.
+            f.fps
+                .is_some_and(|fps| fps.is_finite() && (fps - f64::from(requested)).abs() <= 0.1)
+        })
+        && extension_allowed(f, &p.video_extension)
+        && codec_allowed(f.video_codec.as_deref(), p.video_codec.as_deref())
 }
 fn container(v: &FormatOption, a: &FormatOption) -> MergeContainer {
     let v = v
@@ -173,8 +219,7 @@ fn tracks<'a>(
     p: &PlaylistQuality,
     audio_only: bool,
 ) -> Option<(&'a FormatOption, Option<&'a FormatOption>)> {
-    let audio_ok =
-        |f: &&FormatOption| has_audio(f) && bounded(f.audio_bitrate_kbps, p.max_audio_bitrate_kbps);
+    let audio_ok = |f: &&FormatOption| audio_allowed(f, p);
     if audio_only {
         return formats
             .iter()
@@ -207,12 +252,7 @@ fn tracks<'a>(
     formats
         .iter()
         .rev()
-        .find(|f| {
-            has_video(f)
-                && has_audio(f)
-                && video_allowed(f, p)
-                && bounded(f.audio_bitrate_kbps, p.max_audio_bitrate_kbps)
-        })
+        .find(|f| has_video(f) && has_audio(f) && video_allowed(f, p) && audio_allowed(f, p))
         .map(|v| (v, None))
 }
 fn bytes(f: &FormatOption) -> Option<u64> {
@@ -247,8 +287,10 @@ pub fn select(item: &PlaylistDetails, policy: &PlaylistQuality, audio_only: bool
         return result;
     }
     let Some((first, second)) = matched else {
-        result.error =
-            Some("没有符合上限的音视频组合，或缺少必要的规格信息；可单独调整或允许超限。".into());
+        result.error = Some(
+            "没有符合所选分辨率、帧率、格式、编码或音频码率的组合；可单独调整或允许回退 Best。"
+                .into(),
+        );
         return result;
     };
     result.format_id = Some(second.map_or_else(
@@ -390,6 +432,7 @@ mod tests {
             max_video_bitrate_kbps: Some(3000),
             max_audio_bitrate_kbps: Some(160),
             allow_exceed: false,
+            ..Default::default()
         };
         let first = item(1, 2160);
         let result = select(&first, &policy, false);
@@ -502,6 +545,7 @@ mod tests {
             max_video_bitrate_kbps: Some(3000),
             max_audio_bitrate_kbps: Some(128),
             allow_exceed: false,
+            ..Default::default()
         };
         let mut advanced = crate::domain::download_defaults::DownloadOptionDefaults {
             keep_intermediate_files: true,
@@ -573,5 +617,154 @@ mod tests {
             )
             .is_err()
         );
+    }
+
+    #[test]
+    fn specified_resolution_fps_format_and_codec_match_together_not_as_ceilings() {
+        let mut item = item(1, 1080);
+        item.formats = map_formats(
+            Some(&json!([
+                {"format_id":"aac","ext":"m4a","acodec":"mp4a.40.2","abr":128,"vcodec":"none","filesize":10},
+                {"format_id":"opus","ext":"webm","acodec":"opus","abr":160,"vcodec":"none","filesize":20},
+                {"format_id":"avc30","ext":"mp4","vcodec":"avc1.640028","acodec":"none","height":1080,"fps":29.97,"filesize":100},
+                {"format_id":"avc60","ext":"mp4","vcodec":"avc1.640028","acodec":"none","height":1080,"fps":59.94,"filesize":150},
+                {"format_id":"hevc60","ext":"mp4","vcodec":"hvc1.1.6","acodec":"none","height":1080,"fps":60,"filesize":120},
+                {"format_id":"vp9","ext":"webm","vcodec":"vp09.00","acodec":"none","height":2160,"fps":60,"filesize":500}
+            ])),
+            Some(10.0),
+        );
+        let mut policy = PlaylistQuality {
+            resolution_height: Some(1080),
+            frame_rate: Some(30),
+            video_extension: Some("mp4".into()),
+            video_codec: Some("h264".into()),
+            audio_extension: Some("m4a".into()),
+            audio_codec: Some("aac".into()),
+            ..Default::default()
+        };
+        let selected = select(&item, &policy, false);
+        assert_eq!(selected.format_id.as_deref(), Some("avc30+aac"));
+        assert_eq!(selected.bytes, Some(110));
+        assert_eq!(selected.merge_container, Some(MergeContainer::Mp4));
+        policy.frame_rate = Some(60);
+        assert_eq!(
+            select(&item, &policy, false).format_id.as_deref(),
+            Some("avc60+aac")
+        );
+        policy.video_codec = Some("hevc".into());
+        assert_eq!(
+            select(&item, &policy, false).format_id.as_deref(),
+            Some("hevc60+aac")
+        );
+        policy.resolution_height = Some(720);
+        assert!(select(&item, &policy, false).format_id.is_none());
+        policy.allow_exceed = true;
+        let fallback = select(&item, &policy, false);
+        assert!(fallback.fallback_used);
+        assert_eq!(fallback.format_id.as_deref(), Some("vp9+opus"));
+        assert_eq!(fallback.merge_container, Some(MergeContainer::Webm));
+        policy.allow_exceed = false;
+        // In MP3-only mode video constraints do not filter the source audio.
+        assert_eq!(
+            select(&item, &policy, true).format_id.as_deref(),
+            Some("aac")
+        );
+        assert!(select(&item, &policy, true).bytes.is_none());
+        policy.audio_codec = Some("opus".into());
+        assert!(select(&item, &policy, true).format_id.is_none());
+        policy.audio_extension = Some("webm".into());
+        assert_eq!(
+            select(&item, &policy, true).format_id.as_deref(),
+            Some("opus")
+        );
+    }
+
+    #[test]
+    fn missing_fps_or_wrong_container_never_silently_match_and_muxed_audio_is_filtered() {
+        let mut item = item(1, 1080);
+        let mut policy = PlaylistQuality {
+            frame_rate: Some(30),
+            ..Default::default()
+        };
+        assert!(select(&item, &policy, false).format_id.is_none());
+        for f in &mut item.formats {
+            f.fps = Some(30.5);
+        }
+        assert!(select(&item, &policy, false).format_id.is_none());
+        for f in &mut item.formats {
+            f.fps = Some(29.972);
+        }
+        assert!(select(&item, &policy, false).format_id.is_some());
+        policy.video_extension = Some("webm".into());
+        assert!(select(&item, &policy, false).format_id.is_none());
+        item.formats = map_formats(
+            Some(&json!([
+                {"format_id":"mux","ext":"mp4","vcodec":"avc1","acodec":"aac","height":720,"fps":30,"filesize":123}
+            ])),
+            Some(10.0),
+        );
+        policy.video_extension = Some("mp4".into());
+        policy.audio_codec = Some("opus".into());
+        assert!(select(&item, &policy, false).format_id.is_none());
+        policy.audio_codec = Some("aac".into());
+        assert_eq!(select(&item, &policy, false).bytes, Some(123));
+    }
+
+    #[test]
+    fn codec_families_and_legacy_snapshots_remain_compatible_but_invalid_filters_are_rejected() {
+        for (family, actual) in [
+            ("h264", "AVC1.640028"),
+            ("hevc", "hev1.1.6"),
+            ("av1", "av01.0.08M.08"),
+            ("vp9", "vp09.00"),
+            ("vp8", "vp08"),
+            ("aac", "mp4a.40.2"),
+            ("ac3", "ac-3"),
+            ("eac3", "ec-3"),
+            ("pcm", "pcm_s16le"),
+        ] {
+            assert!(codec_allowed(Some(actual), Some(family)));
+            assert!(!codec_allowed(None, Some(family)));
+        }
+        let old: PlaylistQuality = serde_json::from_value(json!({
+            "maxHeight":1080,"maxVideoBitrateKbps":3000,"maxAudioBitrateKbps":128,"allowExceed":false
+        })).unwrap();
+        assert!(old.validate().is_ok());
+        assert_eq!(old.frame_rate, None);
+        assert_eq!(
+            select(&item(1, 2160), &old, false).format_id.as_deref(),
+            Some("lower+a128")
+        );
+        for invalid in [
+            json!({"frameRate":0}),
+            json!({"frameRate":241}),
+            json!({"resolutionHeight":0}),
+            json!({"videoCodec":"--exec"}),
+            json!({"audioCodec":"bogus"}),
+            json!({"videoExtension":"../mp4"}),
+            json!({"audioExtension":"--exec"}),
+        ] {
+            let policy: PlaylistQuality = serde_json::from_value(invalid).unwrap();
+            assert!(policy.validate().is_err());
+        }
+        let policy = PlaylistQuality {
+            resolution_height: Some(2160),
+            frame_rate: None,
+            video_extension: Some("mp4".into()),
+            video_codec: Some("h264".into()),
+            audio_extension: Some("m4a".into()),
+            audio_codec: Some("aac".into()),
+            ..Default::default()
+        };
+        let options = task_options(
+            "https://example.invalid/list",
+            &item(1, 2160),
+            &policy,
+            &Default::default(),
+            false,
+        )
+        .unwrap();
+        assert_eq!(options.quality_policy, Some(policy));
+        assert_eq!(options.format_id, "higher+a256");
     }
 }

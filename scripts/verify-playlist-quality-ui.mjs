@@ -11,6 +11,7 @@ const browser = await chromium.launch({
 const base = process.argv[3] ?? "http://127.0.0.1:1421/";
 async function fixture(scenario) {
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+  page.setDefaultTimeout(15_000);
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.addInitScript((scenario) => {
@@ -70,6 +71,7 @@ async function fixture(scenario) {
         height,
         resolution: `${height === 720 ? 1280 : height === 1080 ? 1920 : 3840}x${height}`,
         videoBitrateKbps: rate,
+        fps: height === 2160 ? 59.94 : 29.97,
         fileSizeBytes: bytes * mb,
       });
       return [
@@ -87,6 +89,8 @@ async function fixture(scenario) {
           .filter(
             (f) =>
               f.audioCodec &&
+              (!p.audioExtension || f.extension === p.audioExtension) &&
+              (!p.audioCodec || f.audioCodec === p.audioCodec) &&
               (!p.maxAudioBitrateKbps || f.audioBitrateKbps <= p.maxAudioBitrateKbps),
           )
           .at(-1);
@@ -94,6 +98,10 @@ async function fixture(scenario) {
           .filter(
             (f) =>
               f.videoCodec &&
+              (!p.resolutionHeight || f.height === p.resolutionHeight) &&
+              (!p.frameRate || Math.abs(f.fps - p.frameRate) <= 0.1) &&
+              (!p.videoExtension || f.extension === p.videoExtension) &&
+              (!p.videoCodec || (p.videoCodec === "h264" && f.videoCodec === "avc1")) &&
               (!p.maxHeight || f.height <= p.maxHeight) &&
               (!p.maxVideoBitrateKbps || f.videoBitrateKbps <= p.maxVideoBitrateKbps),
           )
@@ -120,7 +128,7 @@ async function fixture(scenario) {
             ? null
             : picked.v.fileSizeBytes + picked.a.fileSizeBytes,
         fallbackUsed: !strict && !!picked,
-        error: item.error ?? (picked ? null : "没有符合上限的音视频组合"),
+        error: item.error ?? (picked ? null : "没有符合所选条件的音视频组合"),
       };
     };
     window.__TAURI_EVENT_PLUGIN_INTERNALS__ = { unregisterListener() {} };
@@ -291,9 +299,27 @@ try {
           window.qualityFixture.calls.filter((call) => call.command === "inspect_playlist_entries")
             .length,
       );
-      await choose(page, policy, "分辨率上限", "1080 p");
-      await choose(page, policy, "视频码率上限", "3000 kbps");
-      await choose(page, policy, "音频码率上限", "128 kbps");
+      if (scenario === "profiles") {
+        await choose(page, policy, "视频编码", "VP9");
+        await page.getByText("没有符合所选条件的音视频组合", { exact: true }).first().waitFor();
+        assert.equal(
+          await page.getByRole("button", { name: "开始下载", exact: true }).isDisabled(),
+          true,
+        );
+        await policy.getByRole("button", { name: "视频恢复 Best", exact: true }).click();
+        await confirmed(page, 3);
+        await choose(page, policy, "音频编码", "OPUS");
+        await page.getByText("没有符合所选条件的音视频组合", { exact: true }).first().waitFor();
+        await policy.getByRole("button", { name: "音频恢复 Best", exact: true }).click();
+        await confirmed(page, 3);
+      }
+      await choose(page, policy, "分辨率", "720p");
+      await choose(page, policy, "帧率（FPS）", "30 fps");
+      await choose(page, policy, "视频格式", "mp4");
+      await choose(page, policy, "视频编码", "H.264 / AVC");
+      await choose(page, policy, "音频格式", "m4a");
+      await choose(page, policy, "音频编码", "AAC");
+      await choose(page, policy, "音频码率", "≤ 128 kbps");
       await confirmed(page, 2);
       const first = page.locator(".download-playlist-row").filter({ hasText: "第 1 项" });
       await first.getByText(/1280x720.*2000 kbps.*128 kbps.*110.0 MB/).waitFor();
@@ -308,26 +334,44 @@ try {
         "policy changes use cached formats, not more network requests",
       );
       if (scenario === "profiles") {
-        await policy.getByRole("checkbox", { name: "无匹配时允许超限回退", exact: true }).check();
+        await policy.getByRole("checkbox", { name: "无匹配时允许回退 Best", exact: true }).check();
         await confirmed(page, 3);
         await page
-          .getByText(/超限回退/, { exact: false })
+          .getByText(/已回退 Best/, { exact: false })
           .last()
           .waitFor();
-        await policy.getByRole("checkbox", { name: "无匹配时允许超限回退", exact: true }).uncheck();
+        await policy
+          .getByRole("checkbox", { name: "无匹配时允许回退 Best", exact: true })
+          .uncheck();
         await page.getByRole("button", { name: "第 3 项单独设置", exact: true }).click();
         let dialog = page.getByRole("dialog", { name: "第 3 项 · 单独画质设置", exact: true });
-        await choose(page, dialog, "分辨率上限", "2160 p");
+        await choose(page, dialog, "分辨率", "2160p");
         await dialog.getByRole("button", { name: "取消", exact: true }).click();
         await confirmed(page, 2);
         await page.getByRole("button", { name: "第 3 项单独设置", exact: true }).click();
         dialog = page.getByRole("dialog", { name: "第 3 项 · 单独画质设置", exact: true });
-        await choose(page, dialog, "分辨率上限", "2160 p");
-        await choose(page, dialog, "视频码率上限", "8000 kbps");
-        await choose(page, dialog, "音频码率上限", "192 kbps");
+        await dialog.getByRole("button", { name: "视频恢复 Best", exact: true }).click();
+        await dialog
+          .getByRole("combobox", { name: "帧率（FPS）", exact: true })
+          .and(page.locator('input[value="Best（最佳可用）"]'))
+          .waitFor();
+        assert.equal(
+          await dialog.getByRole("combobox", { name: "帧率（FPS）", exact: true }).inputValue(),
+          "Best（最佳可用）",
+        );
+        await choose(page, dialog, "分辨率", "2160p");
+        await choose(page, dialog, "帧率（FPS）", "60 fps");
+        await choose(page, dialog, "视频编码", "H.264 / AVC");
+        await choose(page, dialog, "音频码率", "≤ 192 kbps");
+        await dialog.screenshot({ path: "/tmp/savebeam-playlist-track-modal.png" });
         await dialog.getByRole("button", { name: "应用", exact: true }).click();
         await confirmed(page, 3);
         await page.getByText(/单独策略/).waitFor();
+        await page
+          .locator(".download-playlist-row")
+          .filter({ hasText: "第 3 项" })
+          .getByText(/59.94 fps.*mp4.*H.264.*192 kbps/)
+          .waitFor();
         const source = await page
           .getByRole("region", { name: "媒体与格式", exact: true })
           .boundingBox();
@@ -352,10 +396,16 @@ try {
       const queued = await page.evaluate(() => window.qualityFixture.queued);
       assert.equal(queued.length, scenario === "profiles" ? 3 : 2);
       assert.equal(queued[0].formatId, "v720+a128");
-      assert.equal(queued[0].policy.maxHeight, 1080);
+      assert.equal(queued[0].policy.resolutionHeight, 720);
+      assert.equal(queued[0].policy.frameRate, 30);
+      assert.equal(queued[0].policy.videoExtension, "mp4");
+      assert.equal(queued[0].policy.videoCodec, "h264");
+      assert.equal(queued[0].policy.audioExtension, "m4a");
+      assert.equal(queued[0].policy.audioCodec, "aac");
       if (scenario === "profiles") {
         assert.equal(queued[2].formatId, "v2160+a192");
-        assert.equal(queued[2].policy.maxHeight, 2160);
+        assert.equal(queued[2].policy.resolutionHeight, 2160);
+        assert.equal(queued[2].policy.frameRate, 60);
       }
     }
     assert.deepEqual(errors, []);
