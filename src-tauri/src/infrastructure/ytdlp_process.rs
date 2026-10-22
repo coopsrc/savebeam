@@ -146,6 +146,7 @@ impl YtDlpProcessEngine {
                 "--ignore-errors",
                 "--dump-single-json",
                 "--skip-download",
+                "--ignore-no-formats-error",
             ]);
         } else {
             command.args([
@@ -263,6 +264,15 @@ impl YtDlpProcessEngine {
             ));
         }
 
+        if !status.success()
+            && self.size_estimate_selector.is_some()
+            && let Ok(value) = serde_json::from_slice::<Value>(&stdout.bytes)
+            && value.get("entries").is_some_and(Value::is_array)
+        {
+            // --ignore-errors may return nonzero with a useful partial playlist. Missing
+            // positions remain explicit errors; never reuse one entry for another index.
+            return Ok(value);
+        }
         if !status.success() {
             return Err(classify_process_error(&stderr.bytes));
         }
@@ -470,9 +480,10 @@ mod tests {
 [ "${10}" = "--format" ] || exit 14
 [ "${11}" = "bestvideo+bestaudio/best" ] || exit 15
 [ "${14}" = "--skip-download" ] || exit 16
-[ "${15}" = "--proxy" ] || exit 17
-[ "${16}" = "" ] || exit 18
-[ "${17}" = "https://example.invalid/series?a=1&b=2" ] || exit 19
+[ "${15}" = "--ignore-no-formats-error" ] || exit 17
+[ "${16}" = "--proxy" ] || exit 18
+[ "${17}" = "" ] || exit 19
+[ "${18}" = "https://example.invalid/series?a=1&b=2" ] || exit 20
 printf '%s' '{"entries":[{"id":"nine","playlist_index":9,"filesize":80}]}'
 "#,
         );
@@ -489,6 +500,28 @@ printf '%s' '{"entries":[{"id":"nine","playlist_index":9,"filesize":80}]}'
             .inspect("https://example.invalid/series?a=1&b=2")
             .unwrap();
         assert_eq!(raw["entries"][0]["playlist_index"], 9);
+        let _ = fs::remove_dir_all(executable.parent().unwrap());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn metadata_only_partial_failure_keeps_useful_positions_without_hiding_missing_rows() {
+        let executable = write_script(
+            "yt-dlp",
+            "printf '%s' '{\"entries\":[{\"id\":\"one\",\"title\":\"Title\",\"playlist_index\":1,\"formats\":[]},null]}'\nexit 1",
+        );
+        let raw = YtDlpProcessEngine::new(&executable, None)
+            .for_size_estimate(&[1, 2])
+            .unwrap()
+            .inspect("https://example.invalid/series")
+            .unwrap();
+        assert_eq!(raw["entries"][0]["title"], "Title");
+        assert!(raw["entries"][1].is_null());
+        assert!(
+            YtDlpProcessEngine::new(&executable, None)
+                .inspect("https://example.invalid/series")
+                .is_err()
+        );
         let _ = fs::remove_dir_all(executable.parent().unwrap());
     }
 

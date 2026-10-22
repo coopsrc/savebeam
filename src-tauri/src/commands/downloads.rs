@@ -403,6 +403,9 @@ fn launch_next_task(app: AppHandle, components: ComponentRegistry, tasks: Downlo
 }
 
 fn validate_task_options(options: &DownloadOptions) -> CommandResult<()> {
+    if let Some(policy) = &options.quality_policy {
+        policy.validate()?;
+    }
     crate::services::download_defaults::validate(&options.into())?;
     crate::security::download_args::playlist_selector(options)?;
     if options.title.trim().is_empty() || options.title.chars().count() > 1024 {
@@ -423,6 +426,110 @@ fn validate_task_options(options: &DownloadOptions) -> CommandResult<()> {
         ));
     }
     Ok(())
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct QueuedPlaylistTasks {
+    tasks: Vec<DownloadTask>,
+    queued_indices: Vec<u32>,
+    skipped: Vec<u32>,
+    error: Option<String>,
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct PlaylistDownloadRequest {
+    url: String,
+    items: Vec<crate::services::playlist_quality::PlaylistDetails>,
+    policy: crate::domain::playlist_quality::PlaylistQuality,
+    overrides: Vec<crate::services::playlist_quality::QualityOverride>,
+    download_options: crate::domain::download_defaults::DownloadOptionDefaults,
+    use_proxy: bool,
+}
+
+#[tauri::command]
+pub fn start_playlist_download(
+    app: AppHandle,
+    request: PlaylistDownloadRequest,
+    components: State<'_, ComponentRegistry>,
+    tasks: State<'_, DownloadTaskRegistry>,
+    database: State<'_, DatabaseManager>,
+) -> CommandResult<QueuedPlaylistTasks> {
+    let PlaylistDownloadRequest {
+        url,
+        items,
+        policy,
+        overrides,
+        download_options,
+        use_proxy,
+    } = request;
+    use crate::services::playlist_quality::{effective, task_options, validate_request};
+    validate_request(&items, &policy, &overrides)?;
+    crate::services::download_defaults::validate(&download_options)?;
+    if url.len() > 4096 || !(url.starts_with("https://") || url.starts_with("http://")) {
+        return Err(AppError::new(
+            ErrorCode::InvalidUrl,
+            "请输入有效系列链接。",
+            false,
+        ));
+    }
+    load_task_network_preferences(database.database()?, Some(use_proxy))?;
+    let active = crate::infrastructure::database::repositories::DownloadTaskRepository::new(
+        database.database()?,
+    )
+    .list()?;
+    if active.iter().any(|(task, options)| {
+        task.url == url
+            && matches!(
+                task.status,
+                DownloadTaskStatus::Queued
+                    | DownloadTaskStatus::Preparing
+                    | DownloadTaskStatus::Downloading
+                    | DownloadTaskStatus::PostProcessing
+                    | DownloadTaskStatus::Cancelling
+            )
+            && options
+                .expected_media_id
+                .as_ref()
+                .is_none_or(|id| items.iter().any(|item| item.id.as_ref() == Some(id)))
+    }) {
+        return Err(AppError::new(
+            ErrorCode::InvalidPath,
+            "所选系列条目已有进行中的任务，请先处理或取消。",
+            false,
+        ));
+    }
+    let mut result = QueuedPlaylistTasks {
+        tasks: Vec::new(),
+        queued_indices: Vec::new(),
+        skipped: Vec::new(),
+        error: None,
+    };
+    for item in items {
+        let quality = effective(item.index, &policy, &overrides);
+        let Some(options) = task_options(&url, &item, quality, &download_options, use_proxy) else {
+            result.skipped.push(item.index);
+            continue;
+        };
+        match queue_download(
+            app.clone(),
+            options,
+            components.inner(),
+            tasks.inner(),
+            database.inner(),
+        ) {
+            Ok(task) => {
+                result.tasks.push(task);
+                result.queued_indices.push(item.index);
+            }
+            Err(error) => {
+                result.error = Some(error.message);
+                break;
+            }
+        }
+    }
+    Ok(result)
 }
 
 fn run_task(

@@ -18,7 +18,8 @@ import type {
   DownloadOptions,
   DownloadTask,
   MediaInfo,
-  PlaylistSizeItem,
+  PlaylistQuality,
+  QueuedPlaylistTasks,
 } from "../../types/domain";
 import { useNavigate, useLocation } from "react-router-dom";
 import { invokeCommand } from "../../ipc/client";
@@ -28,12 +29,11 @@ import { getMediaUrlError, validateMediaUrl } from "./validateMediaUrl";
 import { selectedEntries } from "./outputPreview";
 import { DownloadOptionsModal } from "./DownloadOptionsModal";
 import { useDownloadOptions } from "./useDownloadOptions";
-import {
-  applyPlaylistSizes,
-  estimateOutputBytes,
-  summarizePlaylistBytes,
-  type PlaylistSizeCache,
-} from "./outputEstimate";
+import { estimateOutputBytes } from "./outputEstimate";
+import { PlaylistQualityFields } from "./PlaylistQualityFields";
+import { DEFAULT_PLAYLIST_QUALITY } from "./playlistQuality";
+import { PlaylistQualityModal } from "./PlaylistQualityModal";
+import { usePlaylistDetails } from "./usePlaylistDetails";
 import { formatBytes } from "../../utils/formatBytes";
 import {
   AUTOMATIC_AUDIO,
@@ -69,11 +69,12 @@ export function DownloadPage() {
   const { audioOnly, subtitleLanguages, writeAutomaticSubtitles } = advancedOptions;
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
-  const [playlistSizes, setPlaylistSizes] = useState<PlaylistSizeCache>({});
-  const [estimatingSize, setEstimatingSize] = useState(false);
-  const [sizeError, setSizeError] = useState<string | null>(null);
+  const [quality, setQuality] = useState<PlaylistQuality>({ ...DEFAULT_PLAYLIST_QUALITY });
+  const [qualityOverrides, setQualityOverrides] = useState<Record<number, PlaylistQuality>>({});
+  const [editingQuality, setEditingQuality] = useState<number | null>(null);
+  const [queuedNotice, setQueuedNotice] = useState<string | null>(null);
+  const series = usePlaylistDetails(mediaInfo, useProxy, quality, qualityOverrides, audioOnly);
   const sizeEpoch = useRef(0);
-  const estimatingRef = useRef(false);
   const upsertDownloadTask = useAppStore((state) => state.upsertDownloadTask);
   const navigate = useNavigate();
   const validation = hasSubmitted ? validateMediaUrl(url) : null;
@@ -92,8 +93,8 @@ export function DownloadPage() {
     setPlaylistConfirmed(false);
     setPlaylistItems([]);
     const epoch = ++sizeEpoch.current;
-    setPlaylistSizes({});
-    setSizeError(null);
+    setQualityOverrides({});
+    setQueuedNotice(null);
 
     const checked = validateMediaUrl(url);
     if (!checked.valid || loadingDefaults || defaultsError) return;
@@ -123,8 +124,8 @@ export function DownloadPage() {
 
   function handleChange(value: string) {
     sizeEpoch.current++;
-    setPlaylistSizes({});
-    setSizeError(null);
+    setQualityOverrides({});
+    setQueuedNotice(null);
     setUrl(value);
     setMediaInfo(null);
     setPlaylistConfirmed(false);
@@ -139,7 +140,7 @@ export function DownloadPage() {
       defaultsError ||
       isStartingDownload ||
       !selection ||
-      (mediaInfo.playlist && (!playlistConfirmed || chosenEntries.length === 0))
+      (mediaInfo.playlist && (!playlistConfirmed || !seriesReady || !matchedCount))
     )
       return;
     setRequestError(null);
@@ -157,6 +158,32 @@ export function DownloadPage() {
       conflictStrategy: "skip",
     };
     try {
+      if (mediaInfo.playlist) {
+        const result = await invokeCommand<QueuedPlaylistTasks>("start_playlist_download", {
+          request: {
+            url: mediaInfo.webpageUrl,
+            items: chosenEntries.map((entry) => series.details[entry.index]),
+            policy: quality,
+            overrides: Object.entries(qualityOverrides)
+              .filter(([index]) => chosenEntries.some((entry) => entry.index === Number(index)))
+              .map(([index, policy]) => ({ index: Number(index), policy })),
+            downloadOptions: advancedOptions,
+            useProxy,
+          },
+        });
+        result.tasks.forEach(upsertDownloadTask);
+        if (result.error || result.skipped.length) {
+          setPlaylistItems((current) =>
+            current.filter((index) => !result.queuedIndices.includes(index)),
+          );
+          setPlaylistConfirmed(false);
+          setQueuedNotice(
+            `已加入 ${result.tasks.length} 项；${result.skipped.length} 项未匹配，未重复加入已排队条目。`,
+          );
+          if (result.error) setRequestError(result.error);
+        } else navigate("/tasks");
+        return;
+      }
       const task = await invokeCommand<DownloadTask>("start_download", { options });
       upsertDownloadTask(task);
       navigate("/tasks");
@@ -178,44 +205,29 @@ export function DownloadPage() {
     ? selectedEntries(mediaInfo.playlist, playlistItems)
     : [];
   const bytes = selection ? estimateOutputBytes(selection, audioOnly) : null;
-  const seriesBytes = summarizePlaylistBytes(chosenEntries, playlistSizes);
+  const selectedMatches = chosenEntries.map((entry) =>
+    series.matches.find((row) => row.index === entry.index),
+  );
+  const seriesReady =
+    chosenEntries.length > 0 &&
+    !series.matching &&
+    chosenEntries.every((entry) => series.details[entry.index]?.id) &&
+    selectedMatches.every(Boolean);
+  const matchedCount = selectedMatches.filter((row) => row?.formatId).length;
+  const knownSizes = selectedMatches.filter(
+    (row) => row?.formatId && typeof row.bytes === "number",
+  );
+  const totalSize = knownSizes.reduce((total, row) => total + row!.bytes!, 0);
   const sizeText = audioOnly
     ? "预计文件大小：MP3 转换后待定"
     : mediaInfo?.playlist
       ? !chosenEntries.length
         ? "预计文件大小：未选择条目"
-        : seriesBytes.unknownCount === 0
-          ? `所选 ${chosenEntries.length} 项合计：约 ${formatBytes(seriesBytes.knownBytes!)}`
-          : seriesBytes.knownBytes !== null
-            ? `已知大小：约 ${formatBytes(seriesBytes.knownBytes)}，${seriesBytes.unknownCount} 项待估算`
-            : `所选 ${chosenEntries.length} 项：大小待估算`
+        : matchedCount > 0 && knownSizes.length === matchedCount && Number.isSafeInteger(totalSize)
+          ? `匹配 ${matchedCount} 项合计：约 ${formatBytes(totalSize)}`
+          : `已匹配 ${matchedCount}/${chosenEntries.length} 项 · ${knownSizes.length > 0 && Number.isSafeInteger(totalSize) ? `已知约 ${formatBytes(totalSize)}` : "大小待确定"}`
       : `预计文件大小：${bytes === null ? "暂无法估算" : `约 ${formatBytes(bytes)}`}`;
 
-  async function estimatePlaylistSize() {
-    if (!mediaInfo?.playlist || !chosenEntries.length || audioOnly || estimatingRef.current) return;
-    const epoch = sizeEpoch.current;
-    const requested = [...chosenEntries];
-    estimatingRef.current = true;
-    setEstimatingSize(true);
-    setSizeError(null);
-    try {
-      const response = await invokeCommand<PlaylistSizeItem[]>("estimate_playlist_size", {
-        url: mediaInfo.webpageUrl,
-        items: requested.map(({ index, id }) => ({ index, id })),
-        useProxy,
-      });
-      if (epoch === sizeEpoch.current)
-        setPlaylistSizes((current) => applyPlaylistSizes(current, requested, response));
-    } catch (reason) {
-      if (epoch === sizeEpoch.current)
-        setSizeError(
-          reason instanceof IpcError ? reason.contextMessage : "大小估算失败，可稍后重试。",
-        );
-    } finally {
-      estimatingRef.current = false;
-      setEstimatingSize(false);
-    }
-  }
   function changePlaylistItems(items: number[]) {
     setPlaylistItems(items);
     setPlaylistConfirmed(false);
@@ -319,11 +331,19 @@ export function DownloadPage() {
                 <Alert
                   color="red"
                   icon={<IconAlertCircle size={18} />}
-                  title="无法解析"
+                  title="操作未完成"
                   role="alert"
                   aria-live="assertive"
                 >
                   {requestError}
+                </Alert>
+              )}
+              {queuedNotice && (
+                <Alert color="yellow" role="status">
+                  {queuedNotice}
+                  <Button variant="subtle" onClick={() => navigate("/tasks")}>
+                    查看任务
+                  </Button>
                 </Alert>
               )}
             </Stack>
@@ -454,6 +474,35 @@ export function DownloadPage() {
               {mediaInfo.playlist && (
                 <Paper
                   component="section"
+                  aria-label="系列画质策略"
+                  className="download-quality-panel"
+                  withBorder
+                  radius="md"
+                  p="md"
+                >
+                  <Stack gap="sm">
+                    <Title order={3}>系列画质策略</Title>
+                    <Text size="sm" c="dimmed">
+                      统一设置，每项按自己的可用格式匹配。少数例外可点右侧“单独设置”。
+                    </Text>
+                    <PlaylistQualityFields
+                      value={quality}
+                      audioOnly={audioOnly}
+                      disabled={isStartingDownload}
+                      onChange={(value) => {
+                        setQuality(value);
+                        setPlaylistConfirmed(false);
+                      }}
+                    />
+                    <Text size="xs" c="dimmed">
+                      已单独设置 {Object.keys(qualityOverrides).length} 项；其余跟随统一策略。
+                    </Text>
+                  </Stack>
+                </Paper>
+              )}
+              {mediaInfo.playlist && (
+                <Paper
+                  component="section"
                   aria-label="选择系列视频"
                   withBorder
                   p="md"
@@ -502,46 +551,115 @@ export function DownloadPage() {
                         ? "系列超过安全上限，当前最多展示前 50 项，可勾选其中一部分。"
                         : `检测到 ${mediaInfo.playlist.totalCount ?? playlistEntries.length} 项，可勾选需要下载的条目。`}
                     </Text>
+                    <Group justify="space-between" gap="xs">
+                      <Text size="xs" c="dimmed" role="status">
+                        {series.loading ? "正在读取标题与格式" : "条目详情"}：{series.done}/
+                        {playlistEntries.filter((entry) => entry.available).length}（不下载媒体）
+                      </Text>
+                      {series.loading ? (
+                        <Button variant="subtle" size="compact-xs" onClick={series.stop}>
+                          停止后续读取
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="subtle"
+                          size="compact-xs"
+                          disabled={isStartingDownload}
+                          onClick={series.reload}
+                        >
+                          重新读取详情
+                        </Button>
+                      )}
+                    </Group>
+                    {(series.error || series.matchError) && (
+                      <Text size="xs" c="red" role="alert">
+                        {series.error || series.matchError}
+                      </Text>
+                    )}
                     <div
                       className="download-playlist-list"
                       role="group"
                       aria-label="可选视频条目"
                       tabIndex={0}
                     >
-                      {playlistEntries.map((entry, offset) => (
-                        <Checkbox
-                          key={`${entry.index}-${offset}`}
-                          label={`第 ${entry.index} 项 · ${entry.title}`}
-                          description={
-                            entry.available
-                              ? entry.id
-                                ? `视频 ID：${entry.id}`
-                                : "视频 ID 待解析"
-                              : "条目信息不可用或不在支持范围，暂不可选"
-                          }
-                          checked={entry.available && playlistItems.includes(entry.index)}
-                          disabled={!entry.available}
-                          onChange={(event) => {
-                            const checked = event.currentTarget.checked;
-                            changePlaylistItems(
-                              checked
-                                ? [...playlistItems, entry.index]
-                                : playlistItems.filter((index) => index !== entry.index),
-                            );
-                          }}
-                        />
-                      ))}
+                      {playlistEntries.map((entry, offset) => {
+                        const details = series.details[entry.index];
+                        const matched = series.matches.find((row) => row.index === entry.index);
+                        const bitrate = (value: number | null) =>
+                          value === null ? "未知" : `${Math.round(value)} kbps`;
+                        const info =
+                          details?.error ??
+                          matched?.error ??
+                          (matched?.formatId
+                            ? `${audioOnly ? "MP3" : (matched.resolution ?? "分辨率未知")} · ${audioOnly ? "" : `视频 ${bitrate(matched.videoBitrateKbps)} · `}音频 ${bitrate(matched.audioBitrateKbps)} · ${matched.bytes === null ? "大小待定" : `约 ${formatBytes(matched.bytes)}`}${matched.fallbackUsed ? " · 超限回退" : ""}`
+                            : details
+                              ? "正在匹配规格…"
+                              : "等待读取标题与格式…");
+                        return (
+                          <div className="download-playlist-row" key={`${entry.index}-${offset}`}>
+                            <Checkbox
+                              label={`第 ${entry.index} 项 · ${details?.title ?? entry.title}`}
+                              description={
+                                <>
+                                  <span>{`视频 ID：${details?.id ?? entry.id ?? "待解析"}`}</span>
+                                  <Text
+                                    component="span"
+                                    display="block"
+                                    size="xs"
+                                    c={
+                                      details?.error || matched?.error
+                                        ? "red"
+                                        : matched?.fallbackUsed
+                                          ? "orange"
+                                          : "dimmed"
+                                    }
+                                  >
+                                    {info}
+                                    {qualityOverrides[entry.index] ? " · 单独策略" : ""}
+                                  </Text>
+                                </>
+                              }
+                              checked={entry.available && playlistItems.includes(entry.index)}
+                              disabled={!entry.available || isStartingDownload}
+                              onChange={(event) => {
+                                const checked = event.currentTarget.checked;
+                                changePlaylistItems(
+                                  checked
+                                    ? [...playlistItems, entry.index]
+                                    : playlistItems.filter((index) => index !== entry.index),
+                                );
+                              }}
+                            />
+                            <Button
+                              type="button"
+                              variant="subtle"
+                              size="compact-xs"
+                              aria-label={`第 ${entry.index} 项单独设置`}
+                              disabled={!entry.available || isStartingDownload}
+                              onClick={() => setEditingQuality(entry.index)}
+                            >
+                              单独设置
+                            </Button>
+                          </div>
+                        );
+                      })}
                       {!playlistEntries.length && (
                         <Text c="dimmed" size="sm">
                           未返回可选条目，请重新解析链接。
                         </Text>
                       )}
                     </div>
+                    {seriesReady && matchedCount < chosenEntries.length && (
+                      <Text c="orange" size="xs">
+                        {chosenEntries.length - matchedCount}{" "}
+                        项未匹配，将跳过；请单独调整、重新读取或取消勾选。
+                      </Text>
+                    )}
                     <Checkbox
                       checked={playlistConfirmed}
-                      disabled={chosenEntries.length === 0}
+                      disabled={!seriesReady || !matchedCount || isStartingDownload}
                       onChange={(event) => setPlaylistConfirmed(event.currentTarget.checked)}
-                      label={`我确认下载所选 ${chosenEntries.length} 项`}
+                      label={`我确认下载匹配的 ${matchedCount} 项`}
                     />
                   </Stack>
                 </Paper>
@@ -561,24 +679,6 @@ export function DownloadPage() {
                   title="估算最终媒体大小，不含字幕、封面、JSON 和保留的中间文件；封装后可能略有差异，源格式可能随时间变化。"
                 >
                   <span>{sizeText}</span>
-                  {mediaInfo.playlist && !audioOnly && (
-                    <Button
-                      type="button"
-                      variant="subtle"
-                      size="compact-xs"
-                      ml="xs"
-                      onClick={() => void estimatePlaylistSize()}
-                      loading={estimatingSize}
-                      disabled={!chosenEntries.length || estimatingSize}
-                    >
-                      {seriesBytes.knownCount ? "重新估算" : "估算大小"}
-                    </Button>
-                  )}
-                  {sizeError && (
-                    <Text component="span" c="red" size="xs" ml="xs" role="alert">
-                      {sizeError}
-                    </Text>
-                  )}
                 </Text>
                 <Group className="download-action-buttons" gap="sm" wrap="nowrap">
                   <Button
@@ -595,7 +695,8 @@ export function DownloadPage() {
                     loading={isStartingDownload}
                     disabled={
                       !selection ||
-                      (mediaInfo.playlist && (!playlistConfirmed || chosenEntries.length === 0)) ||
+                      (mediaInfo.playlist &&
+                        (!playlistConfirmed || !seriesReady || !matchedCount)) ||
                       (writeAutomaticSubtitles && subtitleLanguages.length === 0)
                     }
                   >
@@ -618,11 +719,30 @@ export function DownloadPage() {
           onApply={(next) => {
             setAdvancedOptions(next);
             setPlaylistConfirmed(false);
-            setSizeError(null);
             if (next.audioOnly !== audioOnly) {
               setSelectedAudioId(AUTOMATIC_AUDIO);
               setManualAudio(false);
             }
+          }}
+        />
+      )}
+      {editingQuality !== null && (
+        <PlaylistQualityModal
+          index={editingQuality}
+          value={qualityOverrides[editingQuality] ?? quality}
+          audioOnly={audioOnly}
+          onClose={() => setEditingQuality(null)}
+          onApply={(value) => {
+            setQualityOverrides((current) => ({ ...current, [editingQuality]: value }));
+            setPlaylistConfirmed(false);
+          }}
+          onInherit={() => {
+            setQualityOverrides((current) => {
+              const next = { ...current };
+              delete next[editingQuality];
+              return next;
+            });
+            setPlaylistConfirmed(false);
           }}
         />
       )}

@@ -85,6 +85,8 @@ pub struct DownloadOptions {
     #[serde(default)]
     pub use_proxy: Option<bool>,
     #[serde(default)]
+    pub quality_policy: Option<super::playlist_quality::PlaylistQuality>,
+    #[serde(default)]
     pub cookies_file_path: Option<String>,
     #[serde(default)]
     pub cookies_browser: Option<CookieBrowser>,

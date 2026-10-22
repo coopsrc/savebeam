@@ -82,11 +82,15 @@ async function assertAlignedPanels(page, width, seriesMode) {
     const series = await page
       .getByRole("region", { name: "选择系列视频", exact: true })
       .boundingBox();
+    const quality = await page
+      .getByRole("region", { name: "系列画质策略", exact: true })
+      .boundingBox();
+    assert.ok(quality.y >= source.y + source.height + 12, "Policy sits below natural-height media");
     if (width >= 1200) {
       assert.ok(Math.abs(series.y - source.y) <= 1, "List top aligns with media top");
       assert.ok(
-        Math.abs(series.y + series.height - source.y - source.height) <= 1,
-        JSON.stringify({ source, series }),
+        Math.abs(series.y + series.height - quality.y - quality.height) <= 1,
+        JSON.stringify({ source, series, quality }),
       );
       edge = series;
     }
@@ -149,6 +153,64 @@ try {
                 keepIntermediateFiles: false,
               };
             if (command === "inspect_media") return window.layoutMedia;
+            if (command === "inspect_playlist_entries")
+              return args.items.map((item) => ({
+                ...item,
+                title: window.layoutMedia.playlist.entries.find(
+                  (entry) => entry.index === item.index,
+                )?.title,
+                durationSeconds: 300,
+                error: null,
+                formats: [
+                  {
+                    formatId: "140",
+                    extension: "m4a",
+                    videoCodec: null,
+                    audioCodec: "aac",
+                    audioBitrateKbps: 128,
+                    fileSizeBytes: 1024,
+                  },
+                  {
+                    formatId: "137",
+                    extension: "mp4",
+                    videoCodec: "avc1",
+                    audioCodec: null,
+                    resolution: "1920x1080",
+                    height: 1080,
+                    videoBitrateKbps: 2000,
+                    fileSizeBytes: 1048576,
+                  },
+                ],
+              }));
+            if (command === "match_playlist_quality")
+              return args.items.map((item) => ({
+                index: item.index,
+                id: item.id,
+                formatId: args.audioOnly ? "140" : "137+140",
+                mergeContainer: args.audioOnly ? null : "mp4",
+                resolution: "1920x1080",
+                videoBitrateKbps: 2000,
+                audioBitrateKbps: 128,
+                bytes: args.audioOnly ? null : 1049600,
+                fallbackUsed: false,
+                error: item.error,
+              }));
+            if (command === "start_playlist_download")
+              return {
+                tasks: [
+                  {
+                    id: "layout-series-task",
+                    title: media.title,
+                    url: media.webpageUrl,
+                    formatId: "137+140",
+                    status: "queued",
+                    createdAtUnixMs: 1000,
+                  },
+                ],
+                queuedIndices: args.request.items.map((item) => item.index),
+                skipped: [],
+                error: null,
+              };
             if (command === "start_download")
               return {
                 id: "layout-task",
@@ -345,7 +407,7 @@ try {
         if (mode === "series")
           assert.equal(
             await page
-              .getByRole("checkbox", { name: "我确认下载所选 17 项", exact: true })
+              .getByRole("checkbox", { name: "我确认下载匹配的 17 项", exact: true })
               .isChecked(),
             false,
           );
@@ -369,20 +431,20 @@ try {
         await page.getByRole("button", { name: "取消全选", exact: true }).click();
         assert.equal(
           await page
-            .getByRole("checkbox", { name: "我确认下载所选 0 项", exact: true })
+            .getByRole("checkbox", { name: "我确认下载匹配的 0 项", exact: true })
             .isDisabled(),
           true,
         );
         await page.getByRole("button", { name: "全选", exact: true }).click();
-        await page.getByRole("checkbox", { name: "我确认下载所选 17 项", exact: true }).check();
+        await page.getByRole("checkbox", { name: "我确认下载匹配的 17 项", exact: true }).check();
         await page.getByRole("checkbox", { name: /第 2 项 ·/ }).uncheck();
         assert.equal(
           await page
-            .getByRole("checkbox", { name: "我确认下载所选 16 项", exact: true })
+            .getByRole("checkbox", { name: "我确认下载匹配的 16 项", exact: true })
             .isChecked(),
           false,
         );
-        await page.getByRole("checkbox", { name: "我确认下载所选 16 项", exact: true }).check();
+        await page.getByRole("checkbox", { name: "我确认下载匹配的 16 项", exact: true }).check();
         indices = media.playlist.entries
           .filter((entry) => entry.index !== 2)
           .map((entry) => entry.index);
@@ -390,14 +452,25 @@ try {
       await page.getByRole("button", { name: "开始下载", exact: true }).click();
       await page.getByRole("region", { name: `任务：${media.title}`, exact: true }).waitFor();
       const calls = await page.evaluate(() =>
-        window.calls.filter((call) => call.command === "start_download"),
+        window.calls.filter(
+          (call) => call.command === "start_download" || call.command === "start_playlist_download",
+        ),
       );
       assert.equal(calls.length, 1);
-      assert.deepEqual(calls[0].args.options.playlistItems, indices);
-      assert.equal(calls[0].args.options.audioOnly, mp3);
-      assert.equal(calls[0].args.options.keepIntermediateFiles, true);
-      assert.equal(calls[0].args.options.useProxy, false);
+      if (mode === "series") {
+        assert.deepEqual(
+          calls[0].args.request.items.map((item) => item.index),
+          indices,
+        );
+        assert.equal(calls[0].args.request.downloadOptions.audioOnly, mp3);
+        assert.equal(calls[0].args.request.downloadOptions.keepIntermediateFiles, true);
+        assert.equal(calls[0].args.request.useProxy, false);
+      }
       if (mode === "single") {
+        assert.deepEqual(calls[0].args.options.playlistItems, null);
+        assert.equal(calls[0].args.options.audioOnly, mp3);
+        assert.equal(calls[0].args.options.keepIntermediateFiles, true);
+        assert.equal(calls[0].args.options.useProxy, false);
         assert.equal(calls[0].args.options.formatId, mp3 ? "140" : "137+140");
         assert.equal(calls[0].args.options.mergeContainer, mp3 ? null : "mp4");
       }

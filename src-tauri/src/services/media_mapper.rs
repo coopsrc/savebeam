@@ -83,8 +83,7 @@ fn map_playlist_info(raw: &Value, requested_url: &str) -> Result<MediaInfo, AppE
                     && index <= u32::from(MAX_PLAYLIST_ITEMS)
                     && seen_indices.insert(index),
                 id,
-                title: nonempty_string(entry.get("title"))
-                    .unwrap_or_else(|| "未命名视频（下载时解析）".into()),
+                title: nonempty_string(entry.get("title")).unwrap_or_else(|| "标题待补全".into()),
             }
         })
         .collect();
@@ -130,7 +129,7 @@ fn thumbnail_url(raw: &Value) -> Option<String> {
     })
 }
 
-fn map_formats(value: Option<&Value>, duration: Option<f64>) -> Vec<FormatOption> {
+pub(crate) fn map_formats(value: Option<&Value>, duration: Option<f64>) -> Vec<FormatOption> {
     value
         .and_then(Value::as_array)
         .into_iter()
@@ -151,6 +150,15 @@ fn map_formats(value: Option<&Value>, duration: Option<f64>) -> Vec<FormatOption
                 format_id,
                 extension,
                 resolution,
+                height: height.and_then(|height| u32::try_from(height).ok()),
+                video_bitrate_kbps: positive_number(format.get("vbr")).or_else(|| {
+                    codec(format.get("vcodec"))?;
+                    // A muxed stream's total bitrate must not be presented as video bitrate.
+                    codec(format.get("acodec"))
+                        .is_none()
+                        .then(|| positive_number(format.get("tbr")))
+                        .flatten()
+                }),
                 fps: positive_number(format.get("fps")),
                 video_codec: codec(format.get("vcodec")),
                 audio_codec: codec(format.get("acodec")),
@@ -388,7 +396,7 @@ mod tests {
         assert!(!playlist.entries[5].available);
         assert_eq!(playlist.entries[2].id.as_deref(), Some("third"));
         assert!(playlist.entries[3].available);
-        assert!(playlist.entries[3].title.contains("下载时解析"));
+        assert_eq!(playlist.entries[3].title, "标题待补全");
         let value = serde_json::to_value(playlist).unwrap();
         assert!(value["entries"][3].get("url").is_none());
     }

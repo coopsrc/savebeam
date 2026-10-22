@@ -10,7 +10,7 @@ use rusqlite::{Connection, TransactionBehavior};
 
 use crate::domain::error::{AppError, ErrorCode};
 
-pub const CURRENT_SCHEMA_VERSION: u32 = 11;
+pub const CURRENT_SCHEMA_VERSION: u32 = 12;
 
 pub mod repositories;
 pub mod subscriptions;
@@ -91,6 +91,8 @@ const MIGRATIONS: &[(u32, &str)] = &[(
     "ALTER TABLE download_tasks ADD COLUMN hidden_from_tasks INTEGER NOT NULL DEFAULT 0;"
 ) , (11,
     "ALTER TABLE download_tasks ADD COLUMN use_proxy INTEGER CHECK (use_proxy IN (0, 1));"
+) , (12,
+    "ALTER TABLE download_tasks ADD COLUMN quality_policy_json TEXT;"
 )];
 
 #[derive(Debug, Clone)]

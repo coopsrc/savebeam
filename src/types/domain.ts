@@ -60,6 +60,8 @@ export interface ComponentInstallProgress {
 }
 
 export interface MediaFormat {
+  height?: number | null;
+  videoBitrateKbps?: number | null;
   formatId: string;
   extension: string;
   resolution: string | null;
@@ -113,6 +115,39 @@ export interface PlaylistSizeItem {
   index: number;
   id: string | null;
   bytes: number | null;
+}
+
+export interface PlaylistQuality {
+  maxHeight: number | null;
+  maxVideoBitrateKbps: number | null;
+  maxAudioBitrateKbps: number | null;
+  allowExceed: boolean;
+}
+export interface PlaylistDetails {
+  index: number;
+  id: string | null;
+  title: string | null;
+  durationSeconds: number | null;
+  formats: MediaFormat[];
+  error: string | null;
+}
+export interface PlaylistMatch {
+  index: number;
+  id: string | null;
+  formatId: string | null;
+  mergeContainer: MergeContainer | null;
+  resolution: string | null;
+  videoBitrateKbps: number | null;
+  audioBitrateKbps: number | null;
+  bytes: number | null;
+  fallbackUsed: boolean;
+  error: string | null;
+}
+export interface QueuedPlaylistTasks {
+  tasks: DownloadTask[];
+  queuedIndices: number[];
+  skipped: number[];
+  error: string | null;
 }
 
 export type DownloadTaskStatus =

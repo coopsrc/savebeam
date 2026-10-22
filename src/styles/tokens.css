@@ -113,7 +113,7 @@ body {
 }
 
 .download-workbench--series {
-  grid-template-areas: "media" "list" "actions";
+  grid-template-areas: "media" "quality" "list" "actions";
 }
 
 .download-source-panel {
@@ -122,6 +122,16 @@ body {
 
 .download-series-panel {
   grid-area: list;
+}
+
+.download-quality-panel {
+  grid-area: quality;
+}
+.download-playlist-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: start;
 }
 
 .download-start-actions {
@@ -208,12 +218,12 @@ body {
 @media (min-width: 1200px) {
   .download-workbench--series {
     grid-template-columns: minmax(0, 0.9fr) minmax(340px, 1.1fr);
-    grid-template-areas: "media list" "actions actions";
-    grid-template-rows: auto auto;
+    grid-template-areas: "media list" "quality list" "actions actions";
+    grid-template-rows: auto auto auto;
   }
 
   .download-workbench--series .download-source-panel {
-    align-self: stretch;
+    align-self: start;
   }
 
   .download-workbench--series .download-series-panel {

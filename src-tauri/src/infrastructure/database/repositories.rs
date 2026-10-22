@@ -91,6 +91,12 @@ impl DownloadTaskRepository {
     }
 
     pub fn insert(&self, task: &DownloadTask, options: &DownloadOptions) -> Result<(), AppError> {
+        let quality_json = options
+            .quality_policy
+            .as_ref()
+            .map(serde_json::to_string)
+            .transpose()
+            .map_err(|_| AppError::new(ErrorCode::InvalidPath, "无法保存画质策略。", false))?;
         let playlist_items_json = options
             .playlist_items
             .as_ref()
@@ -111,8 +117,8 @@ impl DownloadTaskRepository {
                      conflict_strategy, playlist_item_count, audio_only,
                      write_automatic_subtitles, write_thumbnail, write_info_json, embed_metadata,
                      cookies_file_path, cookies_browser, cookie_access_confirmed, merge_container,
-                     keep_intermediate_files, playlist_items_json, expected_media_id, use_proxy
-                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23)",
+                     keep_intermediate_files, playlist_items_json, expected_media_id, use_proxy, quality_policy_json
+                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24)",
                 params![
                     task.id,
                     options.url,
@@ -137,6 +143,7 @@ impl DownloadTaskRepository {
                     playlist_items_json,
                     options.expected_media_id,
                     options.use_proxy,
+                    quality_json,
                 ],
             )
         })?;
@@ -169,7 +176,7 @@ impl DownloadTaskRepository {
                             playlist_item_count, audio_only, write_automatic_subtitles,
                             write_thumbnail, write_info_json, embed_metadata,
                             cookies_file_path, cookies_browser, cookie_access_confirmed, merge_container,
-                            keep_intermediate_files, playlist_items_json, expected_media_id, use_proxy
+                            keep_intermediate_files, playlist_items_json, expected_media_id, use_proxy, quality_policy_json
                      FROM download_tasks WHERE task_id = ?1",
                     [task_id],
                     task_from_row,
@@ -204,7 +211,7 @@ impl DownloadTaskRepository {
                         playlist_item_count, audio_only, write_automatic_subtitles,
                         write_thumbnail, write_info_json, embed_metadata,
                         cookies_file_path, cookies_browser, cookie_access_confirmed, merge_container,
-                        keep_intermediate_files, playlist_items_json, expected_media_id, use_proxy
+                        keep_intermediate_files, playlist_items_json, expected_media_id, use_proxy, quality_policy_json
                  FROM download_tasks WHERE NOT ?1 OR hidden_from_tasks = 0 ORDER BY created_at_unix_ms DESC",
             )?;
             let rows = statement.query_map([visible_only], task_from_row)?;
@@ -356,6 +363,10 @@ fn task_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<(DownloadTask, Dow
             keep_intermediate_files: row.get(19)?,
             expected_media_id: row.get(21)?,
             use_proxy: row.get(22)?,
+            quality_policy: row
+                .get::<_, Option<String>>(23)?
+                .map(|json| serde_json::from_str(&json).map_err(|_| rusqlite::Error::InvalidQuery))
+                .transpose()?,
             cookies_file_path: row.get(15)?,
             cookies_browser: row
                 .get::<_, Option<String>>(16)?
@@ -524,6 +535,12 @@ mod tests {
             playlist_items: Some(vec![1, 3, 5]),
             expected_media_id: Some("expected-id".into()),
             use_proxy: Some(true),
+            quality_policy: Some(crate::domain::playlist_quality::PlaylistQuality {
+                max_height: Some(1080),
+                max_video_bitrate_kbps: Some(5000),
+                max_audio_bitrate_kbps: Some(128),
+                allow_exceed: false,
+            }),
             audio_only: true,
             write_automatic_subtitles: true,
             write_thumbnail: true,
@@ -563,6 +580,7 @@ mod tests {
         assert!(loaded_options.cookie_access_confirmed);
         assert_eq!(loaded_options.merge_container, options.merge_container);
         assert_eq!(loaded_options.use_proxy, Some(true));
+        assert_eq!(loaded_options.quality_policy, options.quality_policy);
         assert_eq!(tasks.list().expect("list works").len(), 1);
     }
 
@@ -649,6 +667,7 @@ mod tests {
             playlist_items: None,
             expected_media_id: None,
             use_proxy: None,
+            quality_policy: None,
             audio_only: false,
             write_automatic_subtitles: false,
             write_thumbnail: false,

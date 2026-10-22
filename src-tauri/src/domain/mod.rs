@@ -10,3 +10,4 @@ pub mod download_defaults;
 pub mod error;
 pub mod media;
 pub mod network;
+pub mod playlist_quality;

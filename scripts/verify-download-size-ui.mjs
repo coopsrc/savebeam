@@ -18,6 +18,7 @@ try {
     const page = await browser.newPage({ viewport: { width: 1500, height: 1100 } });
     await page.addInitScript((series) => {
       window.calls = [];
+      window.partial = series;
       window.isTauri = true;
       window.__TAURI_EVENT_PLUGIN_INTERNALS__ = { unregisterListener() {} };
       window.__TAURI_INTERNALS__ = {
@@ -104,14 +105,49 @@ try {
                   }
                 : null,
             };
-          if (command === "estimate_playlist_size") {
+          if (command === "inspect_playlist_entries") {
             if (window.failEstimate)
               throw { code: "network_failure", message: "估算连接失败", retryable: true };
             return args.items.map((item) => ({
               ...item,
-              bytes: window.partial && item.index === 9 ? null : 1048576,
+              title: item.index === 2 ? "第二集" : "第九集",
+              durationSeconds: 100,
+              error: null,
+              formats: [],
             }));
           }
+          if (command === "match_playlist_quality")
+            return args.items.map((item) => ({
+              index: item.index,
+              id: item.id,
+              formatId: item.error ? null : args.audioOnly ? "audio" : "video+audio",
+              mergeContainer: "mp4",
+              resolution: "1920x1080",
+              videoBitrateKbps: 1000,
+              audioBitrateKbps: 128,
+              bytes:
+                item.error || args.audioOnly || (window.partial && item.index === 9)
+                  ? null
+                  : 1048576,
+              error: item.error,
+              fallbackUsed: false,
+            }));
+          if (command === "start_playlist_download")
+            return {
+              tasks: [
+                {
+                  id: "size-task",
+                  title: "测试媒体",
+                  url: args.request.url,
+                  formatId: "video+audio",
+                  status: "queued",
+                  createdAtUnixMs: 1000,
+                },
+              ],
+              queuedIndices: args.request.items.map((item) => item.index),
+              skipped: [],
+              error: null,
+            };
           if (command.startsWith("plugin:event|")) return 1;
           return [];
         },
@@ -169,12 +205,11 @@ try {
       await page.evaluate(() => {
         window.partial = true;
       });
-      await page.getByRole("button", { name: "估算大小", exact: true }).click();
-      await text("已知大小：约 1.0 MB，1 项待估算");
+      await text("已匹配 2/2 项 · 已知约 1.0 MB");
       assert.deepEqual(
         await page.evaluate(() =>
           window.calls
-            .find((call) => call.command === "estimate_playlist_size")
+            .find((call) => call.command === "inspect_playlist_entries")
             .args.items.map((item) => item.index),
         ),
         [2, 9],
@@ -182,15 +217,20 @@ try {
       await page.evaluate(() => {
         window.partial = false;
       });
-      await page.getByRole("button", { name: "重新估算", exact: true }).click();
-      await text("所选 2 项合计：约 2.0 MB");
+      await page.getByRole("button", { name: "重新读取详情", exact: true }).click();
+      await text("匹配 2 项合计：约 2.0 MB");
       await page.getByRole("checkbox", { name: /第 9 项/ }).uncheck();
-      await text("所选 1 项合计：约 1.0 MB");
+      await text("匹配 1 项合计：约 1.0 MB");
       await page.evaluate(() => {
         window.failEstimate = true;
       });
-      await page.getByRole("button", { name: "重新估算", exact: true }).click();
+      await page.getByRole("button", { name: "重新读取详情", exact: true }).click();
       await page.getByRole("alert").waitFor();
+      await page.evaluate(() => {
+        window.failEstimate = false;
+      });
+      await page.getByRole("button", { name: "重新读取详情", exact: true }).click();
+      await text("匹配 1 项合计：约 1.0 MB");
     } else {
       await text("预计文件大小：约 3.0 MB");
       await page.getByRole("checkbox", { name: "手动选择音频", exact: true }).check();
@@ -208,16 +248,18 @@ try {
       fullPage: true,
     });
     const estimateCalls = await page.evaluate(() =>
-      window.calls.filter((call) => call.command === "estimate_playlist_size"),
+      window.calls.filter((call) => call.command === "inspect_playlist_entries"),
     );
     assert.ok(estimateCalls.every((call) => call.args.useProxy === useProxy));
-    if (series) await page.getByRole("checkbox", { name: /我确认下载所选/ }).check();
+    if (series) await page.getByRole("checkbox", { name: /我确认下载匹配的/ }).check();
     await page.getByRole("button", { name: "开始下载", exact: true }).click();
     await page.waitForURL(/#\/tasks$/);
     const started = await page.evaluate(() =>
-      window.calls.find((call) => call.command === "start_download"),
+      window.calls.find(
+        (call) => call.command === "start_download" || call.command === "start_playlist_download",
+      ),
     );
-    assert.equal(started.args.options.useProxy, useProxy);
+    assert.equal(series ? started.args.request.useProxy : started.args.options.useProxy, useProxy);
     await page.close();
   }
   console.log(

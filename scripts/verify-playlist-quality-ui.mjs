@@ -1,0 +1,369 @@
+// Fixture-only integration: never visits a video site or downloads media.
+/* global window, structuredClone */
+import assert from "node:assert/strict";
+import process from "node:process";
+import { pathToFileURL } from "node:url";
+const { chromium } = await import(pathToFileURL(process.argv[2]).href);
+const browser = await chromium.launch({
+  executablePath: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+  headless: true,
+});
+const base = process.argv[3] ?? "http://127.0.0.1:1421/";
+async function fixture(scenario) {
+  const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.addInitScript((scenario) => {
+    window.isTauri = true;
+    window.qualityFixture = {
+      calls: [],
+      scenario,
+      fail: scenario === "read-error",
+      delay: scenario === "stop" || scenario === "stale" ? 200 : 30,
+      queued: [],
+    };
+    const formats = (index) => {
+      const type = (index - 1) % 3;
+      const mb = 1024 * 1024;
+      const audio = [
+        {
+          formatId: "a96",
+          extension: "m4a",
+          audioCodec: "aac",
+          videoCodec: null,
+          audioBitrateKbps: 96,
+          fileSizeBytes: 10 * mb,
+        },
+      ];
+      if (type !== 1)
+        audio.push({
+          formatId: "a128",
+          extension: "m4a",
+          audioCodec: "aac",
+          videoCodec: null,
+          audioBitrateKbps: 128,
+          fileSizeBytes: 10 * mb,
+        });
+      if (type === 0)
+        audio.push({
+          formatId: "a256",
+          extension: "m4a",
+          audioCodec: "aac",
+          videoCodec: null,
+          audioBitrateKbps: 256,
+          fileSizeBytes: 20 * mb,
+        });
+      if (type === 2)
+        audio.push({
+          formatId: "a192",
+          extension: "m4a",
+          audioCodec: "aac",
+          videoCodec: null,
+          audioBitrateKbps: 192,
+          fileSizeBytes: 15 * mb,
+        });
+      const video = (height, rate, bytes) => ({
+        formatId: `v${height}`,
+        extension: "mp4",
+        videoCodec: "avc1",
+        audioCodec: null,
+        height,
+        resolution: `${height === 720 ? 1280 : height === 1080 ? 1920 : 3840}x${height}`,
+        videoBitrateKbps: rate,
+        fileSizeBytes: bytes * mb,
+      });
+      return [
+        ...audio,
+        ...(type === 0
+          ? [video(720, 2000, 100), video(1080, 5000, 300), video(2160, 12000, 900)]
+          : type === 1
+            ? [video(720, 1500, 80)]
+            : [video(2160, 8000, 400)]),
+      ];
+    };
+    const match = (item, policy, audioOnly) => {
+      const choose = (p) => {
+        const a = item.formats
+          .filter(
+            (f) =>
+              f.audioCodec &&
+              (!p.maxAudioBitrateKbps || f.audioBitrateKbps <= p.maxAudioBitrateKbps),
+          )
+          .at(-1);
+        const v = item.formats
+          .filter(
+            (f) =>
+              f.videoCodec &&
+              (!p.maxHeight || f.height <= p.maxHeight) &&
+              (!p.maxVideoBitrateKbps || f.videoBitrateKbps <= p.maxVideoBitrateKbps),
+          )
+          .at(-1);
+        return a && (v || audioOnly) ? { a, v } : null;
+      };
+      const strict = choose(policy);
+      const picked = strict ?? (policy.allowExceed ? choose({}) : null);
+      return {
+        index: item.index,
+        id: item.id,
+        formatId:
+          item.error || !picked
+            ? null
+            : audioOnly
+              ? picked.a.formatId
+              : `${picked.v.formatId}+${picked.a.formatId}`,
+        mergeContainer: audioOnly ? null : "mp4",
+        resolution: picked?.v?.resolution ?? null,
+        videoBitrateKbps: picked?.v?.videoBitrateKbps ?? null,
+        audioBitrateKbps: picked?.a?.audioBitrateKbps ?? null,
+        bytes:
+          item.error || !picked || audioOnly
+            ? null
+            : picked.v.fileSizeBytes + picked.a.fileSizeBytes,
+        fallbackUsed: !strict && !!picked,
+        error: item.error ?? (picked ? null : "没有符合上限的音视频组合"),
+      };
+    };
+    window.__TAURI_EVENT_PLUGIN_INTERNALS__ = { unregisterListener() {} };
+    window.__TAURI_INTERNALS__ = {
+      transformCallback() {
+        return 1;
+      },
+      unregisterCallback() {},
+      async invoke(command, args = {}) {
+        const state = window.qualityFixture;
+        state.calls.push({ command, args: structuredClone(args) });
+        if (command === "get_download_option_defaults")
+          return {
+            audioOnly: false,
+            subtitleLanguages: [],
+            writeAutomaticSubtitles: false,
+            writeThumbnail: false,
+            writeInfoJson: false,
+            embedMetadata: false,
+            keepIntermediateFiles: false,
+          };
+        if (command === "inspect_media") {
+          const count =
+            scenario === "stop" || (scenario === "stale" && args.url.endsWith("old")) ? 7 : 3;
+          return {
+            id: "series",
+            title: "系列测试",
+            uploader: "作者",
+            webpageUrl: args.url,
+            thumbnailUrl: null,
+            thumbnailDataUrl: null,
+            durationSeconds: null,
+            formats: [],
+            subtitles: [],
+            playlist: {
+              id: "list",
+              title: "系列测试",
+              totalCount: count,
+              downloadCount: count,
+              truncated: false,
+              entries: Array.from({ length: count }, (_, i) => ({
+                index: i + 1,
+                id: `BV${i + 1}`,
+                title: "标题待补全",
+                available: true,
+              })),
+            },
+          };
+        }
+        if (command === "inspect_playlist_entries") {
+          await new Promise((resolve) => window.setTimeout(resolve, state.delay));
+          if (state.fail)
+            throw { code: "network_failure", message: "条目详情读取失败，可重试", retryable: true };
+          return args.items.map((item) => ({
+            ...item,
+            title: `${args.url.endsWith("old") ? "旧" : "真实"}标题：第 ${item.index} 集`,
+            durationSeconds: 100,
+            formats: formats(item.index),
+            error: null,
+          }));
+        }
+        if (command === "match_playlist_quality")
+          return args.items.map((item) =>
+            match(
+              item,
+              args.overrides.find((over) => over.index === item.index)?.policy ?? args.policy,
+              args.audioOnly,
+            ),
+          );
+        if (command === "start_playlist_download") {
+          const request = args.request;
+          const selected = request.items
+            .map((item) => ({
+              item,
+              policy:
+                request.overrides.find((over) => over.index === item.index)?.policy ??
+                request.policy,
+            }))
+            .map(({ item, policy }) => ({
+              item,
+              policy,
+              match: match(item, policy, request.downloadOptions.audioOnly),
+            }));
+          state.queued = selected
+            .filter((row) => row.match.formatId)
+            .map((row) => ({
+              index: row.item.index,
+              formatId: row.match.formatId,
+              policy: row.policy,
+              options: request.downloadOptions,
+            }));
+          return {
+            tasks: state.queued.map((row) => ({
+              id: `task-${row.index}`,
+              title: `第 ${row.index} 集`,
+              url: request.url,
+              formatId: row.formatId,
+              status: "queued",
+              createdAtUnixMs: 1,
+            })),
+            queuedIndices: state.queued.map((row) => row.index),
+            skipped: selected.filter((row) => !row.match.formatId).map((row) => row.item.index),
+            error: null,
+          };
+        }
+        if (command.startsWith("plugin:event|")) return 1;
+        return [];
+      },
+    };
+  }, scenario);
+  await page.goto(`${base}#/download`);
+  await page
+    .getByRole("textbox", { name: "视频链接", exact: true })
+    .fill(`https://example.invalid/${scenario === "stale" ? "old" : "series"}`);
+  await page.getByRole("button", { name: "解析视频信息", exact: true }).click();
+  return { page, errors };
+}
+async function choose(page, region, label, option) {
+  await region.getByRole("combobox", { name: label, exact: true }).click();
+  await page.getByRole("option", { name: option, exact: true }).click();
+}
+async function confirmed(page, count) {
+  await page.getByRole("checkbox", { name: `我确认下载匹配的 ${count} 项`, exact: true }).check();
+}
+try {
+  for (const scenario of ["profiles", "skips", "read-error", "stop", "stale"]) {
+    const { page, errors } = await fixture(scenario);
+    const policy = page.getByRole("region", { name: "系列画质策略", exact: true });
+    await policy.waitFor();
+    if (scenario === "read-error") {
+      await page.getByRole("alert").filter({ hasText: "条目详情读取失败" }).waitFor();
+      assert.equal(
+        await page.getByRole("button", { name: "开始下载", exact: true }).isDisabled(),
+        true,
+      );
+      await page.evaluate(() => {
+        window.qualityFixture.fail = false;
+      });
+      await page.getByRole("button", { name: "重新读取详情", exact: true }).click();
+    }
+    if (scenario === "stop") {
+      await page.getByRole("button", { name: "停止后续读取", exact: true }).click();
+      await page.getByRole("button", { name: "重新读取详情", exact: true }).waitFor();
+      assert.equal(
+        await page.evaluate(
+          () =>
+            window.qualityFixture.calls.filter(
+              (call) => call.command === "inspect_playlist_entries",
+            ).length,
+        ),
+        1,
+      );
+      await page.getByRole("button", { name: "重新读取详情", exact: true }).click();
+    }
+    if (scenario === "stale") {
+      await page
+        .getByRole("textbox", { name: "视频链接", exact: true })
+        .fill("https://example.invalid/new");
+      await page.getByRole("button", { name: "解析视频信息", exact: true }).click();
+    }
+    const count = scenario === "stop" ? 7 : 3;
+    await confirmed(page, count);
+    await page.getByRole("checkbox", { name: /第 1 项 · 真实标题/ }).waitFor();
+    assert.equal(await page.getByText(/旧标题/).count(), 0);
+    if (scenario === "profiles" || scenario === "skips") {
+      const calls = await page.evaluate(
+        () =>
+          window.qualityFixture.calls.filter((call) => call.command === "inspect_playlist_entries")
+            .length,
+      );
+      await choose(page, policy, "分辨率上限", "1080 p");
+      await choose(page, policy, "视频码率上限", "3000 kbps");
+      await choose(page, policy, "音频码率上限", "128 kbps");
+      await confirmed(page, 2);
+      const first = page.locator(".download-playlist-row").filter({ hasText: "第 1 项" });
+      await first.getByText(/1280x720.*2000 kbps.*128 kbps.*110.0 MB/).waitFor();
+      assert.equal(
+        await page.evaluate(
+          () =>
+            window.qualityFixture.calls.filter(
+              (call) => call.command === "inspect_playlist_entries",
+            ).length,
+        ),
+        calls,
+        "policy changes use cached formats, not more network requests",
+      );
+      if (scenario === "profiles") {
+        await policy.getByRole("checkbox", { name: "无匹配时允许超限回退", exact: true }).check();
+        await confirmed(page, 3);
+        await page
+          .getByText(/超限回退/, { exact: false })
+          .last()
+          .waitFor();
+        await policy.getByRole("checkbox", { name: "无匹配时允许超限回退", exact: true }).uncheck();
+        await page.getByRole("button", { name: "第 3 项单独设置", exact: true }).click();
+        let dialog = page.getByRole("dialog", { name: "第 3 项 · 单独画质设置", exact: true });
+        await choose(page, dialog, "分辨率上限", "2160 p");
+        await dialog.getByRole("button", { name: "取消", exact: true }).click();
+        await confirmed(page, 2);
+        await page.getByRole("button", { name: "第 3 项单独设置", exact: true }).click();
+        dialog = page.getByRole("dialog", { name: "第 3 项 · 单独画质设置", exact: true });
+        await choose(page, dialog, "分辨率上限", "2160 p");
+        await choose(page, dialog, "视频码率上限", "8000 kbps");
+        await choose(page, dialog, "音频码率上限", "192 kbps");
+        await dialog.getByRole("button", { name: "应用", exact: true }).click();
+        await confirmed(page, 3);
+        await page.getByText(/单独策略/).waitFor();
+        const source = await page
+          .getByRole("region", { name: "媒体与格式", exact: true })
+          .boundingBox();
+        const quality = await policy.boundingBox();
+        const list = await page
+          .getByRole("region", { name: "选择系列视频", exact: true })
+          .boundingBox();
+        assert.ok(source.height < quality.height && quality.y >= source.y + source.height + 12);
+        assert.ok(
+          Math.abs(source.y - list.y) <= 1 &&
+            Math.abs(quality.y + quality.height - list.y - list.height) <= 1,
+        );
+        await page.setViewportSize({ width: 1600, height: 1100 });
+        await page.screenshot({ path: "/tmp/savebeam-playlist-quality.png" });
+        await page.setViewportSize({ width: 1280, height: 720 });
+        await page.getByRole("button", { name: "开始下载", exact: true }).scrollIntoViewIfNeeded();
+        await page.screenshot({ path: "/tmp/savebeam-playlist-quality-1280x720.png" });
+      }
+      await page.getByRole("button", { name: "开始下载", exact: true }).click();
+      if (scenario === "profiles") await page.waitForURL(/#\/tasks$/);
+      else await page.getByRole("status").filter({ hasText: "已加入 2 项" }).waitFor();
+      const queued = await page.evaluate(() => window.qualityFixture.queued);
+      assert.equal(queued.length, scenario === "profiles" ? 3 : 2);
+      assert.equal(queued[0].formatId, "v720+a128");
+      assert.equal(queued[0].policy.maxHeight, 1080);
+      if (scenario === "profiles") {
+        assert.equal(queued[2].formatId, "v2160+a192");
+        assert.equal(queued[2].policy.maxHeight, 2160);
+      }
+    }
+    assert.deepEqual(errors, []);
+    await page.close();
+    process.stdout.write(
+      `${scenario}: title hydration, strategy, per-row sizing and safe task creation passed\n`,
+    );
+  }
+} finally {
+  await browser.close();
+}

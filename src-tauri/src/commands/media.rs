@@ -194,3 +194,61 @@ pub async fn estimate_playlist_size(
         )
     })?
 }
+
+#[tauri::command]
+pub async fn inspect_playlist_entries(
+    app: AppHandle,
+    operations: State<'_, crate::services::playlist_size::PlaylistSizeOperations>,
+    url: String,
+    items: Vec<crate::services::playlist_size::PlaylistSizeRequestItem>,
+    use_proxy: Option<bool>,
+) -> CommandResult<Vec<crate::services::playlist_quality::PlaylistDetails>> {
+    if items.len() > 5
+        || url.len() > 4096
+        || !(url.starts_with("https://") || url.starts_with("http://"))
+        || items.iter().any(|item| {
+            item.id
+                .as_ref()
+                .is_some_and(|id| id.is_empty() || id.len() > 512)
+        })
+    {
+        return Err(AppError::new(
+            ErrorCode::InvalidUrl,
+            "每次最多读取 5 个有效系列条目。",
+            false,
+        ));
+    }
+    let indices = crate::security::playlist_indices::validate_indices(
+        &items.iter().map(|item| item.index).collect::<Vec<_>>(),
+    )?;
+    let guard = operations.begin()?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let _guard = guard;
+        let cookies = load_cookie_preferences(app.state::<DatabaseManager>().inner())?;
+        let raw = configured_media_engine(&app, Some(use_proxy.unwrap_or(false)))?
+            .for_size_estimate(&indices)?
+            .inspect_with_cookies(&url, &cookies)?;
+        Ok(crate::services::playlist_quality::map_details(&raw, &items))
+    })
+    .await
+    .map_err(|_| AppError::new(ErrorCode::Unknown, "条目信息读取中断，请重试。", true))?
+}
+
+#[tauri::command]
+pub fn match_playlist_quality(
+    items: Vec<crate::services::playlist_quality::PlaylistDetails>,
+    policy: crate::domain::playlist_quality::PlaylistQuality,
+    overrides: Vec<crate::services::playlist_quality::QualityOverride>,
+    audio_only: bool,
+) -> CommandResult<Vec<crate::services::playlist_quality::PlaylistMatch>> {
+    use crate::services::playlist_quality::{effective, select, validate_request};
+    if items.is_empty() {
+        policy.validate()?;
+        return Ok(Vec::new());
+    }
+    validate_request(&items, &policy, &overrides)?;
+    Ok(items
+        .iter()
+        .map(|item| select(item, effective(item.index, &policy, &overrides), audio_only))
+        .collect())
+}

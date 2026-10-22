@@ -377,6 +377,7 @@ mod tests {
             playlist_items: None,
             expected_media_id: None,
             use_proxy: None,
+            quality_policy: None,
             audio_only: false,
             write_automatic_subtitles: false,
             write_thumbnail: false,

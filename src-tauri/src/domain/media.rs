@@ -1,6 +1,6 @@
 //! Stable media metadata exposed to application services and the UI.
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -41,12 +41,14 @@ pub struct PlaylistEntry {
     pub available: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FormatOption {
     pub format_id: String,
     pub extension: String,
     pub resolution: Option<String>,
+    pub height: Option<u32>,
+    pub video_bitrate_kbps: Option<f64>,
     pub fps: Option<f64>,
     pub video_codec: Option<String>,
     pub audio_codec: Option<String>,
@@ -84,6 +86,8 @@ mod tests {
                 format_id: "best".into(),
                 extension: "mp4".into(),
                 resolution: Some("1080p".into()),
+                height: Some(1080),
+                video_bitrate_kbps: None,
                 fps: Some(30.0),
                 video_codec: Some("avc1".into()),
                 audio_codec: None,

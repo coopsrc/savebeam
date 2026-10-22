@@ -42,7 +42,7 @@ impl PlaylistSizeOperations {
             .map_err(|_| {
                 AppError::new(
                     ErrorCode::NetworkFailure,
-                    "已有系列大小估算正在进行，请稍后重试。",
+                    "已有系列详情读取正在进行，请稍后重试。",
                     true,
                 )
             })?;

@@ -593,6 +593,12 @@ mod tests {
                     .apply_to(&mut options);
                 // This task-only override must survive too, independently of global defaults.
                 options.write_info_json = false;
+                options.quality_policy = Some(crate::domain::playlist_quality::PlaylistQuality {
+                    max_height: Some(720),
+                    max_video_bitrate_kbps: Some(2000),
+                    max_audio_bitrate_kbps: Some(128),
+                    allow_exceed: false,
+                });
                 let task = registry.create(options.clone()).unwrap();
                 match status {
                     DownloadTaskStatus::Preparing => {
@@ -788,6 +794,7 @@ mod tests {
             playlist_items: None,
             expected_media_id: None,
             use_proxy: None,
+            quality_policy: None,
             audio_only: false,
             write_automatic_subtitles: false,
             write_thumbnail: false,
