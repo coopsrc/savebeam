@@ -178,6 +178,24 @@ impl DownloadTaskRepository {
     }
 
     pub fn list(&self) -> Result<Vec<(DownloadTask, DownloadOptions)>, AppError> {
+        self.list_with_visibility(false)
+    }
+
+    pub fn list_visible(&self) -> Result<Vec<(DownloadTask, DownloadOptions)>, AppError> {
+        self.list_with_visibility(true)
+    }
+
+    /// Keep task rows for history joins and subscription completion backfills.
+    pub fn hide(&self, task_id: &str) -> Result<bool, AppError> {
+        self.database.with_connection(|connection| connection.execute(
+            "UPDATE download_tasks SET hidden_from_tasks = 1 WHERE task_id = ?1 AND hidden_from_tasks = 0 AND status IN ('completed', 'failed', 'cancelled')", [task_id],
+        )).map(|changed| changed > 0)
+    }
+
+    fn list_with_visibility(
+        &self,
+        visible_only: bool,
+    ) -> Result<Vec<(DownloadTask, DownloadOptions)>, AppError> {
         self.database.with_connection(|connection| {
             let mut statement = connection.prepare(
                 "SELECT task_id, url, title, format_id, output_directory,
@@ -186,9 +204,9 @@ impl DownloadTaskRepository {
                         write_thumbnail, write_info_json, embed_metadata,
                         cookies_file_path, cookies_browser, cookie_access_confirmed, merge_container,
                         keep_intermediate_files, playlist_items_json, expected_media_id
-                 FROM download_tasks ORDER BY created_at_unix_ms DESC",
+                 FROM download_tasks WHERE NOT ?1 OR hidden_from_tasks = 0 ORDER BY created_at_unix_ms DESC",
             )?;
-            let rows = statement.query_map([], task_from_row)?;
+            let rows = statement.query_map([visible_only], task_from_row)?;
             rows.collect()
         })
     }

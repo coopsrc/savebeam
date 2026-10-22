@@ -66,6 +66,9 @@ export function AppShell() {
       listenToEvent<DownloadTask>(IPC_EVENTS.downloadStateChanged, (task) => {
         useAppStore.getState().upsertDownloadTask(task);
       }),
+      listenToEvent<string>(IPC_EVENTS.downloadRemoved, (taskId) => {
+        useAppStore.getState().removeDownloadTask(taskId);
+      }),
       listenToEvent<DownloadProgress>(IPC_EVENTS.downloadProgress, (progress) => {
         useAppStore.getState().updateDownloadProgress(progress);
       }),

@@ -10,7 +10,7 @@ use rusqlite::{Connection, TransactionBehavior};
 
 use crate::domain::error::{AppError, ErrorCode};
 
-pub const CURRENT_SCHEMA_VERSION: u32 = 9;
+pub const CURRENT_SCHEMA_VERSION: u32 = 10;
 
 pub mod repositories;
 pub mod subscriptions;
@@ -87,6 +87,8 @@ const MIGRATIONS: &[(u32, &str)] = &[(
          media_id TEXT NOT NULL,
          PRIMARY KEY(source_url, media_id)
      );"
+) , (10,
+    "ALTER TABLE download_tasks ADD COLUMN hidden_from_tasks INTEGER NOT NULL DEFAULT 0;"
 )];
 
 #[derive(Debug, Clone)]

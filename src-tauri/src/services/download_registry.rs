@@ -64,7 +64,7 @@ impl DownloadTaskRegistry {
     /// and the user can explicitly retry after reviewing the interrupted task.
     pub fn initialize_from_database(&self, database: Database) -> Result<(), AppError> {
         let repository = DownloadTaskRepository::new(database);
-        let records = repository.list()?;
+        let records = repository.list_visible()?;
         let mut state = self.lock()?;
         state.repository = Some(repository.clone());
         for (mut task, options) in records.into_iter().rev() {
@@ -148,6 +148,41 @@ impl DownloadTaskRegistry {
             .get(task_id)
             .cloned()
             .ok_or_else(|| AppError::new(ErrorCode::Unknown, "找不到下载任务。", false))
+    }
+
+    /// Remove only terminal tasks from the task view; never delete history or media.
+    pub fn remove(&self, task_id: &str) -> Result<bool, AppError> {
+        let mut state = self.lock()?;
+        let Some(task) = state.tasks.get(task_id) else {
+            return Ok(false);
+        };
+        if !matches!(
+            task.status,
+            DownloadTaskStatus::Completed
+                | DownloadTaskStatus::Failed
+                | DownloadTaskStatus::Cancelled
+        ) {
+            return Err(AppError::new(
+                ErrorCode::PermissionDenied,
+                "运行中或排队中的任务请先取消，等待停止后再删除。",
+                false,
+            ));
+        }
+        if let Some(repository) = &state.repository
+            && !repository.hide(task_id)?
+        {
+            return Err(AppError::new(
+                ErrorCode::Unknown,
+                "任务状态发生变化，未保存删除结果；请刷新后重试。",
+                true,
+            ));
+        }
+        state.tasks.remove(task_id);
+        state.options.remove(task_id);
+        state.cancellations.remove(task_id);
+        state.pending.retain(|id| id != task_id);
+        // An already-completed worker may still be unwinding; only finish() releases its slot.
+        Ok(true)
     }
 
     pub fn task(&self, task_id: &str) -> Result<DownloadTask, AppError> {
@@ -521,6 +556,102 @@ mod tests {
         assert_eq!(registry.claim_next().unwrap().unwrap().0.id, second.id);
         assert!(registry.claim_next().unwrap().is_none());
         assert!(registry.set_max_concurrent(5).is_err());
+    }
+
+    #[test]
+    fn removal_survives_restart_and_keeps_history_task_rows_and_media() {
+        use crate::domain::download::DownloadResult;
+        use crate::infrastructure::database::{
+            Database,
+            repositories::{DownloadTaskRepository, HistoryRepository},
+        };
+        let database = Database::open_in_memory().unwrap();
+        let registry = DownloadTaskRegistry::default();
+        registry.initialize_from_database(database.clone()).unwrap();
+        let completed = registry
+            .create(test_options("https://example.com/one", "One", "18"))
+            .unwrap();
+        registry
+            .transition(&completed.id, DownloadTaskStatus::Preparing)
+            .unwrap();
+        registry
+            .transition(&completed.id, DownloadTaskStatus::Downloading)
+            .unwrap();
+        registry
+            .transition(&completed.id, DownloadTaskStatus::Completed)
+            .unwrap();
+        let file = std::env::temp_dir().join(format!(
+            "savebeam-delete-task-{}-{}.mp4",
+            std::process::id(),
+            completed.id
+        ));
+        std::fs::write(&file, b"fixture media").unwrap();
+        let history = HistoryRepository::new(database.clone());
+        history
+            .insert(
+                &DownloadResult {
+                    task_id: completed.id.clone(),
+                    title: "One".into(),
+                    output_paths: vec![file.to_string_lossy().into_owned()],
+                    total_bytes: 13,
+                },
+                1000,
+            )
+            .unwrap();
+        let failed = registry
+            .create(test_options("https://example.com/two", "Two", "18"))
+            .unwrap();
+        registry
+            .transition(&failed.id, DownloadTaskStatus::Preparing)
+            .unwrap();
+        registry
+            .transition(&failed.id, DownloadTaskStatus::Failed)
+            .unwrap();
+        let cancelled = registry
+            .create(test_options("https://example.com/three", "Three", "18"))
+            .unwrap();
+        registry.enqueue(&cancelled.id).unwrap();
+        registry.cancel(&cancelled.id).unwrap();
+        for task in [&completed, &failed, &cancelled] {
+            assert!(registry.remove(&task.id).unwrap());
+            assert!(!registry.remove(&task.id).unwrap());
+        }
+        assert!(registry.list().unwrap().is_empty());
+        assert!(registry.claim_next().unwrap().is_none());
+        let repository = DownloadTaskRepository::new(database.clone());
+        assert!(repository.list_visible().unwrap().is_empty());
+        assert_eq!(repository.list().unwrap().len(), 3);
+        assert!(repository.get(&completed.id).unwrap().is_some());
+        assert!(history.get(&completed.id).unwrap().is_some());
+        assert_eq!(std::fs::read(&file).unwrap(), b"fixture media");
+        let restarted = DownloadTaskRegistry::default();
+        restarted.initialize_from_database(database).unwrap();
+        assert!(restarted.list().unwrap().is_empty());
+        assert!(restarted.claim_next().unwrap().is_none());
+        std::fs::remove_file(file).unwrap();
+    }
+
+    #[test]
+    fn removal_rejects_all_nonterminal_states_without_changing_them() {
+        let registry = DownloadTaskRegistry::default();
+        let task = registry
+            .create(test_options("https://example.com/live", "Live", "18"))
+            .unwrap();
+        assert!(registry.remove(&task.id).is_err());
+        for status in [
+            DownloadTaskStatus::Preparing,
+            DownloadTaskStatus::Downloading,
+            DownloadTaskStatus::PostProcessing,
+            DownloadTaskStatus::Cancelling,
+        ] {
+            registry.transition(&task.id, status).unwrap();
+            assert!(registry.remove(&task.id).is_err());
+            assert_eq!(registry.task(&task.id).unwrap().status, status);
+        }
+        registry
+            .transition(&task.id, DownloadTaskStatus::Cancelled)
+            .unwrap();
+        assert!(registry.remove(&task.id).unwrap());
     }
 
     fn test_options(url: &str, title: &str, format_id: &str) -> DownloadOptions {

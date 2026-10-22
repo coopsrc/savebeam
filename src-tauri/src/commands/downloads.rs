@@ -216,6 +216,14 @@ pub fn get_download_history(
 }
 
 #[tauri::command]
+pub fn get_download_history_record(
+    task_id: String,
+    database: State<'_, DatabaseManager>,
+) -> CommandResult<Option<DownloadHistoryRecord>> {
+    HistoryRepository::new(database.database()?).get(&task_id)
+}
+
+#[tauri::command]
 pub async fn delete_download_history(
     task_id: String,
     delete_files: Option<bool>,
@@ -267,9 +275,7 @@ fn open_history_path(
     database: &DatabaseManager,
 ) -> CommandResult<()> {
     let history = HistoryRepository::new(database.database()?)
-        .search("")?
-        .into_iter()
-        .find(|record| record.task_id == task_id)
+        .get(task_id)?
         .ok_or_else(|| AppError::new(ErrorCode::InvalidPath, "找不到对应的下载历史。", false))?;
     let output = history
         .output_paths
@@ -320,6 +326,20 @@ pub fn cancel_download(
     let task = tasks.cancel(&task_id)?;
     emit_task(&app, &task);
     Ok(task)
+}
+
+#[tauri::command]
+pub fn delete_download_task(
+    app: AppHandle,
+    task_id: String,
+    tasks: State<'_, DownloadTaskRegistry>,
+) -> CommandResult<bool> {
+    let removed = tasks.remove(&task_id)?;
+    let _ = app.emit(
+        crate::commands::ipc::DOWNLOAD_REMOVED_EVENT,
+        EventPayload::new(task_id),
+    );
+    Ok(removed)
 }
 
 #[tauri::command]

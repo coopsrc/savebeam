@@ -59,10 +59,12 @@ pub fn run() {
             commands::downloads::get_cookie_preferences,
             commands::downloads::save_cookie_preferences,
             commands::downloads::get_download_history,
+            commands::downloads::get_download_history_record,
             commands::downloads::delete_download_history,
             commands::downloads::open_history_file,
             commands::downloads::open_history_folder,
             commands::downloads::cancel_download,
+            commands::downloads::delete_download_task,
             commands::downloads::retry_download,
         ])
         .build(tauri::generate_context!())

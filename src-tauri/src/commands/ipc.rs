@@ -13,6 +13,7 @@ pub const DOWNLOAD_PROGRESS_EVENT: &str = "download://progress";
 pub const DOWNLOAD_LOG_EVENT: &str = "download://log";
 pub const DOWNLOAD_ERROR_EVENT: &str = "download://error";
 pub const DOWNLOAD_RESULT_EVENT: &str = "download://result";
+pub const DOWNLOAD_REMOVED_EVENT: &str = "download://removed";
 
 /// Commands return their success value directly and serialize `AppError` on
 /// failure. A second success/error envelope is intentionally avoided.

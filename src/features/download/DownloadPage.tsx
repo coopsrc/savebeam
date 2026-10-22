@@ -16,7 +16,7 @@ import {
 import { IconAlertCircle, IconLink, IconPhotoOff, IconSearch } from "@tabler/icons-react";
 import { IpcError } from "../../ipc/client";
 import type { DownloadOptions, DownloadTask, MediaInfo } from "../../types/domain";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { invokeCommand } from "../../ipc/client";
 import { useAppStore } from "../../stores/appStore";
 import { inspectMedia } from "./mediaApi";
@@ -35,7 +35,8 @@ import {
 } from "./formatSelection";
 
 export function DownloadPage() {
-  const [url, setUrl] = useState("");
+  const location = useLocation();
+  const [url, setUrl] = useState(() => new URLSearchParams(location.search).get("url") ?? "");
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [isInspecting, setIsInspecting] = useState(false);
   const [isStartingDownload, setIsStartingDownload] = useState(false);

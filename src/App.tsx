@@ -22,6 +22,8 @@ import { useAppStore } from "./stores/appStore";
 import { ComponentsSettings } from "./features/settings/ComponentsSettings";
 import { HistoryPage } from "./features/history/HistoryPage";
 import { SubscriptionsPage } from "./features/subscriptions/SubscriptionsPage";
+import { CompletedTaskActions } from "./features/tasks/CompletedTaskActions";
+import { DeleteTaskButton } from "./features/tasks/DeleteTaskButton";
 import { invokeCommand, IpcError } from "./ipc/client";
 import type { DownloadTask } from "./types/domain";
 import "./App.css";
@@ -33,7 +35,6 @@ function FoundationPage() {
   const profile = usePlatformProfile();
   const downloadTasks = useAppStore((state) => state.downloadTasks);
   const downloadProgress = useAppStore((state) => state.downloadProgress);
-  const downloadResults = useAppStore((state) => state.downloadResults);
   const lastDownloadError = useAppStore((state) => state.lastDownloadError);
   const upsertDownloadTask = useAppStore((state) => state.upsertDownloadTask);
   const setLastDownloadError = useAppStore((state) => state.setLastDownloadError);
@@ -92,7 +93,6 @@ function FoundationPage() {
             )}
             {downloadTasks.map((task) => {
               const progress = downloadProgress[task.id];
-              const result = downloadResults[task.id];
               const percent =
                 progress?.totalBytes && progress.downloadedBytes != null
                   ? Math.min(100, (progress.downloadedBytes / progress.totalBytes) * 100)
@@ -108,7 +108,14 @@ function FoundationPage() {
                 cancelled: "已取消",
               };
               return (
-                <Paper key={task.id} withBorder radius="md" p="md">
+                <Paper
+                  key={task.id}
+                  component="section"
+                  aria-label={`任务：${task.title}`}
+                  withBorder
+                  radius="md"
+                  p="md"
+                >
                   <Stack gap="sm">
                     <Group justify="space-between" align="flex-start">
                       <Stack gap={4}>
@@ -133,6 +140,7 @@ function FoundationPage() {
                       </Badge>
                     </Group>
                     <Group justify="flex-end">
+                      <DeleteTaskButton task={task} />
                       {["queued", "preparing", "downloading", "post_processing"].includes(
                         task.status,
                       ) && (
@@ -193,11 +201,7 @@ function FoundationPage() {
                           </Group>
                         </Stack>
                       )}
-                    {result && (
-                      <Text size="xs" c="dimmed" className="validated-url">
-                        已保存：{result.outputPaths.join("、")} · {formatBytes(result.totalBytes)}
-                      </Text>
-                    )}
+                    {task.status === "completed" && <CompletedTaskActions task={task} />}
                   </Stack>
                 </Paper>
               );
