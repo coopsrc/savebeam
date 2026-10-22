@@ -12,8 +12,8 @@ const base = process.argv[3] ?? "http://127.0.0.1:1421/";
 try {
   for (const [platform, label, width, height] of [
     ["macos", "macOS", 216, 34],
-    ["windows", "Windows", 232, 42],
-    ["linux", "Linux", 224, 40],
+    ["windows", "Windows", 216, 34],
+    ["linux", "Linux", 216, 34],
   ]) {
     for (const viewportWidth of [1280, 800])
       for (const colorScheme of ["light", "dark"]) {

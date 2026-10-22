@@ -232,6 +232,8 @@ src/
 
 平台差异通过 `PlatformProfile`、根节点 `data-platform` 和主题 token 表达：
 
+三种桌面平台的侧栏尺寸统一：展开宽 `216px`、紧凑宽 `56px`、导航项最小高度 `34px`，沿用现有 macOS 几何尺寸。尺寸和选中风格来自同一个共享配置，切换平台预览不改变侧栏或右侧工作区位置；平台只保留字体、快捷键及文件管理器文案等差异。
+
 ```text
 PlatformProfile
 ├─ sidebarWidth
@@ -245,7 +247,7 @@ PlatformProfile
 
 macOS 参考 SwiftUI `NavigationSplitView`：
 
-- Sidebar 建议宽度 `216px`，导航项高度约 `34px`。
+- Sidebar 使用共享宽度 `216px`（紧凑 `56px`），导航项最小高度 `34px`。
 - 选中项使用圆角浅色填充，不使用 Windows 左侧强调线。
 - 字体使用 `-apple-system` 系统字体栈。
 - 页面标题、工具栏、sheet 和设置入口遵循 macOS 习惯。
@@ -254,8 +256,8 @@ macOS 参考 SwiftUI `NavigationSplitView`：
 
 Windows 参考 WinUI 3 `NavigationView`：
 
-- Sidebar 建议宽度 `232px`，导航项高度约 `42px`。
-- 选中项与 macOS 统一使用 10px 圆角和浅色强调底，不再使用左侧强调线；仅统一选中表现，仍保留 Windows 字体、导航尺寸与快捷键。
+- Sidebar 与 macOS 使用相同尺寸，不再单独采用 `232px` 宽和 `42px` 导航高度。
+- 选中项与 macOS 统一使用 10px 圆角和浅色强调底，不再使用左侧强调线；保留 Windows 字体与快捷键。
 - 字体使用 `Segoe UI Variable`、`Segoe UI` 系统字体栈。
 - 提示、确认和状态分别参考 `InfoBar`、`ContentDialog`、`ProgressBar` 的交互语义。
 - 文件操作文案使用“在文件资源管理器中显示”。
@@ -263,7 +265,7 @@ Windows 参考 WinUI 3 `NavigationView`：
 
 Linux 使用中性桌面风格：
 
-- 保持同一侧栏与内容布局。
+- 侧栏与其他桌面平台共享 `216px`/`56px` 宽度及 `34px` 导航项最小高度，不再单独使用 `224px` 宽和 `40px` 导航高度。
 - 导航选中项同样使用 macOS 风格圆角浅色底，图标强调色、文字可读性随明暗主题变化。
 - 使用系统字体和普通不透明背景。
 - 不默认模拟 Mica 或 macOS 毛玻璃。

@@ -157,6 +157,26 @@ async function assertQualityMenus(page, region, width) {
   }
 }
 
+async function sidebarGeometry(page) {
+  return page.locator(".app-sidebar").evaluate(async (sidebar) => {
+    await Promise.all(
+      sidebar.getAnimations().map((animation) => animation.finished.catch(() => {})),
+    );
+    const rect = sidebar.getBoundingClientRect();
+    const workspace = document.querySelector(".app-workspace").getBoundingClientRect();
+    return {
+      width: rect.width,
+      height: rect.height,
+      workspaceX: workspace.x,
+      workspaceWidth: workspace.width,
+      links: [...sidebar.querySelectorAll(".sidebar-link")].map((link) => {
+        const rect = link.getBoundingClientRect();
+        return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+      }),
+    };
+  });
+}
+
 try {
   for (const mode of ["series", "single"]) {
     for (const width of [1600, 1280, 1200, 1199, 1100, 800, 560]) {
@@ -419,11 +439,43 @@ try {
           await policy.getByRole("combobox", { name: "视频编码", exact: true }).click();
           await page.screenshot({ path: "/tmp/savebeam-quality-menu-1280.png" });
           await policy.getByRole("combobox", { name: "视频编码", exact: true }).press("Escape");
+          let expandedGeometry;
           for (const platform of ["macOS", "Windows", "Linux"]) {
             await page.getByText(platform, { exact: true }).click();
             await assertAlignedPanels(page, width, true);
             await assertQualityMenus(page, policy, width);
+            const geometry = await sidebarGeometry(page);
+            assert.equal(geometry.width, 216);
+            assert.equal(geometry.height, 960);
+            expandedGeometry ??= geometry;
+            assert.deepEqual(
+              geometry,
+              expandedGeometry,
+              `Expanded sidebar and workspace must not move for ${platform}`,
+            );
+            await page
+              .locator(".app-sidebar")
+              .screenshot({ path: `/tmp/savebeam-sidebar-${platform}-full.png` });
           }
+          await page.setViewportSize({ width: 800, height: 960 });
+          await page.locator(".app-shell.is-compact").waitFor();
+          let compactGeometry;
+          for (const platform of ["macOS", "Windows", "Linux"]) {
+            await page.getByText(platform, { exact: true }).click();
+            const geometry = await sidebarGeometry(page);
+            assert.equal(geometry.width, 56);
+            compactGeometry ??= geometry;
+            assert.deepEqual(
+              geometry,
+              compactGeometry,
+              `Compact sidebar and workspace must not move for ${platform}`,
+            );
+            await page
+              .locator(".app-sidebar")
+              .screenshot({ path: `/tmp/savebeam-sidebar-${platform}-compact.png` });
+          }
+          await page.setViewportSize({ width, height: 960 });
+          await assertAlignedPanels(page, width, true);
           await page.getByText("自动", { exact: true }).click();
           await page.getByRole("button", { name: "第 1 项单独设置", exact: true }).click();
           const modal = page.getByRole("dialog", { name: "第 1 项 · 单独画质设置", exact: true });

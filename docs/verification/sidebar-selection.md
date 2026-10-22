@@ -2,6 +2,8 @@
 
 日期：2026-10-22。
 
+本页保留统一选中样式时的历史尺寸与验证结果；2026-10-23 后续统一侧栏/导航项尺寸，当前标准及验证见 `sidebar-dimensions.md`。
+
 macOS、Windows、Linux 的 `selectionStyle` 均为 `rounded-fill`；共享 10px 圆角、浅色强调背景、强调色图标，不再渲染 Windows 左侧强调线或 Linux 专用背景。平台字体、侧栏宽度、导航项高度、快捷键和文件操作文案保持原值。
 
 `pnpm check` 通过：25 项前端测试、125 项 Rust 测试，以及格式、ESLint、Clippy 和构建；保留既有 Vite 大包提示。
