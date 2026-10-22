@@ -31,8 +31,6 @@ import type {
   DownloadPreferences,
 } from "../../types/domain";
 import { IPC_EVENTS, listenToEvent } from "../../ipc/events";
-import { NetworkPreferencesPanel } from "./NetworkPreferencesPanel";
-import { DownloadOptionsPanel } from "./DownloadOptionsPanel";
 
 const componentNames: Record<ComponentKind, string> = {
   yt_dlp: "yt-dlp",
@@ -263,240 +261,231 @@ export function ComponentsSettings() {
   }
 
   return (
-    <main className="settings-page">
-      <Stack gap="lg">
-        <CookiePreferencesPanel />
-        <DownloadPreferencesPanel />
-        <DownloadOptionsPanel />
-        <NetworkPreferencesPanel />
-        <DiagnosticsPanel />
-        <Group justify="space-between" align="flex-start">
-          <div>
-            <Title order={2}>运行组件</Title>
-            <Text c="dimmed" size="sm" mt={4}>
-              Savebeam 不会覆盖系统或自定义组件。组件检测只运行固定的版本参数。
-            </Text>
-          </div>
-          <Group>
-            <Button
-              variant="light"
-              leftSection={<IconRefresh size={16} />}
-              onClick={() => void refresh()}
-              loading={loading}
-            >
-              重新检测
-            </Button>
-            <Button
-              variant="light"
-              onClick={() => void refreshReleases()}
-              loading={checkingReleases}
-              disabled={installingKind !== null}
-            >
-              检查组件更新
-            </Button>
-          </Group>
-        </Group>
-
-        {error && (
-          <ErrorState title="组件操作失败" description={error} onAction={() => void refresh()} />
-        )}
-        {releaseError && (
-          <Text role="alert" c="orange" size="sm">
-            暂时无法检查应用管理组件：{releaseError} 可使用下方手动安装建议，或稍后重试。
+    <Stack gap="lg">
+      <Group justify="space-between" align="flex-start">
+        <div>
+          <Title order={2}>运行组件</Title>
+          <Text c="dimmed" size="sm" mt={4}>
+            Savebeam 不会覆盖系统或自定义组件。组件检测只运行固定的版本参数。
           </Text>
-        )}
-        {loading ? (
-          <LoadingState label="正在检测组件…" />
-        ) : (
-          <Stack gap="md">
-            {components.map((component) => (
-              <Paper key={component.kind} withBorder radius="md" p="md">
-                <Stack gap="sm">
-                  <Group justify="space-between" align="flex-start">
-                    <div>
-                      <Text fw={650}>{componentNames[component.kind]}</Text>
-                      <Text size="sm" c="dimmed" mt={3}>
-                        {component.executablePath ?? "尚未找到可执行文件"}
-                      </Text>
-                    </div>
-                    <Badge
-                      color={
-                        component.status === "available"
-                          ? "green"
-                          : component.status === "missing"
-                            ? "gray"
-                            : "yellow"
-                      }
-                      variant="light"
-                    >
-                      {statusNames[component.status]}
-                    </Badge>
-                  </Group>
-                  <Group gap="xs">
-                    {component.source && (
-                      <Badge variant="outline">来源：{sourceNames[component.source]}</Badge>
-                    )}
-                    {component.version && (
-                      <Badge variant="outline">版本：{component.version}</Badge>
-                    )}
-                  </Group>
-                  <Text size="xs" c="dimmed">
-                    许可证：{licenseSummary(component.kind)}
-                  </Text>
-                  {(() => {
-                    const release = releases.find((item) => item.kind === component.kind);
-                    if (!release) return null;
-                    const isInstalling = installingKind === component.kind;
-                    const progressPercent =
-                      installProgress && installProgress.totalBytes > 0
-                        ? Math.min(
-                            100,
-                            (installProgress.downloadedBytes / installProgress.totalBytes) * 100,
-                          )
-                        : 0;
-                    return (
-                      <Stack gap="xs">
-                        <Text size="sm" c="dimmed">
-                          GitHub Releases：{release.version} · {release.provider}
-                        </Text>
-                        {isInstalling ? (
-                          <Group align="end" wrap="nowrap">
-                            <Progress
-                              flex={1}
-                              value={progressPercent}
-                              aria-label={`正在下载 ${componentNames[component.kind]}`}
-                            />
-                            <Text size="xs" c="dimmed" miw={72} ta="right">
-                              {progressPercent.toFixed(0)}%
-                            </Text>
-                            <Button
-                              size="xs"
-                              color="red"
-                              variant="subtle"
-                              onClick={() => void cancelInstall(component.kind)}
-                            >
-                              取消
-                            </Button>
-                          </Group>
-                        ) : (
-                          <Group justify="flex-end">
-                            <Button
-                              size="sm"
-                              variant="light"
-                              loading={checkingReleases}
-                              disabled={installingKind !== null}
-                              onClick={() => void installRelease(component.kind)}
-                            >
-                              {component.version === release.version
-                                ? "安装此版本"
-                                : `安装 / 更新到 ${release.version}`}
-                            </Button>
-                          </Group>
-                        )}
-                      </Stack>
-                    );
-                  })()}
-                  {component.source === "app_managed" && (
-                    <Group justify="flex-end">
-                      <Button
-                        color="red"
-                        variant="subtle"
-                        leftSection={<IconTrash size={15} />}
-                        loading={removingKind === component.kind}
-                        onClick={() => void removeManaged(component.kind)}
-                      >
-                        删除应用管理版本
-                      </Button>
-                    </Group>
-                  )}
-                  <Group align="end" wrap="nowrap">
-                    <TextInput
-                      className="component-path-input"
-                      label="自定义可执行文件路径"
-                      placeholder="输入完整路径，例如 /opt/homebrew/bin/yt-dlp"
-                      value={customPaths[component.kind] ?? ""}
-                      onChange={(event) => {
-                        const path = event.currentTarget.value;
-                        setCustomPaths((previous) => ({
-                          ...previous,
-                          [component.kind]: path,
-                        }));
-                      }}
-                    />
-                    <Button variant="light" onClick={() => void saveCustomPath(component.kind)}>
-                      使用此路径
-                    </Button>
-                    {component.source === "custom" && (
-                      <Button variant="subtle" onClick={() => void resetCustomPath(component.kind)}>
-                        自动检测
-                      </Button>
-                    )}
-                  </Group>
-                </Stack>
-              </Paper>
-            ))}
-          </Stack>
-        )}
+        </div>
+        <Group>
+          <Button
+            variant="light"
+            leftSection={<IconRefresh size={16} />}
+            onClick={() => void refresh()}
+            loading={loading}
+          >
+            重新检测
+          </Button>
+          <Button
+            variant="light"
+            onClick={() => void refreshReleases()}
+            loading={checkingReleases}
+            disabled={installingKind !== null}
+          >
+            检查组件更新
+          </Button>
+        </Group>
+      </Group>
 
-        <Paper withBorder radius="md" p="md">
-          <Stack gap="sm">
-            <div>
-              <Text fw={650}>手动安装建议</Text>
-              <Text size="sm" c="dimmed" mt={3}>
-                Savebeam 只提供命令和官方说明链接，不会代替你执行包管理器。
-              </Text>
-            </div>
-            {(["yt_dlp", "ffmpeg", "ffprobe", "javascript_runtime"] as const).map((kind) => {
-              const guide = recommendation(kind, profile.platform);
-              return (
-                <Group key={kind} justify="space-between" align="flex-start" wrap="nowrap">
-                  <div className="package-guide-copy">
-                    <Text size="sm" fw={550}>
-                      {componentNames[kind]}
+      {error && (
+        <ErrorState title="组件操作失败" description={error} onAction={() => void refresh()} />
+      )}
+      {releaseError && (
+        <Text role="alert" c="orange" size="sm">
+          暂时无法检查应用管理组件：{releaseError} 可使用下方手动安装建议，或稍后重试。
+        </Text>
+      )}
+      {loading ? (
+        <LoadingState label="正在检测组件…" />
+      ) : (
+        <Stack gap="md">
+          {components.map((component) => (
+            <Paper key={component.kind} withBorder radius="md" p="md">
+              <Stack gap="sm">
+                <Group justify="space-between" align="flex-start">
+                  <div>
+                    <Text fw={650}>{componentNames[component.kind]}</Text>
+                    <Text size="sm" c="dimmed" mt={3}>
+                      {component.executablePath ?? "尚未找到可执行文件"}
                     </Text>
-                    {guide.command ? (
-                      <Text size="sm" className="package-command">
-                        {guide.command}
-                      </Text>
-                    ) : null}
-                    {guide.note && (
-                      <Text size="xs" c="dimmed">
-                        {guide.note}
-                      </Text>
-                    )}
-                    {guide.url && (
-                      <a href={guide.url} target="_blank" rel="noreferrer">
-                        查看 Deno 官方安装说明
-                      </a>
-                    )}
                   </div>
-                  {guide.command && (
+                  <Badge
+                    color={
+                      component.status === "available"
+                        ? "green"
+                        : component.status === "missing"
+                          ? "gray"
+                          : "yellow"
+                    }
+                    variant="light"
+                  >
+                    {statusNames[component.status]}
+                  </Badge>
+                </Group>
+                <Group gap="xs">
+                  {component.source && (
+                    <Badge variant="outline">来源：{sourceNames[component.source]}</Badge>
+                  )}
+                  {component.version && <Badge variant="outline">版本：{component.version}</Badge>}
+                </Group>
+                <Text size="xs" c="dimmed">
+                  许可证：{licenseSummary(component.kind)}
+                </Text>
+                {(() => {
+                  const release = releases.find((item) => item.kind === component.kind);
+                  if (!release) return null;
+                  const isInstalling = installingKind === component.kind;
+                  const progressPercent =
+                    installProgress && installProgress.totalBytes > 0
+                      ? Math.min(
+                          100,
+                          (installProgress.downloadedBytes / installProgress.totalBytes) * 100,
+                        )
+                      : 0;
+                  return (
+                    <Stack gap="xs">
+                      <Text size="sm" c="dimmed">
+                        GitHub Releases：{release.version} · {release.provider}
+                      </Text>
+                      {isInstalling ? (
+                        <Group align="end" wrap="nowrap">
+                          <Progress
+                            flex={1}
+                            value={progressPercent}
+                            aria-label={`正在下载 ${componentNames[component.kind]}`}
+                          />
+                          <Text size="xs" c="dimmed" miw={72} ta="right">
+                            {progressPercent.toFixed(0)}%
+                          </Text>
+                          <Button
+                            size="xs"
+                            color="red"
+                            variant="subtle"
+                            onClick={() => void cancelInstall(component.kind)}
+                          >
+                            取消
+                          </Button>
+                        </Group>
+                      ) : (
+                        <Group justify="flex-end">
+                          <Button
+                            size="sm"
+                            variant="light"
+                            loading={checkingReleases}
+                            disabled={installingKind !== null}
+                            onClick={() => void installRelease(component.kind)}
+                          >
+                            {component.version === release.version
+                              ? "安装此版本"
+                              : `安装 / 更新到 ${release.version}`}
+                          </Button>
+                        </Group>
+                      )}
+                    </Stack>
+                  );
+                })()}
+                {component.source === "app_managed" && (
+                  <Group justify="flex-end">
                     <Button
-                      size="xs"
-                      variant="light"
-                      onClick={() => void copyCommand(kind, guide.command!)}
+                      color="red"
+                      variant="subtle"
+                      leftSection={<IconTrash size={15} />}
+                      loading={removingKind === component.kind}
+                      onClick={() => void removeManaged(component.kind)}
                     >
-                      {copiedKind === kind ? "已复制" : "复制命令"}
+                      删除应用管理版本
+                    </Button>
+                  </Group>
+                )}
+                <Group align="end" wrap="nowrap">
+                  <TextInput
+                    className="component-path-input"
+                    label="自定义可执行文件路径"
+                    placeholder="输入完整路径，例如 /opt/homebrew/bin/yt-dlp"
+                    value={customPaths[component.kind] ?? ""}
+                    onChange={(event) => {
+                      const path = event.currentTarget.value;
+                      setCustomPaths((previous) => ({
+                        ...previous,
+                        [component.kind]: path,
+                      }));
+                    }}
+                  />
+                  <Button variant="light" onClick={() => void saveCustomPath(component.kind)}>
+                    使用此路径
+                  </Button>
+                  {component.source === "custom" && (
+                    <Button variant="subtle" onClick={() => void resetCustomPath(component.kind)}>
+                      自动检测
                     </Button>
                   )}
                 </Group>
-              );
-            })}
-            <Text size="xs" c="dimmed">
-              macOS 命令来自 Homebrew；Windows 使用 WinGet；Linux 命令为 Ubuntu/Debian 示例。
-            </Text>
-            <a href="https://ffmpeg.org/download.html" target="_blank" rel="noreferrer">
-              FFmpeg 官网平台下载入口
-            </a>
-          </Stack>
-        </Paper>
+              </Stack>
+            </Paper>
+          ))}
+        </Stack>
+      )}
 
-        <Text size="xs" c="dimmed">
-          自定义路径仅保存在本次运行内存中。应用管理组件只从已验签的 Savebeam GitHub Releases
-          清单安装；下载文件通过 SHA-256 校验后才会解压和启用。
-        </Text>
-      </Stack>
-    </main>
+      <Paper withBorder radius="md" p="md">
+        <Stack gap="sm">
+          <div>
+            <Text fw={650}>手动安装建议</Text>
+            <Text size="sm" c="dimmed" mt={3}>
+              Savebeam 只提供命令和官方说明链接，不会代替你执行包管理器。
+            </Text>
+          </div>
+          {(["yt_dlp", "ffmpeg", "ffprobe", "javascript_runtime"] as const).map((kind) => {
+            const guide = recommendation(kind, profile.platform);
+            return (
+              <Group key={kind} justify="space-between" align="flex-start" wrap="nowrap">
+                <div className="package-guide-copy">
+                  <Text size="sm" fw={550}>
+                    {componentNames[kind]}
+                  </Text>
+                  {guide.command ? (
+                    <Text size="sm" className="package-command">
+                      {guide.command}
+                    </Text>
+                  ) : null}
+                  {guide.note && (
+                    <Text size="xs" c="dimmed">
+                      {guide.note}
+                    </Text>
+                  )}
+                  {guide.url && (
+                    <a href={guide.url} target="_blank" rel="noreferrer">
+                      查看 Deno 官方安装说明
+                    </a>
+                  )}
+                </div>
+                {guide.command && (
+                  <Button
+                    size="xs"
+                    variant="light"
+                    onClick={() => void copyCommand(kind, guide.command!)}
+                  >
+                    {copiedKind === kind ? "已复制" : "复制命令"}
+                  </Button>
+                )}
+              </Group>
+            );
+          })}
+          <Text size="xs" c="dimmed">
+            macOS 命令来自 Homebrew；Windows 使用 WinGet；Linux 命令为 Ubuntu/Debian 示例。
+          </Text>
+          <a href="https://ffmpeg.org/download.html" target="_blank" rel="noreferrer">
+            FFmpeg 官网平台下载入口
+          </a>
+        </Stack>
+      </Paper>
+
+      <Text size="xs" c="dimmed">
+        自定义路径仅保存在本次运行内存中。应用管理组件只从已验签的 Savebeam GitHub Releases
+        清单安装；下载文件通过 SHA-256 校验后才会解压和启用。
+      </Text>
+    </Stack>
   );
 }
 
@@ -507,7 +496,7 @@ function licenseSummary(kind: ComponentKind): string {
   return "FFmpeg 构建许可取决于构建方启用的组件与编译选项；未确定构建前不推断为 LGPL 或 GPL。";
 }
 
-function DiagnosticsPanel() {
+export function DiagnosticsPanel() {
   const [exporting, setExporting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -568,7 +557,7 @@ function DiagnosticsPanel() {
   );
 }
 
-function CookiePreferencesPanel() {
+export function CookiePreferencesPanel() {
   const [preferences, setPreferences] = useState<CookiePreferences>({
     cookiesFilePath: null,
     cookiesBrowser: null,
@@ -749,7 +738,7 @@ function CookiePreferencesPanel() {
   );
 }
 
-function DownloadPreferencesPanel() {
+export function DownloadPreferencesPanel() {
   const [preferences, setPreferences] = useState<DownloadPreferences>({
     outputDirectory: "",
     maxConcurrent: 1,

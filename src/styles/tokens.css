@@ -287,7 +287,58 @@ body {
 
 .settings-page {
   min-height: 100%;
-  padding: var(--sb-space-page);
+  padding: 0 var(--sb-space-page) var(--sb-space-page);
+}
+
+.settings-tabs {
+  max-width: 1100px;
+  min-width: 0;
+  margin-inline: auto;
+}
+
+.settings-tab-bar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  padding-block: 20px;
+  background: var(--sb-color-canvas);
+}
+
+.settings-tabs .settings-tab-list {
+  width: max-content;
+  max-width: 100%;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  border: 1px solid var(--sb-color-border);
+  border-radius: 9px;
+  background: var(--sb-color-surface);
+}
+
+.settings-tabs .settings-tab-list::before {
+  display: none;
+}
+
+.settings-tabs .settings-tab {
+  flex-shrink: 0;
+  min-height: 36px;
+  padding: 8px 20px;
+  border: 0;
+  border-radius: 0;
+  font-weight: 550;
+  white-space: nowrap;
+}
+
+.settings-tabs .settings-tab + .settings-tab {
+  border-inline-start: 1px solid var(--sb-color-border);
+}
+
+.settings-tabs .settings-tab[data-active] {
+  color: white;
+  background: var(--sb-color-accent);
+}
+
+.settings-tabs .settings-tab-panel {
+  min-width: 0;
 }
 
 .component-path-input {

@@ -18,7 +18,7 @@ import { EmptyState } from "./components/states/AppStates";
 import { AppShell } from "./layout/AppShell";
 import { useNavigate } from "react-router-dom";
 import { useAppStore } from "./stores/appStore";
-import { ComponentsSettings } from "./features/settings/ComponentsSettings";
+import { SettingsPage } from "./features/settings/SettingsPage";
 import { HistoryPage } from "./features/history/HistoryPage";
 import { SubscriptionsPage } from "./features/subscriptions/SubscriptionsPage";
 import { CompletedTaskActions } from "./features/tasks/CompletedTaskActions";
@@ -67,7 +67,7 @@ function FoundationPage() {
   }
 
   if (location.pathname === "/settings") {
-    return <ComponentsSettings />;
+    return <SettingsPage />;
   }
 
   if (location.pathname === "/history") {

@@ -118,6 +118,7 @@ async function fixture({ failLoad = false, failSave = false, delay = 0 } = {}) {
     { failLoad, failSave, delay },
   );
   await page.goto(`${base}#/settings`);
+  await page.getByRole("tab", { name: "网络与代理", exact: true }).click();
   const panel = page.getByRole("region", { name: "网络与代理", exact: true });
   await panel.waitFor();
   return { page, panel, errors };
@@ -156,6 +157,7 @@ try {
     await panel.screenshot({ path: "/tmp/savebeam-network-proxy-settings.png" });
     await page.getByRole("link", { name: "下载", exact: true }).click();
     await page.getByRole("link", { name: "设置", exact: true }).click();
+    await page.getByRole("tab", { name: "网络与代理", exact: true }).click();
     await page.getByRole("textbox", { name: "代理地址", exact: true }).waitFor();
     assert.equal(
       await page.getByRole("textbox", { name: "代理地址", exact: true }).inputValue(),
