@@ -15,6 +15,15 @@ const extensions = (values: string[], preferred: string) => [
   ...values.map((value) => ({ value, label: value })),
 ];
 
+// Selected options reserve room for a checkmark in addition to their full label.
+const qualitySelectPresentation = {
+  comboboxProps: { withinPortal: true },
+  styles: {
+    dropdown: { minWidth: 260, maxWidth: "calc(100vw - 24px)" },
+    option: { whiteSpace: "nowrap" as const },
+  },
+};
+
 export function PlaylistQualityFields({
   value,
   onChange,
@@ -60,8 +69,9 @@ export function PlaylistQualityFields({
             恢复默认
           </Button>
         </Group>
-        <SimpleGrid cols={2} spacing="sm">
+        <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
           <Select
+            {...qualitySelectPresentation}
             label="分辨率"
             data={numbers([4320, 2160, 1440, 1080, 720, 480, 360, 240, 144], "p")}
             value={String(value.resolutionHeight ?? "best")}
@@ -70,6 +80,7 @@ export function PlaylistQualityFields({
             disabled={disabled || audioOnly}
           />
           <Select
+            {...qualitySelectPresentation}
             label="帧率（FPS）"
             data={numbers([240, 144, 120, 100, 90, 60, 50, 48, 30, 25, 24, 15], " fps")}
             value={String(value.frameRate ?? "best")}
@@ -78,6 +89,7 @@ export function PlaylistQualityFields({
             disabled={disabled || audioOnly}
           />
           <Select
+            {...qualitySelectPresentation}
             label="视频格式"
             data={extensions(["mp4", "webm", "mkv", "mov", "flv", "ts", "m4v"], "MP4")}
             value={value.videoExtension ?? "auto"}
@@ -86,6 +98,7 @@ export function PlaylistQualityFields({
             disabled={disabled || audioOnly}
           />
           <Select
+            {...qualitySelectPresentation}
             label="视频编码"
             data={[
               automatic("HEVC"),
@@ -125,8 +138,9 @@ export function PlaylistQualityFields({
             恢复默认
           </Button>
         </Group>
-        <SimpleGrid cols={2} spacing="sm">
+        <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
           <Select
+            {...qualitySelectPresentation}
             label="音频格式"
             data={extensions(
               ["m4a", "webm", "mp3", "ogg", "opus", "flac", "wav", "mp4", "aac"],
@@ -138,6 +152,7 @@ export function PlaylistQualityFields({
             disabled={disabled}
           />
           <Select
+            {...qualitySelectPresentation}
             label="音频编码"
             data={[
               automatic("AAC"),
@@ -151,6 +166,7 @@ export function PlaylistQualityFields({
             disabled={disabled}
           />
           <Select
+            {...qualitySelectPresentation}
             label="音频码率"
             data={[
               best,

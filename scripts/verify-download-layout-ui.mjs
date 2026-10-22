@@ -1,5 +1,5 @@
 // Fixture-only UI regression. No website, media downloads, or Cookie access.
-/* global window, structuredClone */
+/* global window, structuredClone, document, NodeFilter */
 // node scripts/verify-download-layout-ui.mjs <playwright/index.mjs> [baseURL]
 import assert from "node:assert/strict";
 import process from "node:process";
@@ -87,6 +87,8 @@ async function assertAlignedPanels(page, width, seriesMode) {
       .boundingBox();
     assert.ok(quality.y >= source.y + source.height + 12, "Policy sits below natural-height media");
     if (width >= 1200) {
+      assert.ok(quality.width >= 479, "Series policy reserves at least 480px in dual-column mode");
+      assert.ok(series.width >= 339, "The list keeps its 340px minimum");
       assert.ok(Math.abs(series.y - source.y) <= 1, "List top aligns with media top");
       assert.ok(
         Math.abs(series.y + series.height - quality.y - quality.height) <= 1,
@@ -105,6 +107,54 @@ async function assertAlignedPanels(page, width, seriesMode) {
     Math.abs(button.x + button.width - edge.x - edge.width) <= 1,
     `Start aligns with the outer content right edge: ${JSON.stringify({ width, button, edge })}`,
   );
+}
+
+async function assertQualityMenus(page, region, width) {
+  for (const [label, preferred] of [
+    ["视频格式", "MP4"],
+    ["视频编码", "HEVC"],
+    ["音频格式", "M4A"],
+    ["音频编码", "AAC"],
+  ]) {
+    const select = region.getByRole("combobox", { name: label, exact: true });
+    await select.click();
+    const option = page.getByRole("option", { name: `自动推荐（优先 ${preferred}）`, exact: true });
+    const measurement = await option.evaluate((element) => {
+      const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+      const tops = [];
+      while (walker.nextNode()) {
+        if (!walker.currentNode.textContent.trim()) continue;
+        const range = document.createRange();
+        range.selectNodeContents(walker.currentNode);
+        for (const rect of range.getClientRects())
+          if (rect.width > 0) tops.push(Math.round(rect.top));
+      }
+      const dropdown = element.closest("[data-position]") ?? element.closest('[role="listbox"]');
+      const rect = dropdown.getBoundingClientRect();
+      return {
+        lines: new Set(tops).size,
+        scroll: element.scrollWidth,
+        client: element.clientWidth,
+        x: rect.x,
+        right: rect.right,
+        width: rect.width,
+      };
+    });
+    assert.equal(
+      measurement.lines,
+      1,
+      `${label} recommendation must stay on one line: ${JSON.stringify(measurement)}`,
+    );
+    assert.ok(
+      measurement.scroll <= measurement.client + 1,
+      "Full option labels must not be clipped",
+    );
+    assert.ok(
+      measurement.x >= 0 && measurement.right <= width + 1,
+      "Dropdown stays within the viewport",
+    );
+    await select.press("Escape");
+  }
 }
 
 try {
@@ -358,6 +408,29 @@ try {
         .evaluate((element) => ({ scroll: element.scrollWidth, client: element.clientWidth }));
       assert.ok(overflow.scroll <= overflow.client + 1, JSON.stringify({ width, overflow }));
       await assertAlignedPanels(page, width, mode === "series");
+      if (mode === "series" && [1600, 1280, 1200, 560].includes(width)) {
+        await assertQualityMenus(
+          page,
+          page.getByRole("region", { name: "系列画质策略", exact: true }),
+          width,
+        );
+        if (width === 1280) {
+          const policy = page.getByRole("region", { name: "系列画质策略", exact: true });
+          await policy.getByRole("combobox", { name: "视频编码", exact: true }).click();
+          await page.screenshot({ path: "/tmp/savebeam-quality-menu-1280.png" });
+          await policy.getByRole("combobox", { name: "视频编码", exact: true }).press("Escape");
+          for (const platform of ["macOS", "Windows", "Linux"]) {
+            await page.getByText(platform, { exact: true }).click();
+            await assertAlignedPanels(page, width, true);
+            await assertQualityMenus(page, policy, width);
+          }
+          await page.getByText("自动", { exact: true }).click();
+          await page.getByRole("button", { name: "第 1 项单独设置", exact: true }).click();
+          const modal = page.getByRole("dialog", { name: "第 1 项 · 单独画质设置", exact: true });
+          await assertQualityMenus(page, modal, width);
+          await modal.getByRole("button", { name: "取消", exact: true }).click();
+        }
+      }
       if (mode === "single") {
         await page.getByRole("checkbox", { name: "手动选择音频", exact: true }).check();
         await page.getByRole("combobox", { name: "音频轨道", exact: true }).waitFor();

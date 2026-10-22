@@ -217,7 +217,7 @@ body {
 
 @media (min-width: 1200px) {
   .download-workbench--series {
-    grid-template-columns: minmax(0, 0.9fr) minmax(340px, 1.1fr);
+    grid-template-columns: minmax(480px, 0.9fr) minmax(340px, 1.1fr);
     grid-template-areas: "media list" "quality list" "actions actions";
     grid-template-rows: auto auto auto;
   }
