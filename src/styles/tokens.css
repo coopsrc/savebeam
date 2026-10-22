@@ -390,37 +390,13 @@ body {
 }
 
 .sidebar-link[data-active] {
+  border-radius: 10px;
   color: var(--sb-color-text);
   background: var(--sb-color-accent-soft);
 }
 
 .sidebar-link[data-active] .mantine-NavLink-section {
   color: var(--sb-color-accent);
-}
-
-.app-root[data-platform="macos"] .sidebar-link[data-active] {
-  border-radius: 10px;
-}
-
-.app-root[data-platform="windows"] .sidebar-link[data-active] {
-  border-radius: 4px;
-  background: transparent;
-}
-
-.app-root[data-platform="linux"] .sidebar-link[data-active] {
-  border-radius: 8px;
-  background: rgb(100 100 106 / 10%);
-}
-
-.app-root[data-selection-style="accent-indicator"] .sidebar-link[data-active]::before {
-  position: absolute;
-  top: 7px;
-  bottom: 7px;
-  left: -12px;
-  width: 3px;
-  border-radius: 0 3px 3px 0;
-  background: var(--sb-color-accent);
-  content: "";
 }
 
 .app-workspace {
@@ -550,10 +526,6 @@ body {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   clip-path: inset(50%);
-}
-
-.is-compact .sidebar-link[data-active]::before {
-  left: -7px;
 }
 
 @media (prefers-reduced-motion: reduce) {

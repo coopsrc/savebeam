@@ -254,7 +254,7 @@ macOS 参考 SwiftUI `NavigationSplitView`：
 Windows 参考 WinUI 3 `NavigationView`：
 
 - Sidebar 建议宽度 `232px`，导航项高度约 `42px`。
-- 选中项使用 Fluent 风格填充和左侧强调线。
+- 选中项与 macOS 统一使用 10px 圆角和浅色强调底，不再使用左侧强调线；仅统一选中表现，仍保留 Windows 字体、导航尺寸与快捷键。
 - 字体使用 `Segoe UI Variable`、`Segoe UI` 系统字体栈。
 - 提示、确认和状态分别参考 `InfoBar`、`ContentDialog`、`ProgressBar` 的交互语义。
 - 文件操作文案使用“在文件资源管理器中显示”。
@@ -263,6 +263,7 @@ Windows 参考 WinUI 3 `NavigationView`：
 Linux 使用中性桌面风格：
 
 - 保持同一侧栏与内容布局。
+- 导航选中项同样使用 macOS 风格圆角浅色底，图标强调色、文字可读性随明暗主题变化。
 - 使用系统字体和普通不透明背景。
 - 不默认模拟 Mica 或 macOS 毛玻璃。
 - 文件操作文案使用“在文件管理器中显示”。

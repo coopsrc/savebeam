@@ -8,7 +8,7 @@ export interface PlatformProfile {
   sidebarWidth: number;
   compactSidebarWidth: number;
   navigationItemHeight: number;
-  selectionStyle: "rounded-fill" | "accent-indicator" | "neutral-fill";
+  selectionStyle: "rounded-fill";
   systemFont: string;
   revealFileLabel: string;
   modifierKey: "Meta" | "Control";
@@ -32,7 +32,7 @@ const profiles: Record<PlatformKind, PlatformProfile> = {
     sidebarWidth: 232,
     compactSidebarWidth: 56,
     navigationItemHeight: 42,
-    selectionStyle: "accent-indicator",
+    selectionStyle: "rounded-fill",
     systemFont: '"Segoe UI Variable", "Segoe UI", sans-serif',
     revealFileLabel: "在文件资源管理器中显示",
     modifierKey: "Control",
@@ -43,7 +43,7 @@ const profiles: Record<PlatformKind, PlatformProfile> = {
     sidebarWidth: 224,
     compactSidebarWidth: 56,
     navigationItemHeight: 40,
-    selectionStyle: "neutral-fill",
+    selectionStyle: "rounded-fill",
     systemFont: 'system-ui, "Noto Sans", sans-serif',
     revealFileLabel: "在文件管理器中显示",
     modifierKey: "Control",
