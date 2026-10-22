@@ -151,8 +151,15 @@ async function fixture(scenario) {
             keepIntermediateFiles: false,
           };
         if (command === "inspect_media") {
+          if (scenario === "pending")
+            await new Promise((resolve) => window.setTimeout(resolve, 350));
+          state.inspected = true;
           const count =
-            scenario === "stop" || (scenario === "stale" && args.url.endsWith("old")) ? 7 : 3;
+            scenario === "retention"
+              ? 17
+              : scenario === "stop" || (scenario === "stale" && args.url.endsWith("old"))
+                ? 7
+                : 3;
           return {
             id: "series",
             title: "系列测试",
@@ -254,8 +261,22 @@ async function confirmed(page, count) {
   await page.getByRole("checkbox", { name: `我确认下载匹配的 ${count} 项`, exact: true }).check();
 }
 try {
-  for (const scenario of ["profiles", "skips", "read-error", "stop", "stale"]) {
+  for (const scenario of [
+    "profiles",
+    "skips",
+    "read-error",
+    "stop",
+    "stale",
+    "pending",
+    "retention",
+  ]) {
     const { page, errors } = await fixture(scenario);
+    if (scenario === "pending") {
+      await page.getByRole("link", { name: "任务", exact: true }).click();
+      await page.waitForFunction(() => window.qualityFixture.inspected);
+      assert.equal(await page.getByRole("textbox", { name: "视频链接", exact: true }).count(), 0);
+      await page.getByRole("link", { name: "下载", exact: true }).click();
+    }
     const policy = page.getByRole("region", { name: "系列画质策略", exact: true });
     await policy.waitFor();
     for (const [label, preferred] of [
@@ -300,10 +321,110 @@ try {
         .fill("https://example.invalid/new");
       await page.getByRole("button", { name: "解析视频信息", exact: true }).click();
     }
-    const count = scenario === "stop" ? 7 : 3;
+    const count = scenario === "retention" ? 17 : scenario === "stop" ? 7 : 3;
     await confirmed(page, count);
     await page.getByRole("checkbox", { name: /第 1 项 · 真实标题/ }).waitFor();
     assert.equal(await page.getByText(/旧标题/).count(), 0);
+    if (scenario === "pending") {
+      assert.equal(
+        await page.evaluate(
+          () =>
+            window.qualityFixture.calls.filter((call) => call.command === "inspect_media").length,
+        ),
+        1,
+      );
+    }
+    if (scenario === "retention") {
+      await choose(page, policy, "视频编码", "H.264 / AVC");
+      await page.getByRole("button", { name: "第 1 项单独设置", exact: true }).click();
+      const dialog = page.getByRole("dialog", { name: "第 1 项 · 单独画质设置", exact: true });
+      await choose(page, dialog, "分辨率", "720p");
+      await choose(page, dialog, "帧率（FPS）", "30 fps");
+      await dialog.getByRole("button", { name: "应用", exact: true }).click();
+      await page.getByRole("checkbox", { name: /第 2 项 · 真实标题/ }).uncheck();
+      await confirmed(page, 16);
+      await page.getByRole("button", { name: "高级设置", exact: true }).click();
+      const advanced = page.getByRole("dialog", { name: "高级设置", exact: true });
+      await advanced.getByRole("checkbox", { name: "保留中间文件", exact: true }).check();
+      await advanced.getByRole("button", { name: "应用到本次下载", exact: true }).click();
+      await confirmed(page, 16);
+      await page.getByRole("button", { name: "开始下载", exact: true }).scrollIntoViewIfNeeded();
+      await page.locator(".download-playlist-list").evaluate((element) => {
+        element.scrollTop = 160;
+      });
+      await page.waitForFunction(
+        () => window.document.querySelector(".page-content").scrollTop > 0,
+      );
+      const before = await page.evaluate(() => ({
+        top: window.document.querySelector(".page-content").scrollTop,
+        listTop: window.document.querySelector(".download-playlist-list").scrollTop,
+        calls: window.qualityFixture.calls.filter((call) =>
+          ["inspect_media", "inspect_playlist_entries", "match_playlist_quality"].includes(
+            call.command,
+          ),
+        ).length,
+      }));
+      for (const route of ["任务", "历史", "设置", "订阅"]) {
+        await page.getByRole("link", { name: route, exact: true }).click();
+        await page.getByRole("link", { name: "下载", exact: true }).click();
+        assert.equal(
+          await page.getByRole("combobox", { name: "视频编码", exact: true }).inputValue(),
+          "H.264 / AVC",
+        );
+        assert.equal(
+          await page.getByRole("checkbox", { name: /第 2 项 · 真实标题/ }).isChecked(),
+          false,
+        );
+        assert.equal(
+          await page
+            .getByRole("checkbox", { name: "我确认下载匹配的 16 项", exact: true })
+            .isChecked(),
+          true,
+        );
+        const scroll = await page.evaluate(() => ({
+          top: window.document.querySelector(".page-content").scrollTop,
+          listTop: window.document.querySelector(".download-playlist-list").scrollTop,
+        }));
+        assert.ok(
+          Math.abs(scroll.top - before.top) <= 1,
+          "Download page scroll position is restored",
+        );
+        assert.equal(
+          scroll.listTop,
+          before.listTop,
+          "Series inner scroll position survives navigation",
+        );
+      }
+      assert.equal(
+        await page.evaluate(
+          () =>
+            window.qualityFixture.calls.filter((call) =>
+              ["inspect_media", "inspect_playlist_entries", "match_playlist_quality"].includes(
+                call.command,
+              ),
+            ).length,
+        ),
+        before.calls,
+        "returning uses the same details and matching cache",
+      );
+      await page.screenshot({ path: "/tmp/savebeam-download-draft-restored.png" });
+      await page.getByRole("button", { name: "开始下载", exact: true }).click();
+      await page.waitForURL(/#\/tasks$/);
+      const queued = await page.evaluate(() => window.qualityFixture.queued);
+      assert.equal(queued.length, 16);
+      assert.equal(queued[0].formatId, "v720+a256");
+      assert.equal(queued[0].policy.frameRate, 30);
+      assert.equal(queued[0].options.keepIntermediateFiles, true);
+      assert.equal(
+        queued.some((row) => row.index === 2),
+        false,
+      );
+      await page.getByRole("link", { name: "下载", exact: true }).click();
+      assert.equal(
+        await page.getByRole("textbox", { name: "视频链接", exact: true }).inputValue(),
+        "",
+      );
+    }
     if (scenario === "profiles" || scenario === "skips") {
       const calls = await page.evaluate(
         () =>

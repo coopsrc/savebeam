@@ -1,7 +1,7 @@
 import { useMediaQuery } from "@mantine/hooks";
 import { IconDeviceDesktop } from "@tabler/icons-react";
 import { isTauri } from "@tauri-apps/api/core";
-import { useEffect } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { usePlatformProfile } from "../app/platform/profile";
 import { Sidebar } from "./Sidebar";
@@ -9,6 +9,8 @@ import { IPC_EVENTS, listenToEvent } from "../ipc/events";
 import type { AppError, DownloadProgress, DownloadResult, DownloadTask } from "../types/domain";
 import { useAppStore } from "../stores/appStore";
 import { invokeCommand } from "../ipc/client";
+import { DownloadPage } from "../features/download/DownloadPage";
+import { resolveDownloadSession } from "../features/download/downloadSession";
 
 const routeTitles: Record<string, string> = {
   "/download": "下载",
@@ -19,13 +21,29 @@ const routeTitles: Record<string, string> = {
 };
 
 export function AppShell() {
-  const { pathname } = useLocation();
+  const location = useLocation();
+  const { pathname } = location;
   const navigate = useNavigate();
   const profile = usePlatformProfile();
   const compact = useMediaQuery("(max-width: 959px)", false, {
     getInitialValueInEffect: false,
   });
   const title = routeTitles[pathname] ?? "下载";
+  const downloadVisible = pathname === "/download";
+  const [downloadSession, setDownloadSession] = useState(() =>
+    resolveDownloadSession(null, location),
+  );
+  const session = resolveDownloadSession(downloadSession, location);
+  // A bounded render-time adjustment keeps session identity consistent with this route commit.
+  if (session !== downloadSession) setDownloadSession(session);
+  const content = useRef<HTMLElement>(null);
+  const downloadScroll = useRef<{ identity: object; top: number } | null>(null);
+  const sessionIdentity = session?.identity;
+  useLayoutEffect(() => {
+    if (!downloadVisible || !sessionIdentity || !content.current) return;
+    content.current.scrollTop =
+      downloadScroll.current?.identity === sessionIdentity ? downloadScroll.current.top : 0;
+  }, [downloadVisible, sessionIdentity]);
 
   useEffect(() => {
     function handleShortcut(event: KeyboardEvent) {
@@ -130,12 +148,39 @@ export function AppShell() {
           </div>
         </header>
         <section
+          ref={content}
           id="main-content"
           className="page-content"
           aria-label={`${title}页面`}
           tabIndex={-1}
+          onScroll={(event) => {
+            if (downloadVisible && session)
+              downloadScroll.current = {
+                identity: session.identity,
+                top: event.currentTarget.scrollTop,
+              };
+          }}
         >
-          <Outlet />
+          {session && (
+            <DownloadPage
+              key={session.key}
+              initialUrl={session.initialUrl}
+              active={downloadVisible}
+              onDraftTouched={() =>
+                setDownloadSession((current) =>
+                  current?.identity === session.identity && !current.retained
+                    ? { ...current, retained: true }
+                    : current,
+                )
+              }
+              onQueued={() =>
+                setDownloadSession((current) =>
+                  current?.identity === session.identity ? { ...current, consumed: true } : current,
+                )
+              }
+            />
+          )}
+          {!downloadVisible && <Outlet />}
         </section>
         <footer className="status-bar" aria-label="应用状态">
           <span className="status-indicator" aria-hidden="true" />

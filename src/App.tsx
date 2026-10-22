@@ -16,7 +16,6 @@ import { IconDownload } from "@tabler/icons-react";
 import { usePlatformProfile } from "./app/platform/profile";
 import { EmptyState } from "./components/states/AppStates";
 import { AppShell } from "./layout/AppShell";
-import { DownloadPage } from "./features/download/DownloadPage";
 import { useNavigate } from "react-router-dom";
 import { useAppStore } from "./stores/appStore";
 import { ComponentsSettings } from "./features/settings/ComponentsSettings";
@@ -272,7 +271,7 @@ function App() {
     <Routes>
       <Route element={<AppShell />}>
         <Route path="/" element={<Navigate to="/download" replace />} />
-        <Route path="/download" element={<DownloadPage />} />
+        <Route path="/download" element={null} />
         <Route path="/tasks" element={<FoundationPage />} />
         <Route path="/history" element={<FoundationPage />} />
         <Route path="/subscriptions" element={<SubscriptionsPage />} />

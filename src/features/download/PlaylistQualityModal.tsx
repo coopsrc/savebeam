@@ -10,6 +10,7 @@ export function PlaylistQualityModal({
   onApply,
   onInherit,
   onClose,
+  opened = true,
 }: {
   index: number;
   value: PlaylistQuality;
@@ -17,10 +18,18 @@ export function PlaylistQualityModal({
   onApply: (value: PlaylistQuality) => void;
   onInherit: () => void;
   onClose: () => void;
+  opened?: boolean;
 }) {
   const [draft, setDraft] = useState({ ...value });
   return (
-    <Modal opened onClose={onClose} title={`第 ${index} 项 · 单独画质设置`} size="lg" centered>
+    <Modal
+      opened={opened}
+      returnFocus={opened}
+      onClose={onClose}
+      title={`第 ${index} 项 · 单独画质设置`}
+      size="lg"
+      centered
+    >
       <Stack gap="md">
         <Text size="sm" c="dimmed">
           仅覆盖这一项，其余条目仍使用统一策略。

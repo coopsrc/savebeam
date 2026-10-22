@@ -14,6 +14,7 @@ export function DownloadOptionsModal({
   audioOnlyRequired = false,
   subtitleTracks,
   subtitleScope,
+  opened = true,
 }: {
   value: DownloadOptionDefaults;
   onApply: (value: DownloadOptionDefaults) => void;
@@ -21,6 +22,7 @@ export function DownloadOptionsModal({
   audioOnlyRequired?: boolean;
   subtitleTracks?: SubtitleTrack[];
   subtitleScope?: SubtitleScope;
+  opened?: boolean;
 }) {
   const [draft, setDraft] = useState(() => copyDownloadOptions(value));
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +40,14 @@ export function DownloadOptionsModal({
     }
   }
   return (
-    <Modal opened onClose={onClose} title="高级设置" size="lg" centered>
+    <Modal
+      opened={opened}
+      returnFocus={opened}
+      onClose={onClose}
+      title="高级设置"
+      size="lg"
+      centered
+    >
       <Stack gap="md">
         <Text size="sm" c="dimmed">
           仅调整本次下载，不修改全局默认。创建任务后会保存此配置，排队、重启恢复及重试均保持不变。

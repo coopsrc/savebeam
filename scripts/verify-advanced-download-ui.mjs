@@ -47,6 +47,20 @@ async function fixture(mode, width = 1280) {
               throw { code: "unknown", message: "默认配置读取失败", retryable: true };
             return structuredClone(state.defaults);
           }
+          if (command === "get_download_tasks")
+            return mode === "reparse"
+              ? [
+                  {
+                    id: "old-task",
+                    url: "https://example.invalid/new-source?part=2&v=a#chapter",
+                    title: "Old source",
+                    formatId: "video+audio",
+                    status: "completed",
+                    createdAtUnixMs: 1,
+                  },
+                ]
+              : [];
+          if (command === "get_download_history_record") return null;
           if (command === "save_download_option_defaults") {
             await new Promise((resolve) => window.setTimeout(resolve, state.delay));
             if (state.failSave)
@@ -92,7 +106,12 @@ async function fixture(mode, width = 1280) {
               ],
               playlist: null,
             };
-          if (command === "start_download")
+          if (command === "start_download") {
+            if (state.holdQueue)
+              await new Promise((resolve) => {
+                state.releaseQueue = resolve;
+              });
+            state.queueReturned = true;
             return {
               id: "option-task",
               title: args.options.title,
@@ -101,6 +120,7 @@ async function fixture(mode, width = 1280) {
               status: "queued",
               createdAtUnixMs: 1,
             };
+          }
           if (command === "get_cookie_preferences")
             return { cookiesFilePath: null, cookiesBrowser: null, accessConfirmed: false };
           if (command === "get_download_preferences")
@@ -137,6 +157,25 @@ try {
         window.optionFixture.failLoad = false;
       });
       await page.getByRole("button", { name: "重新读取下载选项", exact: true }).click();
+    }
+    if (mode === "single") {
+      await page.getByRole("checkbox", { name: "使用代理", exact: true }).check();
+      await page.getByRole("link", { name: "任务", exact: true }).click();
+      await page.getByRole("heading", { level: 1, name: "任务", exact: true }).waitFor();
+      assert.equal(
+        await page.getByRole("textbox", { name: "视频链接", exact: true }).count(),
+        0,
+        "inactive draft is not accessible",
+      );
+      await page.getByRole("link", { name: "下载", exact: true }).click();
+      assert.equal(
+        await page.getByRole("textbox", { name: "视频链接", exact: true }).inputValue(),
+        "https://example.invalid/video",
+      );
+      assert.equal(
+        await page.getByRole("checkbox", { name: "使用代理", exact: true }).isChecked(),
+        true,
+      );
     }
     await parse.click();
     const advanced = page.getByRole("button", { name: "高级设置", exact: true });
@@ -277,8 +316,72 @@ try {
     await dialog
       .getByRole("button", { name: mode === "load-error" ? "应用到本次下载" : "取消", exact: true })
       .click();
+    if (mode === "single") {
+      await page.getByRole("checkbox", { name: "手动选择音频", exact: true }).check();
+      const before = await page.evaluate(
+        () => window.optionFixture.calls.filter((call) => call.command === "inspect_media").length,
+      );
+      for (const route of ["任务", "历史", "订阅", "设置"]) {
+        await page.getByRole("link", { name: route, exact: true }).click();
+        await page.getByRole("heading", { level: 1, name: route, exact: true }).waitFor();
+        assert.equal(await page.getByRole("textbox", { name: "视频链接", exact: true }).count(), 0);
+        await page.getByRole("link", { name: "下载", exact: true }).click();
+        await page.getByRole("region", { name: "媒体与格式", exact: true }).waitFor();
+        assert.equal(
+          await page.getByRole("checkbox", { name: "手动选择音频", exact: true }).isChecked(),
+          true,
+        );
+      }
+      assert.equal(
+        await page.evaluate(
+          () =>
+            window.optionFixture.calls.filter((call) => call.command === "inspect_media").length,
+        ),
+        before,
+        "navigation must not re-inspect media",
+      );
+      await page.locator(".dev-platform-switcher").getByText("macOS", { exact: true }).click();
+      await advanced.click();
+      dialog = page.getByRole("dialog", { name: "高级设置", exact: true });
+      assert.equal(
+        await dialog.getByRole("checkbox", { name: "另存媒体信息 JSON", exact: true }).isChecked(),
+        true,
+        "new global defaults do not replace the draft",
+      );
+      await dialog.getByRole("checkbox", { name: "另存媒体信息 JSON", exact: true }).uncheck();
+      await dialog.getByRole("button", { name: "取消", exact: true }).focus();
+      await page.keyboard.press("Meta+2");
+      await page.waitForURL(/#\/tasks$/);
+      await dialog.waitFor({ state: "hidden" });
+      await page.getByRole("link", { name: "下载", exact: true }).click();
+      await dialog.waitFor();
+      assert.equal(
+        await dialog.getByRole("checkbox", { name: "另存媒体信息 JSON", exact: true }).isChecked(),
+        false,
+        "unapplied modal draft resumes with the workspace",
+      );
+      await dialog.getByRole("button", { name: "取消", exact: true }).click();
+      await page.evaluate(() => {
+        window.optionFixture.holdQueue = true;
+      });
+    }
     await page.getByRole("button", { name: "开始下载", exact: true }).click();
-    await page.waitForURL(/#\/tasks$/);
+    if (mode === "single") {
+      await page.getByRole("link", { name: "历史", exact: true }).click();
+      await page.evaluate(() => window.optionFixture.releaseQueue());
+      await page.waitForFunction(() => window.optionFixture.queueReturned === true);
+      await page.locator(".download-page").waitFor({ state: "detached" });
+      assert.match(page.url(), /#\/history$/, "background submission must not steal navigation");
+      await page.getByRole("link", { name: "任务", exact: true }).click();
+      await page.getByRole("region", { name: "任务：高级设置回归视频", exact: true }).waitFor();
+      await page.getByRole("link", { name: "下载", exact: true }).click();
+      assert.equal(
+        await page.getByRole("textbox", { name: "视频链接", exact: true }).inputValue(),
+        "",
+        "successful submission consumes the draft",
+      );
+      assert.equal(await page.getByRole("region", { name: "媒体与格式", exact: true }).count(), 0);
+    } else await page.waitForURL(/#\/tasks$/);
     const snapshot = await page.evaluate(
       () =>
         window.optionFixture.calls.find((item) => item.command === "start_download").args.options,
@@ -423,6 +526,45 @@ try {
   await recovery.page.close();
   process.stdout.write(
     "settings: unreadable defaults require explicit reset and save, never silent replacement passed\n",
+  );
+  const reparse = await fixture("reparse");
+  await reparse.page.goto(`${base}#/download`);
+  await reparse.page
+    .getByRole("textbox", { name: "视频链接", exact: true })
+    .fill("https://example.invalid/unfinished");
+  await reparse.page.getByRole("button", { name: "解析视频信息", exact: true }).click();
+  await reparse.page.getByRole("region", { name: "媒体与格式", exact: true }).waitFor();
+  await reparse.page.getByRole("link", { name: "任务", exact: true }).click();
+  await reparse.page.getByRole("button", { name: "重新解析", exact: true }).click();
+  await reparse.page.getByRole("heading", { level: 1, name: "下载", exact: true }).waitFor();
+  assert.equal(
+    await reparse.page.getByRole("textbox", { name: "视频链接", exact: true }).inputValue(),
+    "https://example.invalid/new-source?part=2&v=a#chapter",
+  );
+  assert.equal(
+    await reparse.page.getByRole("region", { name: "媒体与格式", exact: true }).count(),
+    0,
+    "new source does not inherit old media",
+  );
+  await reparse.page.getByRole("link", { name: "历史", exact: true }).click();
+  await reparse.page.getByRole("heading", { level: 1, name: "历史", exact: true }).waitFor();
+  await reparse.page.getByRole("link", { name: "下载", exact: true }).click();
+  await reparse.page.getByRole("heading", { level: 1, name: "下载", exact: true }).waitFor();
+  assert.equal(
+    await reparse.page.getByRole("textbox", { name: "视频链接", exact: true }).inputValue(),
+    "https://example.invalid/new-source?part=2&v=a#chapter",
+  );
+  assert.equal(
+    await reparse.page.evaluate(
+      () => window.optionFixture.calls.filter((call) => call.command === "inspect_media").length,
+    ),
+    1,
+    "prefill does not start parsing by itself",
+  );
+  assert.deepEqual(reparse.errors, []);
+  await reparse.page.close();
+  process.stdout.write(
+    "draft: sidebar retention, hidden UI, modal resume, consumed submission and explicit source replacement passed\n",
   );
 } finally {
   await browser.close();

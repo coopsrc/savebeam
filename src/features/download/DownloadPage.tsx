@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent } from "react";
+import { useLayoutEffect, useRef, useState, type FormEvent } from "react";
 import {
   Alert,
   Button,
@@ -21,7 +21,7 @@ import type {
   PlaylistQuality,
   QueuedPlaylistTasks,
 } from "../../types/domain";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { invokeCommand } from "../../ipc/client";
 import { useAppStore } from "../../stores/appStore";
 import { inspectMedia } from "./mediaApi";
@@ -45,9 +45,25 @@ import {
   videoFormats,
 } from "./formatSelection";
 
-export function DownloadPage() {
-  const location = useLocation();
-  const [url, setUrl] = useState(() => new URLSearchParams(location.search).get("url") ?? "");
+export function DownloadPage({
+  initialUrl,
+  active,
+  onDraftTouched,
+  onQueued,
+}: {
+  initialUrl: string;
+  active: boolean;
+  onDraftTouched: () => void;
+  onQueued: () => void;
+}) {
+  const [url, setUrl] = useState(initialUrl);
+  const activePage = useRef(active);
+  useLayoutEffect(() => {
+    activePage.current = active;
+    return () => {
+      activePage.current = false;
+    };
+  }, [active]);
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [useProxy, setUseProxy] = useState(false);
   const [isInspecting, setIsInspecting] = useState(false);
@@ -83,6 +99,7 @@ export function DownloadPage() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    onDraftTouched();
     setHasSubmitted(true);
     setRequestError(null);
     setMediaInfo(null);
@@ -123,6 +140,7 @@ export function DownloadPage() {
   }
 
   function handleChange(value: string) {
+    onDraftTouched();
     sizeEpoch.current++;
     setQualityOverrides({});
     setQueuedNotice(null);
@@ -145,6 +163,8 @@ export function DownloadPage() {
       return;
     setRequestError(null);
     setIsStartingDownload(true);
+    // Router transitions may update the URL before this page's active prop commits.
+    const originLocation = window.location.href;
     const options: DownloadOptions = {
       title: mediaInfo.title,
       url: mediaInfo.webpageUrl,
@@ -181,12 +201,16 @@ export function DownloadPage() {
             `已加入 ${result.tasks.length} 项；${result.skipped.length} 项未匹配，未重复加入已排队条目。`,
           );
           if (result.error) setRequestError(result.error);
-        } else navigate("/tasks");
+        } else {
+          onQueued();
+          if (activePage.current && window.location.href === originLocation) navigate("/tasks");
+        }
         return;
       }
       const task = await invokeCommand<DownloadTask>("start_download", { options });
       upsertDownloadTask(task);
-      navigate("/tasks");
+      onQueued();
+      if (activePage.current && window.location.href === originLocation) navigate("/tasks");
     } catch (error: unknown) {
       setRequestError(error instanceof IpcError ? error.contextMessage : "无法创建下载任务。");
     } finally {
@@ -254,7 +278,11 @@ export function DownloadPage() {
     ? Object.values(series.details).flatMap((item) => item.subtitles ?? [])
     : (mediaInfo?.subtitles ?? []);
   return (
-    <main className="download-page">
+    <main
+      className="download-page"
+      hidden={!active}
+      style={active ? undefined : { display: "none" }}
+    >
       <Paper
         className={`download-card${mediaInfo?.playlist ? " download-card--series" : ""}`}
         shadow="sm"
@@ -721,6 +749,7 @@ export function DownloadPage() {
       </Paper>
       {advancedOpen && (
         <DownloadOptionsModal
+          opened={active}
           value={advancedOptions}
           subtitleTracks={subtitleTracks}
           subtitleScope={mediaInfo?.playlist ? "series" : "video"}
@@ -740,6 +769,7 @@ export function DownloadPage() {
       )}
       {editingQuality !== null && (
         <PlaylistQualityModal
+          opened={active}
           index={editingQuality}
           value={qualityOverrides[editingQuality] ?? quality}
           audioOnly={audioOnly}

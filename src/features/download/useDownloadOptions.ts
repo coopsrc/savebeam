@@ -19,7 +19,7 @@ export function optionError(error: unknown) {
       : "下载选项操作失败，请重试。";
 }
 
-/** Load once per new page; user edits are not overwritten by background preference updates. */
+/** Load once per new draft/settings page; navigation back to a retained draft never reloads it. */
 export function useDownloadOptions() {
   const [options, setOptions] = useState(() => copyDownloadOptions(INITIAL_DOWNLOAD_OPTIONS));
   const [loading, setLoading] = useState(true);
