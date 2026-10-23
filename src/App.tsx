@@ -18,7 +18,6 @@ import { EmptyState } from "./components/states/AppStates";
 import { AppShell } from "./layout/AppShell";
 import { useNavigate } from "react-router-dom";
 import { useAppStore } from "./stores/appStore";
-import { SettingsPage } from "./features/settings/SettingsPage";
 import { HistoryPage } from "./features/history/HistoryPage";
 import { SubscriptionsPage } from "./features/subscriptions/SubscriptionsPage";
 import { CompletedTaskActions } from "./features/tasks/CompletedTaskActions";
@@ -64,10 +63,6 @@ function FoundationPage() {
     } finally {
       setBusyTaskId(null);
     }
-  }
-
-  if (location.pathname === "/settings") {
-    return <SettingsPage />;
   }
 
   if (location.pathname === "/history") {
@@ -275,7 +270,7 @@ function App() {
         <Route path="/tasks" element={<FoundationPage />} />
         <Route path="/history" element={<FoundationPage />} />
         <Route path="/subscriptions" element={<SubscriptionsPage />} />
-        <Route path="/settings" element={<FoundationPage />} />
+        <Route path="/settings" element={null} />
         <Route path="*" element={<Navigate to="/download" replace />} />
       </Route>
     </Routes>

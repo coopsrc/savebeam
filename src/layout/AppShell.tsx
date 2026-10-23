@@ -11,6 +11,7 @@ import { useAppStore } from "../stores/appStore";
 import { invokeCommand } from "../ipc/client";
 import { DownloadPage } from "../features/download/DownloadPage";
 import { resolveDownloadSession } from "../features/download/downloadSession";
+import { SettingsPage } from "../features/settings/SettingsPage";
 
 const routeTitles: Record<string, string> = {
   "/download": "下载",
@@ -30,6 +31,10 @@ export function AppShell() {
   });
   const title = routeTitles[pathname] ?? "下载";
   const downloadVisible = pathname === "/download";
+  const settingsVisible = pathname === "/settings";
+  const [settingsVisited, setSettingsVisited] = useState(settingsVisible);
+  // Mount settings only after the first visit, then retain its unsaved session in memory.
+  if (settingsVisible && !settingsVisited) setSettingsVisited(true);
   const [downloadSession, setDownloadSession] = useState(() =>
     resolveDownloadSession(null, location),
   );
@@ -180,7 +185,8 @@ export function AppShell() {
               }
             />
           )}
-          {!downloadVisible && <Outlet />}
+          {settingsVisited && <SettingsPage active={settingsVisible} />}
+          {!downloadVisible && !settingsVisible && <Outlet />}
         </section>
         <footer className="status-bar" aria-label="应用状态">
           <span className="status-indicator" aria-hidden="true" />

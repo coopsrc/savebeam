@@ -17,15 +17,22 @@ const groups = [
   { value: "diagnostics", label: "隐私与诊断" },
 ] as const;
 
-export function SettingsPage() {
+export function SettingsPage({ active }: { active: boolean }) {
   const [tab, setTab] = useState("download");
   const root = useRef<HTMLElement>(null);
   const scrollPositions = useRef<Record<string, number>>({});
 
   useLayoutEffect(() => {
     const viewport = root.current?.closest(".page-content");
-    if (viewport) viewport.scrollTop = scrollPositions.current[tab] ?? 0;
-  }, [tab]);
+    if (!active || !viewport) return;
+    viewport.scrollTop = scrollPositions.current[tab] ?? 0;
+    // Listen only while visible: other routes share this viewport and must not overwrite it.
+    function rememberScroll() {
+      scrollPositions.current[tab] = viewport!.scrollTop;
+    }
+    viewport.addEventListener("scroll", rememberScroll);
+    return () => viewport.removeEventListener("scroll", rememberScroll);
+  }, [active, tab]);
 
   function changeTab(value: string | null) {
     if (!value || value === tab) return;
@@ -34,7 +41,12 @@ export function SettingsPage() {
   }
 
   return (
-    <main className="settings-page" ref={root}>
+    <main
+      className="settings-page"
+      ref={root}
+      hidden={!active}
+      style={active ? undefined : { display: "none" }}
+    >
       <Tabs
         className="settings-tabs"
         value={tab}
