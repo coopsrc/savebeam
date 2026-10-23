@@ -1,3 +1,4 @@
+import { t, useUiLocale, getUiLocale } from "../../i18n/translate.ts";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
@@ -26,10 +27,12 @@ import { SubscriptionEntries } from "./SubscriptionEntries";
 import { mergeSubscriptionMetadata, patchEntryMetadata } from "./entryMetadata";
 
 function message(error: unknown) {
-  return error instanceof Error ? error.message : "订阅操作失败，请重试。";
+  return error instanceof Error ? error.message : t("订阅操作失败，请重试。");
 }
 
 export function SubscriptionsPage({ active }: { active: boolean }) {
+  useUiLocale();
+
   const root = useRetainedPageScroll(active);
   const location = useLocation();
   const navigate = useNavigate();
@@ -153,9 +156,9 @@ export function SubscriptionsPage({ active }: { active: boolean }) {
       <Stack gap="lg">
         <Group justify="space-between">
           <div>
-            <Title order={2}>系列订阅</Title>
+            <Title order={2}>{t("系列订阅")}</Title>
             <Text c="dimmed" size="sm">
-              本地保存订阅；手动检查更新，勾选后下载，不会自动下载。
+              {t("本地保存订阅；手动检查更新，勾选后下载，不会自动下载。")}
             </Text>
           </div>
           <Button
@@ -170,18 +173,21 @@ export function SubscriptionsPage({ active }: { active: boolean }) {
                 for (const item of subscriptions) {
                   if (stopChecks.current) break;
                   setCheckProgress(
-                    `正在检查 ${checked + 1}/${subscriptions.length}：${item.title}`,
+                    t("正在检查 {0}/{1}：{2}", [checked + 1, subscriptions.length, item.title]),
                   );
                   await check(item.id);
                   checked += 1;
                 }
                 setCheckProgress(
-                  `已检查 ${checked}/${subscriptions.length} 个系列。失败项保留上次结果，可单独重试。`,
+                  t("已检查 {0}/{1} 个系列。失败项保留上次结果，可单独重试。", [
+                    checked,
+                    subscriptions.length,
+                  ]),
                 );
               });
             }}
           >
-            检查全部更新
+            {t("检查全部更新")}
           </Button>
         </Group>
         {checkProgress && (
@@ -194,22 +200,22 @@ export function SubscriptionsPage({ active }: { active: boolean }) {
             variant="subtle"
             onClick={() => {
               stopChecks.current = true;
-              setCheckProgress("当前检查完成后停止后续检查（单项最长约 60 秒）。");
+              setCheckProgress(t("当前检查完成后停止后续检查（单项最长约 60 秒）。"));
             }}
           >
-            停止后续检查
+            {t("停止后续检查")}
           </Button>
         )}
         {error && (
-          <Alert color="red" role="alert" title="操作失败">
+          <Alert color="red" role="alert" title={t("操作失败")}>
             {error}
           </Alert>
         )}
         {defaultsError && (
-          <Alert color="red" role="alert" title="无法读取下载选项">
+          <Alert color="red" role="alert" title={t("无法读取下载选项")}>
             {defaultsError}
             <Button variant="subtle" onClick={retryDefaults}>
-              重新读取下载选项
+              {t("重新读取下载选项")}
             </Button>
           </Alert>
         )}
@@ -217,7 +223,7 @@ export function SubscriptionsPage({ active }: { active: boolean }) {
           <Alert color="green" role="status">
             {notice}
             <Button variant="subtle" size="xs" onClick={() => navigate("/tasks")}>
-              查看任务
+              {t("查看任务")}
             </Button>
           </Alert>
         )}
@@ -230,7 +236,9 @@ export function SubscriptionsPage({ active }: { active: boolean }) {
                   await subscriptionApi.subscribe(url);
                   setUrl("");
                   setNotice(
-                    "已添加订阅，首次检查建立基线；之后新出现的视频会标为新增。旧文件仅按历史中的视频 ID 识别，无法识别的仍列为待下载。",
+                    t(
+                      "已添加订阅，首次检查建立基线；之后新出现的视频会标为新增。旧文件仅按历史中的视频 ID 识别，无法识别的仍列为待下载。",
+                    ),
                   );
                 });
             }}
@@ -238,12 +246,12 @@ export function SubscriptionsPage({ active }: { active: boolean }) {
             <Stack gap="sm">
               <Group>
                 <IconRss size={20} />
-                <Text fw={600}>添加系列订阅</Text>
+                <Text fw={600}>{t("添加系列订阅")}</Text>
               </Group>
               {candidates.length > 0 && (
                 <Select
-                  label="从已下载的系列选择"
-                  placeholder="选择历史系列，或在下方填写链接"
+                  label={t("从已下载的系列选择")}
+                  placeholder={t("选择历史系列，或在下方填写链接")}
                   value={null}
                   disabled={!!busy}
                   data={candidates.map((item) => ({ value: item.url, label: item.title }))}
@@ -254,26 +262,27 @@ export function SubscriptionsPage({ active }: { active: boolean }) {
                 />
               )}
               <TextInput
-                label="系列 / 播放列表链接"
+                label={t("系列 / 播放列表链接")}
                 placeholder="https://…"
                 value={url}
                 disabled={!!busy}
                 onChange={(event) => setUrl(event.currentTarget.value)}
               />
               <Text size="xs" c="dimmed">
-                使用设置中的全局 Cookie 授权。每次最多检查前 1000 项，最多订阅 100
-                个系列；首次列表不会全部误记为已下载。
+                {t(
+                  "使用设置中的全局 Cookie 授权。每次最多检查前 1000 项，最多订阅 100 个系列；首次列表不会全部误记为已下载。",
+                )}
               </Text>
               <Group justify="flex-end">
                 <Button type="submit" disabled={!!busy || !url.trim()} loading={busy === "add"}>
-                  添加订阅并检查
+                  {t("添加订阅并检查")}
                 </Button>
               </Group>
             </Stack>
           </form>
         </Paper>
         <Checkbox
-          label="显示已下载条目"
+          label={t("显示已下载条目")}
           checked={showDownloaded}
           onChange={(event) => setShowDownloaded(event.currentTarget.checked)}
         />
@@ -281,8 +290,8 @@ export function SubscriptionsPage({ active }: { active: boolean }) {
           <Paper withBorder p="xl">
             <Text c="dimmed">
               {busy === "load"
-                ? "正在读取本地订阅…"
-                : "暂无订阅。添加已下载或持续更新的系列后，可在这里检查新增视频。"}
+                ? t("正在读取本地订阅…")
+                : t("暂无订阅。添加已下载或持续更新的系列后，可在这里检查新增视频。")}
             </Text>
           </Paper>
         )}
@@ -312,17 +321,25 @@ export function SubscriptionsPage({ active }: { active: boolean }) {
                   </div>
                   <Group gap="xs">
                     <Badge color={newItems.length ? "orange" : "gray"}>
-                      新增 {newItems.length}
+                      {t("新增 ")}
+                      {newItems.length}
                     </Badge>
-                    <Badge variant="light">待下载 {pending.length}</Badge>
+                    <Badge variant="light">
+                      {t("待下载 ")}
+                      {pending.length}
+                    </Badge>
                     <Badge color="green" variant="light">
-                      已下载 {item.entries.filter((entry) => entry.downloaded).length}
+                      {t("已下载 ")}
+                      {item.entries.filter((entry) => entry.downloaded).length}
                     </Badge>
                   </Group>
                 </Group>
                 <Text size="xs" c="dimmed">
-                  上次成功检查：{new Date(item.lastCheckedUnixMs).toLocaleString()} ·{" "}
-                  {checkErrors[item.id] ? "本次检查失败，保留上次结果" : "仅表示上次检查时的状态"}
+                  {t("上次成功检查：")}
+                  {new Date(item.lastCheckedUnixMs).toLocaleString(getUiLocale())} ·{" "}
+                  {checkErrors[item.id]
+                    ? t("本次检查失败，保留上次结果")
+                    : t("仅表示上次检查时的状态")}
                 </Text>
                 {checkErrors[item.id] && (
                   <Alert color="red" role="alert">
@@ -331,7 +348,9 @@ export function SubscriptionsPage({ active }: { active: boolean }) {
                 )}
                 {item.truncated && (
                   <Alert color="yellow">
-                    列表未完整读取（最多前 1000 项）。结果仅覆盖已检查范围，不代表整个系列没有更新。
+                    {t(
+                      "列表未完整读取（最多前 1000 项）。结果仅覆盖已检查范围，不代表整个系列没有更新。",
+                    )}
                   </Alert>
                 )}
                 <Group justify="space-between">
@@ -343,7 +362,7 @@ export function SubscriptionsPage({ active }: { active: boolean }) {
                       loading={busy === `check-${item.id}`}
                       onClick={() => void act(`check-${item.id}`, () => check(item.id))}
                     >
-                      检查更新
+                      {t("检查更新")}
                     </Button>
                     <Button
                       size="xs"
@@ -356,7 +375,7 @@ export function SubscriptionsPage({ active }: { active: boolean }) {
                         }))
                       }
                     >
-                      选择新增
+                      {t("选择新增")}
                     </Button>
                     <Button
                       size="xs"
@@ -369,7 +388,7 @@ export function SubscriptionsPage({ active }: { active: boolean }) {
                         }))
                       }
                     >
-                      选择待下载（最多 50 项）
+                      {t("选择待下载（最多 50 项）")}
                     </Button>
                     <Button
                       size="xs"
@@ -377,7 +396,7 @@ export function SubscriptionsPage({ active }: { active: boolean }) {
                       disabled={!!busy || !chosen.length}
                       onClick={() => setSelected((previous) => ({ ...previous, [item.id]: [] }))}
                     >
-                      取消全选
+                      {t("取消全选")}
                     </Button>
                   </Group>
                   <Button
@@ -387,7 +406,7 @@ export function SubscriptionsPage({ active }: { active: boolean }) {
                     disabled={!!busy}
                     onClick={() => setRemoving(item)}
                   >
-                    取消订阅
+                    {t("取消订阅")}
                   </Button>
                 </Group>
                 <Button
@@ -398,7 +417,7 @@ export function SubscriptionsPage({ active }: { active: boolean }) {
                     setExpanded((previous) => ({ ...previous, [item.id]: !previous[item.id] }))
                   }
                 >
-                  {expanded[item.id] ? "收起条目" : `展开条目（${visible.length}）`}
+                  {expanded[item.id] ? t("收起条目") : t("展开条目（{0}）", [visible.length])}
                 </Button>
                 {expanded[item.id] && (
                   <SubscriptionEntries
@@ -429,8 +448,9 @@ export function SubscriptionsPage({ active }: { active: boolean }) {
                   />
                 )}
                 <Text size="xs" c="dimmed">
-                  下载采用当前默认目录及重名策略，逐项自动匹配视频与音频并合并。保留“系列名称
-                  [ID]/序号-标题 [视频 ID].扩展名”结构；实际格式及大小下载时确定。
+                  {t(
+                    "下载采用当前默认目录及重名策略，逐项自动匹配视频与音频并合并。保留“系列名称 [ID]/序号-标题 [视频 ID].扩展名”结构；实际格式及大小下载时确定。",
+                  )}
                 </Text>
                 <Group justify="flex-end">
                   <Button
@@ -438,11 +458,11 @@ export function SubscriptionsPage({ active }: { active: boolean }) {
                     disabled={!!busy}
                     onClick={() => navigate(`/download?url=${encodeURIComponent(item.url)}`)}
                   >
-                    选择画质与分 P
+                    {t("选择画质与分 P")}
                   </Button>
                   <Checkbox
-                    label="使用代理"
-                    description="仅本次下载，使用设置中保存的自定义代理；不勾选则直连。"
+                    label={t("使用代理")}
+                    description={t("仅本次下载，使用设置中保存的自定义代理；不勾选则直连。")}
                     checked={proxyChoices[item.id] ?? false}
                     disabled={!!busy}
                     onChange={(event) => {
@@ -455,7 +475,7 @@ export function SubscriptionsPage({ active }: { active: boolean }) {
                     disabled={!!busy || loadingDefaults || !!defaultsError}
                     onClick={() => setEditingOptions(item.id)}
                   >
-                    高级设置
+                    {t("高级设置")}
                   </Button>
                   <Button
                     disabled={!!busy || !chosen.length || loadingDefaults || !!defaultsError}
@@ -473,7 +493,9 @@ export function SubscriptionsPage({ active }: { active: boolean }) {
                         );
                         if (result.tasks.length) {
                           setNotice(
-                            `已加入 ${result.tasks.length} 个下载任务，成功完成后才计为已下载。`,
+                            t("已加入 {0} 个下载任务，成功完成后才计为已下载。", [
+                              result.tasks.length,
+                            ]),
                           );
                           setSelected((previous) => ({ ...previous, [item.id]: [] }));
                         }
@@ -481,7 +503,8 @@ export function SubscriptionsPage({ active }: { active: boolean }) {
                       })
                     }
                   >
-                    下载所选 {chosen.length} 项
+                    {t("下载所选 ")}
+                    {chosen.length} {t(" 项")}
                   </Button>
                 </Group>
               </Stack>
@@ -505,16 +528,18 @@ export function SubscriptionsPage({ active }: { active: boolean }) {
         onClose={() => {
           if (!busy) setRemoving(null);
         }}
-        title="取消订阅"
+        title={t("取消订阅")}
         centered
       >
         <Stack>
           <Text>
-            取消“{removing?.title}”的订阅？只移除订阅，不删除下载文件、历史记录或正在执行的任务。
+            {t("取消“")}
+            {removing?.title}
+            {t("”的订阅？只移除订阅，不删除下载文件、历史记录或正在执行的任务。")}
           </Text>
           <Group justify="flex-end">
             <Button variant="default" disabled={!!busy} onClick={() => setRemoving(null)}>
-              返回
+              {t("返回")}
             </Button>
             <Button
               color="red"
@@ -527,7 +552,7 @@ export function SubscriptionsPage({ active }: { active: boolean }) {
                   });
               }}
             >
-              确认取消订阅
+              {t("确认取消订阅")}
             </Button>
           </Group>
         </Stack>

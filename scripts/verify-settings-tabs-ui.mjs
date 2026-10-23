@@ -10,10 +10,14 @@ const browser = await chromium.launch({
   headless: true,
 });
 const base = process.argv[3] ?? "http://127.0.0.1:1421/";
-const labels = ["下载", "网络与代理", "Cookie 与登录", "运行组件", "隐私与诊断"];
+const labels = ["通用", "下载", "网络与代理", "Cookie 与登录", "运行组件"];
 
 async function fixture(colorScheme = "light", initialRoute = "settings") {
-  const page = await browser.newPage({ viewport: { width: 1280, height: 800 }, colorScheme });
+  const page = await browser.newPage({
+    locale: "zh-CN",
+    viewport: { width: 1280, height: 800 },
+    colorScheme,
+  });
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.addInitScript(() => {
@@ -140,7 +144,7 @@ try {
     element.scrollTop = element.scrollHeight;
   });
   const componentsScroll = await viewport.evaluate((element) => element.scrollTop);
-  await select(page, "隐私与诊断");
+  await select(page, "通用");
   assert.equal(await page.getByRole("textbox").count(), 0, "Hidden inputs are not accessible");
   await select(page, "下载");
   assert.equal(await viewport.evaluate((element) => element.scrollTop), downloadScroll);
@@ -189,7 +193,7 @@ try {
     window.settingsFixture.failNetwork = false;
   });
   await page.getByRole("button", { name: "保存网络设置", exact: true }).click();
-  await select(page, "隐私与诊断");
+  await select(page, "通用");
   await page.getByText("网络设置已保存。", { exact: true }).waitFor({ state: "attached" });
   await select(page, "网络与代理");
   await page.getByRole("status").filter({ hasText: "网络设置已保存。" }).waitFor();
@@ -223,13 +227,13 @@ try {
   await page.keyboard.press("Home");
   assert.equal(
     await page
-      .getByRole("tab", { name: "下载", exact: true })
+      .getByRole("tab", { name: "通用", exact: true })
       .evaluate((element) => element === window.document.activeElement),
     true,
   );
   await page.keyboard.press("Enter");
   assert.equal(
-    await page.getByRole("tab", { name: "下载", exact: true }).getAttribute("aria-selected"),
+    await page.getByRole("tab", { name: "通用", exact: true }).getAttribute("aria-selected"),
     "true",
   );
   assert.deepEqual(errors, []);

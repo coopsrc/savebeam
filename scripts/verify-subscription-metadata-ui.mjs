@@ -148,7 +148,7 @@ async function scroll(page, value) {
 }
 try {
   for (const scenario of ["fill", "error", "hidden", "stop", "bounded"]) {
-    const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+    const page = await browser.newPage({ locale: "zh-CN", viewport: { width: 1280, height: 800 } });
     const errors = [];
     page.on("pageerror", (e) => errors.push(e.message));
     await fixture(page, scenario);
@@ -230,6 +230,7 @@ try {
   for (const platform of ["macOS", "Windows", "Linux"])
     for (const scheme of ["light", "dark"]) {
       const page = await browser.newPage({
+        locale: "zh-CN",
         viewport: { width: 1280, height: 800 },
         colorScheme: scheme,
       });

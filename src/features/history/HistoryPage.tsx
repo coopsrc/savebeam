@@ -1,3 +1,4 @@
+import { t, useUiLocale, getUiLocale } from "../../i18n/translate.ts";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
@@ -20,6 +21,8 @@ import { useAppStore } from "../../stores/appStore";
 import { MediaVersionsButton } from "./MediaVersionsButton";
 
 export function HistoryPage({ active }: { active: boolean }) {
+  useUiLocale();
+
   const root = useRetainedPageScroll(active);
   const [query, setQuery] = useState("");
   const [records, setRecords] = useState<DownloadHistoryRecord[]>([]);
@@ -48,7 +51,7 @@ export function HistoryPage({ active }: { active: boolean }) {
       }
     } catch (reason) {
       if (revision === request.current)
-        setError(reason instanceof Error ? reason.message : "无法读取下载历史。");
+        setError(reason instanceof Error ? reason.message : t("无法读取下载历史。"));
     }
   }, []);
 
@@ -67,7 +70,7 @@ export function HistoryPage({ active }: { active: boolean }) {
       })
       .catch((reason: unknown) => {
         if (revision === request.current)
-          setError(reason instanceof Error ? reason.message : "无法读取下载历史。");
+          setError(reason instanceof Error ? reason.message : t("无法读取下载历史。"));
       });
     return () => {
       request.current = null;
@@ -85,7 +88,7 @@ export function HistoryPage({ active }: { active: boolean }) {
       await invokeCommand(action, { taskId, outputIndex });
     } catch (reason) {
       setError(
-        reason instanceof IpcError || reason instanceof Error ? reason.message : "操作失败。",
+        reason instanceof IpcError || reason instanceof Error ? reason.message : t("操作失败。"),
       );
     } finally {
       setBusyTask(null);
@@ -116,14 +119,14 @@ export function HistoryPage({ active }: { active: boolean }) {
       setPendingDeletion(null);
       setNotice(
         !deleted
-          ? "该历史记录已不存在。"
+          ? t("该历史记录已不存在。")
           : deleteFiles
-            ? "历史记录已删除，仍存在的关联媒体文件已移入系统废纸篓或回收站。"
-            : "历史记录已删除，下载文件已保留。",
+            ? t("历史记录已删除，仍存在的关联媒体文件已移入系统废纸篓或回收站。")
+            : t("历史记录已删除，下载文件已保留。"),
       );
       await load(appliedQuery.current);
     } catch (reason) {
-      setDeletionError(reason instanceof Error ? reason.message : "删除操作未完成。");
+      setDeletionError(reason instanceof Error ? reason.message : t("删除操作未完成。"));
     } finally {
       setBusyTask(null);
     }
@@ -139,16 +142,18 @@ export function HistoryPage({ active }: { active: boolean }) {
       <Stack gap="md">
         <Group justify="space-between" align="end">
           <div>
-            <Title order={2}>下载历史</Title>
+            <Title order={2}>{t("下载历史")}</Title>
             <Text size="sm" c="dimmed">
-              历史记录仅保存在本机；删除时默认保留文件，也可选择将关联媒体文件移入系统废纸篓或回收站。
+              {t(
+                "历史记录仅保存在本机；删除时默认保留文件，也可选择将关联媒体文件移入系统废纸篓或回收站。",
+              )}
             </Text>
           </div>
         </Group>
         <Group align="end">
           <TextInput
-            label="搜索标题或文件路径"
-            placeholder="输入关键词"
+            label={t("搜索标题或文件路径")}
+            placeholder={t("输入关键词")}
             value={query}
             onChange={(event) => setQuery(event.currentTarget.value)}
             onKeyDown={(event) => {
@@ -156,10 +161,10 @@ export function HistoryPage({ active }: { active: boolean }) {
             }}
             style={{ flex: 1 }}
           />
-          <Button onClick={() => void load(query)}>搜索</Button>
+          <Button onClick={() => void load(query)}>{t("搜索")}</Button>
         </Group>
         {error && (
-          <Alert color="red" title="历史操作失败" role="alert">
+          <Alert color="red" title={t("历史操作失败")} role="alert">
             {error}
           </Alert>
         )}
@@ -170,7 +175,7 @@ export function HistoryPage({ active }: { active: boolean }) {
         )}
         {records.length === 0 ? (
           <Paper withBorder radius="md" p="xl">
-            <Text c="dimmed">暂无下载历史。</Text>
+            <Text c="dimmed">{t("暂无下载历史。")}</Text>
           </Paper>
         ) : (
           records.map((record) => (
@@ -180,7 +185,7 @@ export function HistoryPage({ active }: { active: boolean }) {
                   <div>
                     <Text fw={600}>{record.title}</Text>
                     <Text size="xs" c="dimmed">
-                      {new Date(record.completedAtUnixMs).toLocaleString()} ·{" "}
+                      {new Date(record.completedAtUnixMs).toLocaleString(getUiLocale())} ·{" "}
                       {formatBytes(record.totalBytes)}
                     </Text>
                   </div>
@@ -194,7 +199,7 @@ export function HistoryPage({ active }: { active: boolean }) {
                       disabled={busyTask !== null}
                       onClick={() => requestDeletion(record)}
                     >
-                      删除记录
+                      {t("删除记录")}
                     </Button>
                   </Group>
                 </Group>
@@ -211,7 +216,7 @@ export function HistoryPage({ active }: { active: boolean }) {
                         loading={busyTask === record.taskId}
                         onClick={() => void runAction(record.taskId, "open_history_file", index)}
                       >
-                        打开文件
+                        {t("打开文件")}
                       </Button>
                       <Button
                         size="xs"
@@ -220,7 +225,7 @@ export function HistoryPage({ active }: { active: boolean }) {
                         loading={busyTask === record.taskId}
                         onClick={() => void runAction(record.taskId, "open_history_folder", index)}
                       >
-                        打开目录
+                        {t("打开目录")}
                       </Button>
                     </Group>
                   </Group>
@@ -234,7 +239,7 @@ export function HistoryPage({ active }: { active: boolean }) {
         opened={active && pendingDeletion !== null}
         returnFocus={active}
         onClose={closeDeletion}
-        title="删除下载历史"
+        title={t("删除下载历史")}
         centered
         closeOnClickOutside={!deleting}
         closeOnEscape={!deleting}
@@ -242,9 +247,14 @@ export function HistoryPage({ active }: { active: boolean }) {
       >
         {pendingDeletion && (
           <Stack gap="md">
-            <Text>确认删除“{pendingDeletion.title}”的历史记录？</Text>
+            <Text>
+              {t("确认删除“")}
+              {pendingDeletion.title}
+              {t("”的历史记录？")}
+            </Text>
             <Text size="sm" c="dimmed">
-              此记录关联的下载文件（{pendingDeletion.outputPaths.length} 个）：
+              {t("此记录关联的下载文件（")}
+              {pendingDeletion.outputPaths.length} {t(" 个）：")}
             </Text>
             <Stack gap="xs" mah={180} style={{ overflowY: "auto" }}>
               {pendingDeletion.outputPaths.map((path, index) => (
@@ -254,33 +264,35 @@ export function HistoryPage({ active }: { active: boolean }) {
               ))}
             </Stack>
             <Checkbox
-              label="同时删除下载文件"
-              description="移入系统废纸篓或回收站，已不存在的文件会跳过。"
+              label={t("同时删除下载文件")}
+              description={t("移入系统废纸篓或回收站，已不存在的文件会跳过。")}
               checked={deleteFiles}
               disabled={deleting}
               onChange={(event) => setDeleteFiles(event.currentTarget.checked)}
             />
             <Text size="sm" c={deleteFiles ? "red" : "dimmed"}>
               {deleteFiles
-                ? "仅处理以上媒体文件，不删除目录，也不会自动清理字幕、封面、JSON 或保留的中间文件。"
-                : "仅删除历史记录，所有下载文件均会保留。"}
+                ? t(
+                    "仅处理以上媒体文件，不删除目录，也不会自动清理字幕、封面、JSON 或保留的中间文件。",
+                  )
+                : t("仅删除历史记录，所有下载文件均会保留。")}
             </Text>
             {deletionError && (
-              <Alert color="red" title="删除未完成" role="alert">
+              <Alert color="red" title={t("删除未完成")} role="alert">
                 <Text size="sm">{deletionError}</Text>
                 {deleteFiles && (
                   <Text size="sm">
-                    历史记录会保留以便重试；部分文件可能已移入废纸篓或回收站，可在其中恢复。
+                    {t("历史记录会保留以便重试；部分文件可能已移入废纸篓或回收站，可在其中恢复。")}
                   </Text>
                 )}
               </Alert>
             )}
             <Group justify="flex-end">
               <Button variant="default" disabled={deleting} onClick={closeDeletion}>
-                取消
+                {t("取消")}
               </Button>
               <Button color="red" loading={deleting} onClick={() => void confirmDeletion()}>
-                {deleteFiles ? "移入废纸篓并删除记录" : "仅删除记录"}
+                {deleteFiles ? t("移入废纸篓并删除记录") : t("仅删除记录")}
               </Button>
             </Group>
           </Stack>

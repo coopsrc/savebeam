@@ -1,3 +1,4 @@
+import { t, useUiLocale } from "./i18n/translate.ts";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useState } from "react";
 import {
@@ -24,8 +25,12 @@ import { invokeCommand, IpcError } from "./ipc/client";
 import type { DownloadTask } from "./types/domain";
 import "./App.css";
 import { formatBytes } from "./utils/formatBytes";
+import { getUiLocale } from "./i18n/translate";
+import { getLocalizedErrorMessage } from "./i18n/errorMessages";
 
 function FoundationPage() {
+  useUiLocale();
+
   const location = useLocation();
   const navigate = useNavigate();
   const profile = usePlatformProfile();
@@ -36,12 +41,12 @@ function FoundationPage() {
   const setLastDownloadError = useAppStore((state) => state.setLastDownloadError);
   const [busyTaskId, setBusyTaskId] = useState<string | null>(null);
   const titleByRoute: Record<string, string> = {
-    "/download": "下载",
-    "/tasks": "任务",
-    "/history": "历史",
-    "/settings": "设置",
+    "/download": t("下载"),
+    "/tasks": t("任务"),
+    "/history": t("历史"),
+    "/settings": t("设置"),
   };
-  const title = titleByRoute[location.pathname] ?? "下载";
+  const title = titleByRoute[location.pathname] ?? t("下载");
 
   async function changeTask(taskId: string, action: "cancel" | "retry") {
     setBusyTaskId(taskId);
@@ -55,7 +60,7 @@ function FoundationPage() {
     } catch (error: unknown) {
       setLastDownloadError({
         code: error instanceof IpcError ? error.code : "unknown",
-        message: error instanceof Error ? error.message : "无法更新下载任务。",
+        message: error instanceof Error ? error.message : t("无法更新下载任务。"),
         retryable: error instanceof IpcError && error.retryable,
       });
     } finally {
@@ -71,12 +76,14 @@ function FoundationPage() {
             {lastDownloadError && (
               <Alert
                 color="red"
-                title="下载任务失败"
+                title={t("下载任务失败")}
                 role="alert"
                 onClose={() => useAppStore.getState().setLastDownloadError(null)}
                 withCloseButton
               >
-                {lastDownloadError.message}
+                {getUiLocale() === "zh-CN"
+                  ? lastDownloadError.message
+                  : getLocalizedErrorMessage(lastDownloadError, getUiLocale())}
               </Alert>
             )}
             {downloadTasks.map((task) => {
@@ -86,20 +93,20 @@ function FoundationPage() {
                   ? Math.min(100, (progress.downloadedBytes / progress.totalBytes) * 100)
                   : 0;
               const statusLabel: Record<typeof task.status, string> = {
-                queued: "排队中",
-                preparing: "准备中",
-                downloading: "下载中",
-                post_processing: "后处理中",
-                completed: "已完成",
-                failed: "失败",
-                cancelling: "正在取消",
-                cancelled: "已取消",
+                queued: t("排队中"),
+                preparing: t("准备中"),
+                downloading: t("下载中"),
+                post_processing: t("后处理中"),
+                completed: t("已完成"),
+                failed: t("失败"),
+                cancelling: t("正在取消"),
+                cancelled: t("已取消"),
               };
               return (
                 <Paper
                   key={task.id}
                   component="section"
-                  aria-label={`任务：${task.title}`}
+                  aria-label={t("任务：{0}", [task.title])}
                   withBorder
                   radius="md"
                   p="md"
@@ -109,12 +116,13 @@ function FoundationPage() {
                       <Stack gap={4}>
                         <Text fw={600}>{task.title}</Text>
                         <Text size="xs" c="dimmed">
-                          格式：{task.formatId}
+                          {t("格式：")}
+                          {task.formatId}
                         </Text>
                       </Stack>
                       <Badge
                         role="status"
-                        aria-label={`下载任务状态：${statusLabel[task.status]}`}
+                        aria-label={t("下载任务状态：{0}", [statusLabel[task.status]])}
                         variant="light"
                         color={
                           task.status === "failed"
@@ -139,7 +147,7 @@ function FoundationPage() {
                           loading={busyTaskId === task.id}
                           onClick={() => void changeTask(task.id, "cancel")}
                         >
-                          取消
+                          {t("取消")}
                         </Button>
                       )}
                       {["failed", "cancelled"].includes(task.status) && (
@@ -149,7 +157,7 @@ function FoundationPage() {
                           loading={busyTaskId === task.id}
                           onClick={() => void changeTask(task.id, "retry")}
                         >
-                          重试
+                          {t("重试")}
                         </Button>
                       )}
                     </Group>
@@ -163,24 +171,24 @@ function FoundationPage() {
                             aria-valuemin={0}
                             aria-valuemax={100}
                             aria-valuenow={Math.round(percent)}
-                            aria-label={`${task.title} 下载进度`}
+                            aria-label={t("{0} 下载进度", [task.title])}
                             aria-valuetext={`${Math.round(percent)}%`}
                           />
                           <Group justify="space-between">
                             <Text size="xs" c="dimmed">
                               {progress.downloadedBytes == null
-                                ? "正在准备传输"
+                                ? t("正在准备传输")
                                 : `${formatBytes(progress.downloadedBytes)}${progress.totalBytes ? ` / ${formatBytes(progress.totalBytes)}` : ""}`}
                             </Text>
                             <Text size="xs" c="dimmed">
                               {progress.postProcessing
-                                ? "正在合并媒体流"
+                                ? t("正在合并媒体流")
                                 : [
                                     progress.speedBytesPerSecond
                                       ? `${formatBytes(progress.speedBytesPerSecond)}/s`
                                       : null,
                                     progress.etaSeconds != null
-                                      ? `剩余 ${formatDuration(progress.etaSeconds)}`
+                                      ? t("剩余 {0}", [formatDuration(progress.etaSeconds)])
                                       : null,
                                   ]
                                     .filter(Boolean)
@@ -201,9 +209,9 @@ function FoundationPage() {
 
     return (
       <EmptyState
-        title="还没有下载任务"
-        description="解析视频信息并开始下载后，任务进度会显示在这里。"
-        actionLabel="添加视频链接"
+        title={t("还没有下载任务")}
+        description={t("解析视频信息并开始下载后，任务进度会显示在这里。")}
+        actionLabel={t("添加视频链接")}
         onAction={() => navigate("/download")}
       />
     );
@@ -212,9 +220,9 @@ function FoundationPage() {
   if (location.pathname === "/history") {
     return (
       <EmptyState
-        title="暂无下载记录"
-        description="已完成的下载会保存在本机，并显示在这里。"
-        actionLabel="开始添加链接"
+        title={t("暂无下载记录")}
+        description={t("已完成的下载会保存在本机，并显示在这里。")}
+        actionLabel={t("开始添加链接")}
         onAction={() => navigate("/download")}
       />
     );
@@ -233,13 +241,16 @@ function FoundationPage() {
               <Title order={1}>{title}</Title>
             </div>
           </Group>
-          <Text c="dimmed">界面基础已就绪。后续里程碑将逐步加入导航、媒体信息和下载任务交互。</Text>
+          <Text c="dimmed">
+            {t("界面基础已就绪。后续里程碑将逐步加入导航、媒体信息和下载任务交互。")}
+          </Text>
           <Group justify="space-between" align="center">
             <Badge variant="light" color="blue">
               M1 · UI Foundation
             </Badge>
             <Text size="sm" c="dimmed">
-              平台样式：{profile.label}
+              {t("平台样式：")}
+              {profile.label}
             </Text>
           </Group>
         </Stack>
@@ -252,10 +263,12 @@ function formatDuration(seconds: number): string {
   const rounded = Math.max(0, Math.round(seconds));
   const minutes = Math.floor(rounded / 60);
   const remainder = rounded % 60;
-  return minutes > 0 ? `${minutes}分${remainder}秒` : `${remainder}秒`;
+  return minutes > 0 ? t("{0}分{1}秒", [minutes, remainder]) : t("{0}秒", [remainder]);
 }
 
 function App() {
+  useUiLocale();
+
   return (
     <Routes>
       <Route element={<AppShell />}>

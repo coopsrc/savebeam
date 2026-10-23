@@ -1,6 +1,7 @@
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import type { AppError, AppErrorCode } from "../types/domain";
 import { getLocalizedErrorMessage } from "../i18n/errorMessages";
+import { getUiLocale } from "../i18n/translate";
 
 const ERROR_CODES: ReadonlySet<string> = new Set([
   "invalid_url",
@@ -25,14 +26,19 @@ export class IpcError extends Error implements AppError {
   readonly retryable: boolean;
   readonly diagnostic?: string;
   /** Rust-authored, user-safe context, never stderr or diagnostic text. */
-  readonly contextMessage: string;
+  private readonly rawContextMessage: string;
+  get contextMessage(): string {
+    return getUiLocale() === "zh-CN"
+      ? this.rawContextMessage
+      : getLocalizedErrorMessage(this, getUiLocale());
+  }
 
   constructor(error: AppError) {
-    super(getLocalizedErrorMessage(error, "zh-CN"));
+    super(getLocalizedErrorMessage(error, getUiLocale()));
     this.name = "IpcError";
     this.code = error.code;
     this.retryable = error.retryable;
-    this.contextMessage = error.message;
+    this.rawContextMessage = error.message;
     this.diagnostic = error.diagnostic;
   }
 }

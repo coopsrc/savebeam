@@ -1,3 +1,4 @@
+import { t, useUiLocale } from "../../i18n/translate.ts";
 import type { ReactNode } from "react";
 import { Alert, Button, Loader, Stack, Text, ThemeIcon, Title } from "@mantine/core";
 import { IconAlertTriangle, IconPackageOff } from "@tabler/icons-react";
@@ -14,6 +15,8 @@ type EmptyStateProps = ActionProps & {
 };
 
 export function EmptyState({ title, description, icon, actionLabel, onAction }: EmptyStateProps) {
+  useUiLocale();
+
   return (
     <section className="state-view" aria-labelledby="empty-state-title">
       <Stack align="center" gap="sm" ta="center">
@@ -40,7 +43,9 @@ type LoadingStateProps = {
   label?: string;
 };
 
-export function LoadingState({ label = "正在处理…" }: LoadingStateProps) {
+export function LoadingState({ label = t("正在处理…") }: LoadingStateProps) {
+  useUiLocale();
+
   return (
     <div className="state-inline" role="status" aria-live="polite">
       <Loader size="sm" aria-hidden="true" />
@@ -55,11 +60,13 @@ type ErrorStateProps = ActionProps & {
 };
 
 export function ErrorState({
-  title = "操作未能完成",
+  title = t("操作未能完成"),
   description,
-  actionLabel = "重试",
+  actionLabel = t("重试"),
   onAction,
 }: ErrorStateProps) {
+  useUiLocale();
+
   return (
     <Alert
       color="red"
@@ -89,14 +96,16 @@ type ComponentMissingStateProps = {
 
 export function ComponentMissingState({
   componentName,
-  description = "安装或配置该组件后即可继续。",
+  description = t("安装或配置该组件后即可继续。"),
   onOpenSettings,
 }: ComponentMissingStateProps) {
+  useUiLocale();
+
   return (
     <Alert
       color="yellow"
       icon={<IconPackageOff size={18} stroke={1.8} />}
-      title={`缺少 ${componentName}`}
+      title={t("缺少 {0}", [componentName])}
       role="status"
     >
       <Stack gap="sm">
@@ -104,7 +113,7 @@ export function ComponentMissingState({
         {onOpenSettings && (
           <div>
             <Button size="xs" variant="light" color="yellow" onClick={onOpenSettings}>
-              打开组件设置
+              {t("打开组件设置")}
             </Button>
           </div>
         )}

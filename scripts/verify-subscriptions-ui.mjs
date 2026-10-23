@@ -75,7 +75,10 @@ try {
     "add",
     "remove",
   ]) {
-    const page = await browser.newPage({ viewport: { width: 1200, height: 1000 } });
+    const page = await browser.newPage({
+      locale: "zh-CN",
+      viewport: { width: 1200, height: 1000 },
+    });
     const errors = [];
     page.on("pageerror", (error) => errors.push(error.message));
     await page.addInitScript(

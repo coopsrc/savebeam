@@ -1,3 +1,4 @@
+import { t, useUiLocale } from "../../i18n/translate.ts";
 import { useId } from "react";
 import { ActionIcon, Button, Checkbox, Text } from "@mantine/core";
 import { IconChevronDown, IconChevronUp } from "@tabler/icons-react";
@@ -40,6 +41,8 @@ function formatDuration(value: number | null | undefined) {
 }
 
 function EntryRow({ entry, ...props }: Props & { entry: DownloadEntry }) {
+  useUiLocale();
+
   const detail = props.details[entry.index];
   const matched = props.matches.find((row) => row.index === entry.index);
   const tracks = matched?.formatId
@@ -51,15 +54,23 @@ function EntryRow({ entry, ...props }: Props & { entry: DownloadEntry }) {
     ? ` · ${video.fps ? `${Number(video.fps.toFixed(3))} fps · ` : ""}${video.extension} · ${codecLabel(video.videoCodec)}`
     : "";
   const audioSpec = audio ? ` · ${audio.extension} · ${codecLabel(audio.audioCodec)}` : "";
-  const bitrate = (value: number | null) => (value === null ? "未知" : `${Math.round(value)} kbps`);
+  const bitrate = (value: number | null) =>
+    value === null ? t("未知") : `${Math.round(value)} kbps`;
   const info =
     detail?.error ??
     matched?.error ??
     (matched?.formatId
-      ? `${props.audioOnly ? "MP3" : `${matched.resolution ?? "分辨率未知"}${videoSpec}`} · ${props.audioOnly ? "" : `视频 ${bitrate(matched.videoBitrateKbps)} · `}音频 ${bitrate(matched.audioBitrateKbps)}${audioSpec} · ${matched.bytes === null ? "大小待定" : `约 ${formatBytes(matched.bytes)}`}${matched.fallbackUsed ? " · 已回退 Best（未满足指定条件）" : ""}`
+      ? t("{0} · {1}音频 {2}{3} · {4}{5}", [
+          props.audioOnly ? "MP3" : `${matched.resolution ?? t("分辨率未知")}${videoSpec}`,
+          props.audioOnly ? "" : t("视频 {0} · ", [bitrate(matched.videoBitrateKbps)]),
+          bitrate(matched.audioBitrateKbps),
+          audioSpec,
+          matched.bytes === null ? t("大小待定") : t("约 {0}", [formatBytes(matched.bytes)]),
+          matched.fallbackUsed ? t(" · 已回退 Best（未满足指定条件）") : "",
+        ])
       : detail
-        ? "正在匹配规格…"
-        : "等待读取标题与格式…");
+        ? t("正在匹配规格…")
+        : t("等待读取标题与格式…"));
   const fullTitle = detail?.title ?? entry.title;
   const partIndex = entry.part?.partIndex ?? entry.index;
   const isPart = !!entry.part || props.multipart;
@@ -80,7 +91,9 @@ function EntryRow({ entry, ...props }: Props & { entry: DownloadEntry }) {
         description={
           <>
             <span>
-              {duration ? `时长 ${duration} · ` : ""}视频 ID：{detail?.id ?? entry.id ?? "待解析"}
+              {duration ? t("时长 {0} · ", [duration]) : ""}
+              {t("视频 ID：")}
+              {detail?.id ?? entry.id ?? t("待解析")}
             </span>
             <Text
               component="span"
@@ -94,10 +107,10 @@ function EntryRow({ entry, ...props }: Props & { entry: DownloadEntry }) {
                     : "dimmed"
               }
             >
-              {info}
+              {t(info)}
               {props.overrides[entry.index] ||
               (entry.part && props.overrides[entry.part.parentIndex])
-                ? " · 单独策略"
+                ? t(" · 单独策略")
                 : ""}
             </Text>
           </>
@@ -114,23 +127,25 @@ function EntryRow({ entry, ...props }: Props & { entry: DownloadEntry }) {
         type="button"
         variant="subtle"
         size="compact-xs"
-        aria-label={`${label}单独设置`}
+        aria-label={t("{0}单独设置", [label])}
         disabled={!entry.available || props.disabled}
         onClick={() => props.onEdit(entry.index)}
       >
-        单独设置
+        {t("单独设置")}
       </Button>
     </div>
   );
 }
 
 export function DownloadEntryList(props: Props) {
+  useUiLocale();
+
   const listId = useId();
   return (
     <div
       className="download-playlist-list"
       role="group"
-      aria-label={props.multipart ? "可选分 P" : "可选视频条目"}
+      aria-label={props.multipart ? t("可选分 P") : t("可选视频条目")}
       tabIndex={0}
     >
       {entryGroups(props.entries).map((group) => {
@@ -144,35 +159,36 @@ export function DownloadEntryList(props: Props) {
         const known = selected.filter((m) => m.formatId && m.bytes !== null);
         const total = known.reduce((sum, m) => sum + m.bytes!, 0);
         const size = props.audioOnly
-          ? "转换后大小待定"
+          ? t("转换后大小待定")
           : !chosen.length
-            ? "未选择"
+            ? t("未选择")
             : known.length === chosen.length && Number.isSafeInteger(total)
-              ? `约 ${formatBytes(total)}`
-              : "大小待确定";
+              ? t("约 {0}", [formatBytes(total)])
+              : t("大小待确定");
         const errors = group.entries.filter(
           (e) =>
             props.details[e.index]?.error || props.matches.find((m) => m.index === e.index)?.error,
         ).length;
         const opened = !!props.expanded[index];
-        const title = props.details[index]?.title ?? first.parentTitle ?? "标题待补全";
+        const title = props.details[index]?.title ?? first.parentTitle ?? t("标题待补全");
         return (
           <div key={`parent-${index}`} className="download-part-group">
             <div className="download-playlist-row">
               <Checkbox
-                label={`第 ${index} 项 · ${title}`}
+                label={t("第 {0} 项 · {1}", [index, title])}
                 description={
                   <>
                     <span>
-                      视频 ID：{first.part!.parentId} · 已选 {chosen.length}/{available.length} P ·{" "}
-                      {size}
+                      {t("视频 ID：")}
+                      {first.part!.parentId} {t(" · 已选 ")}
+                      {chosen.length}/{available.length} P · {size}
                       {first.part!.partCount > available.length
-                        ? `（共 ${first.part!.partCount} P，本次仅展示部分）`
+                        ? t("（共 {0} P，本次仅展示部分）", [first.part!.partCount])
                         : ""}
                     </span>
                     {errors > 0 && (
                       <Text component="span" display="block" size="xs" c="red">
-                        {errors} 个分 P 未匹配或读取失败，展开查看。
+                        {errors} {t(" 个分 P 未匹配或读取失败，展开查看。")}
                       </Text>
                     )}
                   </>
@@ -192,7 +208,7 @@ export function DownloadEntryList(props: Props) {
               />
               <ActionIcon
                 variant="subtle"
-                aria-label={`${opened ? "收起" : "展开"}第 ${index} 项分 P`}
+                aria-label={t("{0}第 {1} 项分 P", [opened ? t("收起") : t("展开"), index])}
                 aria-expanded={opened}
                 aria-controls={`${listId}-${index}`}
                 onClick={() => props.onExpand(index)}
@@ -204,7 +220,7 @@ export function DownloadEntryList(props: Props) {
               <div
                 id={`${listId}-${index}`}
                 role="group"
-                aria-label={`第 ${index} 项分 P`}
+                aria-label={t("第 {0} 项分 P", [index])}
                 className="download-part-children"
               >
                 {group.entries.map((entry) => (
@@ -217,7 +233,7 @@ export function DownloadEntryList(props: Props) {
       })}
       {!props.entries.length && (
         <Text c="dimmed" size="sm">
-          未返回可选条目，请重新解析链接。
+          {t("未返回可选条目，请重新解析链接。")}
         </Text>
       )}
     </div>

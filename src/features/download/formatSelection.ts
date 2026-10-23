@@ -1,3 +1,4 @@
+import { t } from "../../i18n/translate.ts";
 import type { MediaFormat, MediaInfo, MergeContainer } from "../../types/domain";
 
 export const AUTOMATIC_AUDIO = "savebeam:auto";
@@ -108,7 +109,7 @@ export function selectDownload(
 }
 
 export function codecLabel(codec: string | null): string {
-  if (!codec) return "未知编码";
+  if (!codec) return t("未知编码");
   if (/^(avc|h264)/i.test(codec)) return "H.264";
   if (/^(hev|hvc|h265)/i.test(codec)) return "HEVC";
   if (/^(av01|av1)/i.test(codec)) return "AV1";

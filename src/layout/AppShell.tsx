@@ -1,3 +1,4 @@
+import { t, useUiLocale } from "../i18n/translate.ts";
 import { useMediaQuery } from "@mantine/hooks";
 import { IconDeviceDesktop } from "@tabler/icons-react";
 import { isTauri } from "@tauri-apps/api/core";
@@ -16,14 +17,26 @@ import { HistoryPage } from "../features/history/HistoryPage";
 import { SubscriptionsPage } from "../features/subscriptions/SubscriptionsPage";
 
 const routeTitles: Record<string, string> = {
-  "/download": "下载",
-  "/tasks": "任务",
-  "/history": "历史",
-  "/subscriptions": "订阅",
-  "/settings": "设置",
+  get "/download"() {
+    return t("下载");
+  },
+  get "/tasks"() {
+    return t("任务");
+  },
+  get "/history"() {
+    return t("历史");
+  },
+  get "/subscriptions"() {
+    return t("订阅");
+  },
+  get "/settings"() {
+    return t("设置");
+  },
 };
 
 export function AppShell() {
+  useUiLocale();
+
   const location = useLocation();
   const { pathname } = location;
   const navigate = useNavigate();
@@ -31,7 +44,7 @@ export function AppShell() {
   const compact = useMediaQuery("(max-width: 959px)", false, {
     getInitialValueInEffect: false,
   });
-  const title = routeTitles[pathname] ?? "下载";
+  const title = routeTitles[pathname] ?? t("下载");
   const downloadVisible = pathname === "/download";
   const settingsVisible = pathname === "/settings";
   const historyVisible = pathname === "/history";
@@ -118,7 +131,7 @@ export function AppShell() {
             .catch((error: unknown) => {
               useAppStore.getState().setLastDownloadError({
                 code: "unknown",
-                message: error instanceof Error ? error.message : "无法读取本地任务记录。",
+                message: error instanceof Error ? error.message : t("无法读取本地任务记录。"),
                 retryable: true,
               });
             });
@@ -127,7 +140,7 @@ export function AppShell() {
       .catch(() => {
         useAppStore.getState().setLastDownloadError({
           code: "unknown",
-          message: "无法订阅下载进度事件，请重新启动应用。",
+          message: t("无法订阅下载进度事件，请重新启动应用。"),
           retryable: true,
         });
       });
@@ -147,7 +160,7 @@ export function AppShell() {
           document.getElementById("main-content")?.focus();
         }}
       >
-        跳转到主要内容
+        {t("跳转到主要内容")}
       </a>
       <Sidebar compact={compact} />
       <div className="app-workspace">
@@ -161,7 +174,7 @@ export function AppShell() {
           ref={content}
           id="main-content"
           className="page-content"
-          aria-label={`${title}页面`}
+          aria-label={t("{0}页面", [title])}
           tabIndex={-1}
           onScroll={(event) => {
             if (downloadVisible && session)
@@ -197,20 +210,21 @@ export function AppShell() {
           )}
           {!downloadVisible && !retainedRoute && <Outlet />}
         </section>
-        <footer className="status-bar" aria-label="应用状态">
+        <footer className="status-bar" aria-label={t("应用状态")}>
           <span className="status-indicator" aria-hidden="true" />
-          <span>本地运行</span>
+          <span>{t("本地运行")}</span>
           <span className="status-separator" aria-hidden="true">
             ·
           </span>
-          <span>任务与媒体文件仅在本机处理</span>
+          <span>{t("任务与媒体文件仅在本机处理")}</span>
           <span className="status-platform">
             <IconDeviceDesktop size={14} stroke={1.8} aria-hidden="true" />
-            桌面版
+            {t("桌面版")}
           </span>
           <span className="shortcut-hint">
-            {profile.modifierKey === "Meta" ? "⌘" : "Ctrl"}1–4 导航 ·{" "}
-            {profile.modifierKey === "Meta" ? "⌘" : "Ctrl"}", 设置
+            {profile.modifierKey === "Meta" ? "⌘" : "Ctrl"}
+            {t("1–4 导航 ·")} {profile.modifierKey === "Meta" ? "⌘" : "Ctrl"}
+            {t('", 设置')}
           </span>
         </footer>
       </div>

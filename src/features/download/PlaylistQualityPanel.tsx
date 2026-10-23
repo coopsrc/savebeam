@@ -1,3 +1,4 @@
+import { t, useUiLocale } from "../../i18n/translate.ts";
 import { useId, useState } from "react";
 import { Button, Collapse, Group, Paper, Stack, Text, Title } from "@mantine/core";
 import { IconChevronDown, IconChevronUp } from "@tabler/icons-react";
@@ -20,10 +21,12 @@ export function PlaylistQualityPanel({
   overrideCount: number;
   onChange: (value: PlaylistQuality) => void;
 }) {
+  useUiLocale();
+
   const [expanded, setExpanded] = useState(false);
   const id = useId();
   const summary = summarizePlaylistQuality(value, audioOnly);
-  const title = multipart ? "共用画质" : "系列画质策略";
+  const title = multipart ? t("共用画质") : t("系列画质策略");
   return (
     <Paper
       component="section"
@@ -45,25 +48,31 @@ export function PlaylistQualityPanel({
             rightSection={expanded ? <IconChevronUp size={16} /> : <IconChevronDown size={16} />}
             onClick={() => setExpanded((current) => !current)}
           >
-            {expanded ? "收起画质设置" : "展开画质设置"}
+            {expanded ? t("收起画质设置") : t("展开画质设置")}
           </Button>
         </Group>
         {!expanded && (
-          <Stack gap={4} role="group" aria-label="当前画质参数">
-            <Text size="sm">视频：{summary.video}</Text>
-            <Text size="sm">音频：{summary.audio}</Text>
+          <Stack gap={4} role="group" aria-label={t("当前画质参数")}>
+            <Text size="sm">
+              {t("视频：")}
+              {summary.video}
+            </Text>
+            <Text size="sm">
+              {t("音频：")}
+              {summary.audio}
+            </Text>
             <Text size="xs" c="dimmed">
-              {value.allowExceed ? "无匹配允许回退 Best" : "严格匹配，无匹配跳过"}
+              {value.allowExceed ? t("无匹配允许回退 Best") : t("严格匹配，无匹配跳过")}
             </Text>
           </Stack>
         )}
         <Collapse expanded={expanded} keepMountedMode="display-none" id={id}>
           <Stack gap="sm">
             <Text size="sm" c="dimmed">
-              分辨率和 FPS 可选 Best；格式与编码自动推荐，也可手动指定。
+              {t("分辨率和 FPS 可选 Best；格式与编码自动推荐，也可手动指定。")}
               {multipart
-                ? "各 P 按自身可用格式匹配，也可单独设置。"
-                : "少数例外可点右侧“单独设置”。"}
+                ? t("各 P 按自身可用格式匹配，也可单独设置。")
+                : t("少数例外可点右侧“单独设置”。")}
             </Text>
             <PlaylistQualityFields
               value={value}
@@ -75,7 +84,8 @@ export function PlaylistQualityPanel({
         </Collapse>
         {overrideCount > 0 && (
           <Text size="xs" c="dimmed">
-            已单独设置 {overrideCount} 项；其余跟随统一策略。
+            {t("已单独设置 ")}
+            {overrideCount} {t(" 项；其余跟随统一策略。")}
           </Text>
         )}
       </Stack>

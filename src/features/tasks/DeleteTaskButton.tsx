@@ -1,3 +1,4 @@
+import { t, useUiLocale } from "../../i18n/translate.ts";
 import { useState } from "react";
 import { Alert, Button, Group, Modal, Stack, Text } from "@mantine/core";
 import { IconTrash } from "@tabler/icons-react";
@@ -6,6 +7,8 @@ import { useAppStore } from "../../stores/appStore";
 import type { DownloadTask } from "../../types/domain";
 
 export function DeleteTaskButton({ task }: { task: DownloadTask }) {
+  useUiLocale();
+
   const [opened, setOpened] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +28,7 @@ export function DeleteTaskButton({ task }: { task: DownloadTask }) {
           ? reason.contextMessage
           : reason instanceof Error
             ? reason.message
-            : "删除任务失败，请重试。",
+            : t("删除任务失败，请重试。"),
       );
     } finally {
       setBusy(false);
@@ -44,23 +47,28 @@ export function DeleteTaskButton({ task }: { task: DownloadTask }) {
           setOpened(true);
         }}
       >
-        删除任务
+        {t("删除任务")}
       </Button>
       <Modal
         opened={opened}
         onClose={() => {
           if (!busy) setOpened(false);
         }}
-        title="删除任务"
+        title={t("删除任务")}
         centered
         closeOnEscape={!busy}
         closeOnClickOutside={!busy}
         withCloseButton={!busy}
       >
         <Stack gap="md">
-          <Text>确定从任务列表删除“{task.title}”？</Text>
+          <Text>
+            {t("确定从任务列表删除“")}
+            {task.title}”？
+          </Text>
           <Text size="sm" c="dimmed">
-            只移除任务，保留下载文件、历史记录和订阅的已下载状态。若需删除文件，请前往“历史”单独操作。
+            {t(
+              "只移除任务，保留下载文件、历史记录和订阅的已下载状态。若需删除文件，请前往“历史”单独操作。",
+            )}
           </Text>
           {error && (
             <Alert color="red" role="alert">
@@ -69,10 +77,10 @@ export function DeleteTaskButton({ task }: { task: DownloadTask }) {
           )}
           <Group justify="flex-end">
             <Button variant="default" disabled={busy} onClick={() => setOpened(false)}>
-              返回
+              {t("返回")}
             </Button>
             <Button color="red" loading={busy} onClick={() => void confirm()}>
-              确认删除任务
+              {t("确认删除任务")}
             </Button>
           </Group>
         </Stack>

@@ -28,7 +28,11 @@ const specs = [
 ];
 try {
   for (const [label, userAgent, command, anchor, copyCount] of specs) {
-    const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, userAgent });
+    const context = await browser.newContext({
+      locale: "zh-CN",
+      viewport: { width: 1280, height: 800 },
+      userAgent,
+    });
     const page = await context.newPage();
     const errors = [];
     page.on("pageerror", (error) => errors.push(error.message));

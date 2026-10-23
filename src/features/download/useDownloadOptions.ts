@@ -1,3 +1,4 @@
+import { t } from "../../i18n/translate.ts";
 import { useEffect, useState } from "react";
 import { invokeCommand, IpcError } from "../../ipc/client";
 import type { DownloadOptionDefaults } from "../../types/domain";
@@ -19,7 +20,7 @@ export function optionError(error: unknown) {
     ? error.contextMessage
     : error instanceof Error
       ? error.message
-      : "下载选项操作失败，请重试。";
+      : t("下载选项操作失败，请重试。");
 }
 
 /** Load once per new draft/settings page; navigation back to a retained draft never reloads it. */

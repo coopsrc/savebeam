@@ -36,8 +36,8 @@ export interface QueuedItems {
   error: string | null;
 }
 
-// This Chinese-only feature needs actionable selection/check details, not a generic URL error.
-// Rust messages contain app-authored context; diagnostics and process stderr stay excluded.
+// Chinese preserves app-authored context; other locales use the stable localized error code.
+// Diagnostics and process stderr stay excluded.
 async function invoke<T>(command: string, args?: Record<string, unknown>): Promise<T> {
   try {
     return await invokeCommand<T>(command, args);

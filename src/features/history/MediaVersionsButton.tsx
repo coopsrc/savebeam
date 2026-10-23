@@ -1,3 +1,4 @@
+import { t, useUiLocale, getUiLocale } from "../../i18n/translate.ts";
 import { useEffect, useRef, useState } from "react";
 import { Alert, Badge, Button, Checkbox, Group, Modal, Paper, Stack, Text } from "@mantine/core";
 import { invokeCommand, IpcError } from "../../ipc/client";
@@ -8,7 +9,7 @@ import { compareVersionFiles, sourceLabels } from "./mediaVersions";
 import type { MediaVersion, SourceCheck } from "./mediaVersions";
 
 function message(error: unknown) {
-  return error instanceof IpcError ? error.contextMessage : "版本操作失败，请重试。";
+  return error instanceof IpcError ? error.contextMessage : t("版本操作失败，请重试。");
 }
 
 export function MediaVersionsButton({
@@ -18,11 +19,13 @@ export function MediaVersionsButton({
   taskId: string;
   active?: boolean;
 }) {
+  useUiLocale();
+
   const [opened, setOpened] = useState(false);
   return (
     <>
       <Button size="xs" variant="light" onClick={() => setOpened(true)}>
-        来源与版本
+        {t("来源与版本")}
       </Button>
       {opened && (
         <VersionsDialog taskId={taskId} active={active} onClose={() => setOpened(false)} />
@@ -40,6 +43,8 @@ function VersionsDialog({
   active: boolean;
   onClose: () => void;
 }) {
+  useUiLocale();
+
   const [versions, setVersions] = useState<MediaVersion[]>([]);
   const [check, setCheck] = useState<SourceCheck | null>(null);
   const [proxy, setProxy] = useState(false);
@@ -97,7 +102,7 @@ function VersionsDialog({
         });
         useAppStore.getState().upsertDownloadTask(task);
         setCheck(null);
-        setNotice("新版本已加入任务列表，不覆盖旧文件；完成后刷新版本列表可查看摘要。");
+        setNotice(t("新版本已加入任务列表，不覆盖旧文件；完成后刷新版本列表可查看摘要。"));
       } else {
         await invokeCommand("open_history_file", { taskId: versionId, outputIndex });
       }
@@ -115,17 +120,19 @@ function VersionsDialog({
       opened={active}
       returnFocus={active}
       onClose={onClose}
-      title="来源与历史版本"
+      title={t("来源与历史版本")}
       size="lg"
       centered
     >
       <Stack gap="md">
         <Text size="sm" c="dimmed">
-          仅在点击检查时访问来源。元数据变化只能提示疑似换源，未变化也不保证内容相同。旧下载没有历史来源基线时无法判断。
+          {t(
+            "仅在点击检查时访问来源。元数据变化只能提示疑似换源，未变化也不保证内容相同。旧下载没有历史来源基线时无法判断。",
+          )}
         </Text>
         <Checkbox
-          label="使用代理"
-          description="仅用于本次检查和新版本下载；登录 Cookie 使用设置中已授权的配置。"
+          label={t("使用代理")}
+          description={t("仅用于本次检查和新版本下载；登录 Cookie 使用设置中已授权的配置。")}
           checked={proxy}
           disabled={!!busy}
           onChange={(event) => {
@@ -140,14 +147,14 @@ function VersionsDialog({
             loading={busy === "check"}
             onClick={() => void run("check")}
           >
-            检查来源变化
+            {t("检查来源变化")}
           </Button>
           <Button
             disabled={!!busy || !check || check.comparison.status === "identity_changed"}
             loading={busy === "download"}
             onClick={() => void run("download")}
           >
-            重新下载并保留旧版本
+            {t("重新下载并保留旧版本")}
           </Button>
         </Group>
         {check && (
@@ -164,15 +171,15 @@ function VersionsDialog({
           >
             {check.comparison.reasons.map((reason) => (
               <Text size="sm" key={reason}>
-                {reason}
+                {t(reason)}
               </Text>
             ))}
           </Alert>
         )}
         <Text size="xs" c="dimmed">
-          新版本保存在原下载目录的 Savebeam Versions
-          独立子目录，不移动或覆盖旧文件。沿用原任务的高级选项，按原画质策略重新匹配；旧任务无策略时使用自动推荐，不复用失效的格式
-          ID。
+          {t(
+            "新版本保存在原下载目录的 Savebeam Versions 独立子目录，不移动或覆盖旧文件。沿用原任务的高级选项，按原画质策略重新匹配；旧任务无策略时使用自动推荐，不复用失效的格式 ID。",
+          )}
         </Text>
         {error && (
           <Alert color="red" role="alert">
@@ -185,39 +192,45 @@ function VersionsDialog({
           </Alert>
         )}
         <Group justify="space-between">
-          <Text fw={600}>已保存版本（{versions.length}）</Text>
+          <Text fw={600}>
+            {t("已保存版本（")}
+            {versions.length}）
+          </Text>
           <Button size="xs" variant="subtle" disabled={!!busy} onClick={() => void run("list")}>
-            刷新版本
+            {t("刷新版本")}
           </Button>
         </Group>
         {busy === "list" && (
-          <Text size="sm">正在读取版本，旧文件首次计算摘要可能需要一些时间…</Text>
+          <Text size="sm">{t("正在读取版本，旧文件首次计算摘要可能需要一些时间…")}</Text>
         )}
         <Stack gap="sm" mah={320} style={{ overflowY: "auto" }}>
           {versions.map((version) => (
             <Paper withBorder p="sm" key={version.taskId}>
               <Stack gap="xs">
                 <Group gap="xs">
-                  <Text fw={600}>版本 {version.versionNumber}</Text>
-                  {version.taskId === taskId && <Badge size="xs">当前记录</Badge>}
+                  <Text fw={600}>
+                    {t("版本 ")}
+                    {version.versionNumber}
+                  </Text>
+                  {version.taskId === taskId && <Badge size="xs">{t("当前记录")}</Badge>}
                   <Text size="xs" c="dimmed">
-                    {new Date(version.completedAtUnixMs).toLocaleString()}
+                    {new Date(version.completedAtUnixMs).toLocaleString(getUiLocale())}
                   </Text>
                 </Group>
                 <Text size="sm">{compareVersionFiles(version, versions)}</Text>
                 <Text size="xs" c="dimmed">
                   {version.source
-                    ? `媒体 ID：${version.source.mediaId}`
-                    : "无历史来源基线；摘要仅代表首次记录时的本地文件。"}
+                    ? t("媒体 ID：{0}", [version.source.mediaId])
+                    : t("无历史来源基线；摘要仅代表首次记录时的本地文件。")}
                 </Text>
                 {version.files.map((file, index) => (
                   <Stack gap={4} key={`${index}-${file.path}`}>
                     <Text size="xs" style={{ overflowWrap: "anywhere" }}>
                       {file.path} ·{" "}
-                      {file.sizeBytes === null ? "大小未知" : formatBytes(file.sizeBytes)}
+                      {file.sizeBytes === null ? t("大小未知") : formatBytes(file.sizeBytes)}
                     </Text>
                     <Text size="xs" c="dimmed" style={{ overflowWrap: "anywhere" }}>
-                      SHA-256：{file.sha256 ?? "文件缺失、不可访问或无法安全计算"}
+                      SHA-256：{file.sha256 ?? t("文件缺失、不可访问或无法安全计算")}
                     </Text>
                     <Button
                       size="xs"
@@ -225,7 +238,7 @@ function VersionsDialog({
                       disabled={!!busy}
                       onClick={() => void run("open", version.taskId, index)}
                     >
-                      打开此版本
+                      {t("打开此版本")}
                     </Button>
                   </Stack>
                 ))}
@@ -234,8 +247,9 @@ function VersionsDialog({
           ))}
         </Stack>
         <Text size="xs" c="dimmed">
-          文件摘要不同也可能来自编码、封装或元数据差异，不证明 UP
-          主更换了源视频。删除某条历史记录会一并删除其版本摘要，不影响其他版本。
+          {t(
+            "文件摘要不同也可能来自编码、封装或元数据差异，不证明 UP 主更换了源视频。删除某条历史记录会一并删除其版本摘要，不影响其他版本。",
+          )}
         </Text>
       </Stack>
     </Modal>

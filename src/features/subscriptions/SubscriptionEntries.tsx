@@ -1,3 +1,4 @@
+import { t, useUiLocale } from "../../i18n/translate.ts";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Button, Checkbox, Group, ScrollArea, Stack, Text } from "@mantine/core";
 import { subscriptionApi } from "./subscriptionApi";
@@ -37,6 +38,8 @@ export function SubscriptionEntries({
   onSelect,
   onMetadata,
 }: Props) {
+  useUiLocale();
+
   const latest = useRef({ entries, onMetadata });
   useLayoutEffect(() => {
     latest.current = { entries, onMetadata };
@@ -83,7 +86,7 @@ export function SubscriptionEntries({
         for (let offset = 0; offset < targets.length; offset += 5) {
           if (cancelled || stop.current) break;
           const chunk = targets.slice(offset, offset + 5);
-          setProgress(`正在补全视频信息 ${done}/${targets.length}（不下载媒体）`);
+          setProgress(t("正在补全视频信息 {0}/{1}（不下载媒体）", [done, targets.length]));
           const request = serialRead(async () => {
             if (cancelled || stop.current) return [];
             const current = chunk.filter((entry) =>
@@ -117,10 +120,10 @@ export function SubscriptionEntries({
           }));
           done += rows.length;
         }
-        setProgress(`已读取 ${done}/${targets.length} 项视频信息；缺失或失败项可重试。`);
+        setProgress(t("已读取 {0}/{1} 项视频信息；缺失或失败项可重试。", [done, targets.length]));
       } catch (error: unknown) {
         retryNeeded.current = true;
-        setProgress(error instanceof Error ? error.message : "读取视频信息失败，可稍后重试。");
+        setProgress(error instanceof Error ? error.message : t("读取视频信息失败，可稍后重试。"));
       } finally {
         setReading(false);
       }
@@ -140,8 +143,8 @@ export function SubscriptionEntries({
         <Text size="xs" c="dimmed" role="status">
           {progress ||
             (remaining
-              ? "展开时分批补全缺失标题；标题和时长保存在本机。"
-              : "视频信息已保存到本机。")}
+              ? t("展开时分批补全缺失标题；标题和时长保存在本机。")
+              : t("视频信息已保存到本机。"))}
         </Text>
         {reading ? (
           <Button
@@ -149,10 +152,10 @@ export function SubscriptionEntries({
             variant="subtle"
             onClick={() => {
               stop.current = true;
-              setProgress("当前批次完成后停止后续读取。");
+              setProgress(t("当前批次完成后停止后续读取。"));
             }}
           >
-            停止读取信息
+            {t("停止读取信息")}
           </Button>
         ) : (
           remaining > 0 && (
@@ -176,7 +179,7 @@ export function SubscriptionEntries({
                 setRevision((value) => value + 1);
               }}
             >
-              继续 / 重试读取信息
+              {t("继续 / 重试读取信息")}
             </Button>
           )
         )}
@@ -187,7 +190,7 @@ export function SubscriptionEntries({
         scrollbars="y"
         offsetScrollbars="y"
         className="subscription-entry-scroll"
-        viewportProps={{ tabIndex: 0, role: "region", "aria-label": `${title}条目` }}
+        viewportProps={{ tabIndex: 0, role: "region", "aria-label": t("{0}条目", [title]) }}
       >
         <Stack gap="sm" className="subscription-entry-content">
           {entries.map((entry) => {
@@ -201,19 +204,23 @@ export function SubscriptionEntries({
                   !isPending(entry) ||
                   (!chosen.includes(entry.id) && chosen.length >= 50)
                 }
-                label={`第 ${entry.index} 项 · ${missingTitle(entry.title) ? "标题待补全" : entry.title}${entry.isNew && !entry.downloaded ? " · 新增" : ""}`}
+                label={t("第 {0} 项 · {1}{2}", [
+                  entry.index,
+                  missingTitle(entry.title) ? t("标题待补全") : entry.title,
+                  entry.isNew && !entry.downloaded ? t(" · 新增") : "",
+                ])}
                 description={
                   <>
-                    {duration ? `时长 ${duration} · ` : ""}ID：{entry.id} ·{" "}
+                    {duration ? t("时长 {0} · ", [duration]) : ""}ID：{entry.id} ·{" "}
                     {entry.downloaded
-                      ? "已下载"
+                      ? t("已下载")
                       : !entry.available
-                        ? "不可用 / 已移出列表"
+                        ? t("不可用 / 已移出列表")
                         : !isPending(entry)
-                          ? "已加入下载任务"
+                          ? t("已加入下载任务")
                           : entry.taskStatus === "failed" || entry.taskStatus === "cancelled"
-                            ? "上次未完成，可重新下载"
-                            : "待下载"}
+                            ? t("上次未完成，可重新下载")
+                            : t("待下载")}
                     {failures[entry.id] && (
                       <Text component="span" display="block" size="xs" c="orange">
                         {failures[entry.id]}
@@ -227,7 +234,7 @@ export function SubscriptionEntries({
           })}
           {!entries.length && (
             <Text size="sm" c="dimmed">
-              当前已知条目均已下载，或站点未返回可识别的视频 ID。
+              {t("当前已知条目均已下载，或站点未返回可识别的视频 ID。")}
             </Text>
           )}
         </Stack>

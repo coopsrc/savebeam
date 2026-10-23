@@ -1,3 +1,4 @@
+import { t, useUiLocale } from "../../i18n/translate.ts";
 import { useEffect, useState } from "react";
 import { Alert, Button, Group, Select, Stack, Text } from "@mantine/core";
 import { IconExternalLink, IconFolderOpen, IconHistory, IconRefresh } from "@tabler/icons-react";
@@ -13,10 +14,12 @@ function actionError(reason: unknown): string {
     ? reason.contextMessage
     : reason instanceof Error
       ? reason.message
-      : "操作失败，请重试。";
+      : t("操作失败，请重试。");
 }
 
 export function CompletedTaskActions({ task }: { task: DownloadTask }) {
+  useUiLocale();
+
   const navigate = useNavigate();
   const [record, setRecord] = useState<DownloadHistoryRecord | null>(null);
   const [loading, setLoading] = useState(true);
@@ -67,14 +70,14 @@ export function CompletedTaskActions({ task }: { task: DownloadTask }) {
   return (
     <Stack gap="sm">
       {error && (
-        <Alert color="red" title="任务操作失败" role="alert">
+        <Alert color="red" title={t("任务操作失败")} role="alert">
           {error}
         </Alert>
       )}
       {paths.length > 1 && (
         <Select
-          label="下载文件"
-          description={`该任务生成 ${paths.length} 个文件，选择后打开。`}
+          label={t("下载文件")}
+          description={t("该任务生成 {0} 个文件，选择后打开。", [paths.length])}
           data={paths.map((path, index) => ({
             value: String(index),
             label: `${index + 1}. ${path.split(/[\\/]/).pop() ?? path}`,
@@ -87,13 +90,14 @@ export function CompletedTaskActions({ task }: { task: DownloadTask }) {
       )}
       {selectedPath && (
         <Text size="xs" c="dimmed" title={selectedPath} style={{ overflowWrap: "anywhere" }}>
-          已保存：{selectedPath}
-          {record ? ` · 共 ${formatBytes(record.totalBytes)}` : ""}
+          {t("已保存：")}
+          {selectedPath}
+          {record ? t(" · 共 {0}", [formatBytes(record.totalBytes)]) : ""}
         </Text>
       )}
       {!loading && !record && !error && (
         <Text size="xs" c="dimmed">
-          下载历史已删除或未能保存，无法从任务定位文件；仍可重新解析来源链接。
+          {t("下载历史已删除或未能保存，无法从任务定位文件；仍可重新解析来源链接。")}
         </Text>
       )}
       <Group justify="flex-end" gap="xs">
@@ -106,7 +110,7 @@ export function CompletedTaskActions({ task }: { task: DownloadTask }) {
           loading={busy === "file"}
           onClick={() => void open("file")}
         >
-          打开文件
+          {t("打开文件")}
         </Button>
         <Button
           size="xs"
@@ -116,7 +120,7 @@ export function CompletedTaskActions({ task }: { task: DownloadTask }) {
           loading={busy === "folder"}
           onClick={() => void open("folder")}
         >
-          打开所在文件夹
+          {t("打开所在文件夹")}
         </Button>
         <Button
           size="xs"
@@ -125,7 +129,7 @@ export function CompletedTaskActions({ task }: { task: DownloadTask }) {
           disabled={!!busy}
           onClick={() => navigate("/history")}
         >
-          查看历史
+          {t("查看历史")}
         </Button>
         <Button
           size="xs"
@@ -134,11 +138,11 @@ export function CompletedTaskActions({ task }: { task: DownloadTask }) {
           disabled={!!busy}
           onClick={() => navigate(`/download?url=${encodeURIComponent(task.url)}`)}
         >
-          重新解析
+          {t("重新解析")}
         </Button>
       </Group>
       <Text size="xs" c="dimmed">
-        重新解析只回填原链接；需要保留旧文件并保存新版本时，请使用“来源与版本”。
+        {t("重新解析只回填原链接；需要保留旧文件并保存新版本时，请使用“来源与版本”。")}
       </Text>
     </Stack>
   );

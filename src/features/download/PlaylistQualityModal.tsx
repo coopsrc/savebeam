@@ -1,3 +1,4 @@
+import { t, useUiLocale } from "../../i18n/translate.ts";
 import { useState } from "react";
 import { Button, Group, Modal, Stack, Text } from "@mantine/core";
 import type { PlaylistQuality } from "../../types/domain";
@@ -22,19 +23,21 @@ export function PlaylistQualityModal({
   onClose: () => void;
   opened?: boolean;
 }) {
+  useUiLocale();
+
   const [draft, setDraft] = useState({ ...value });
   return (
     <Modal
       opened={opened}
       returnFocus={opened}
       onClose={onClose}
-      title={`${label ?? `第 ${index} 项`} · 单独画质设置`}
+      title={t("{0} · 单独画质设置", [label ?? t("第 {0} 项", [index])])}
       size="lg"
       centered
     >
       <Stack gap="md">
         <Text size="sm" c="dimmed">
-          仅覆盖这一项，其余条目仍使用统一策略。
+          {t("仅覆盖这一项，其余条目仍使用统一策略。")}
         </Text>
         <PlaylistQualityFields value={draft} onChange={setDraft} audioOnly={audioOnly} />
         <Group justify="space-between">
@@ -45,11 +48,11 @@ export function PlaylistQualityModal({
               onClose();
             }}
           >
-            恢复统一策略
+            {t("恢复统一策略")}
           </Button>
           <Group gap="xs">
             <Button variant="default" onClick={onClose}>
-              取消
+              {t("取消")}
             </Button>
             <Button
               onClick={() => {
@@ -57,7 +60,7 @@ export function PlaylistQualityModal({
                 onClose();
               }}
             >
-              应用
+              {t("应用")}
             </Button>
           </Group>
         </Group>

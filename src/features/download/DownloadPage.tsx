@@ -1,3 +1,4 @@
+import { t, useUiLocale } from "../../i18n/translate.ts";
 import { useLayoutEffect, useRef, useState, type FormEvent } from "react";
 import {
   Alert,
@@ -63,6 +64,8 @@ export function DownloadPage({
   onDraftTouched: () => void;
   onQueued: () => void;
 }) {
+  useUiLocale();
+
   const [url, setUrl] = useState(initialUrl);
   const activePage = useRef(active);
   useLayoutEffect(() => {
@@ -146,7 +149,7 @@ export function DownloadPage({
     } catch (error: unknown) {
       if (epoch === sizeEpoch.current)
         setRequestError(
-          error instanceof IpcError ? error.contextMessage : "解析失败，请稍后重试。",
+          error instanceof IpcError ? error.contextMessage : t("解析失败，请稍后重试。"),
         );
     } finally {
       setIsInspecting(false);
@@ -214,7 +217,10 @@ export function DownloadPage({
           );
           setPlaylistConfirmed(false);
           setQueuedNotice(
-            `已加入 ${result.tasks.length} 项；${result.skipped.length} 项未匹配，未重复加入已排队条目。`,
+            t("已加入 {0} 项；{1} 项未匹配，未重复加入已排队条目。", [
+              result.tasks.length,
+              result.skipped.length,
+            ]),
           );
           if (result.error) setRequestError(result.error);
         } else {
@@ -228,7 +234,7 @@ export function DownloadPage({
       onQueued();
       if (activePage.current && window.location.href === originLocation) navigate("/tasks");
     } catch (error: unknown) {
-      setRequestError(error instanceof IpcError ? error.contextMessage : "无法创建下载任务。");
+      setRequestError(error instanceof IpcError ? error.contextMessage : t("无法创建下载任务。"));
     } finally {
       setIsStartingDownload(false);
     }
@@ -260,14 +266,22 @@ export function DownloadPage({
   );
   const totalSize = knownSizes.reduce((total, row) => total + row!.bytes!, 0);
   const sizeText = audioOnly
-    ? "预计文件大小：MP3 转换后待定"
+    ? t("预计文件大小：MP3 转换后待定")
     : mediaInfo?.playlist
       ? !chosenEntries.length
-        ? "预计文件大小：未选择条目"
+        ? t("预计文件大小：未选择条目")
         : matchedCount > 0 && knownSizes.length === matchedCount && Number.isSafeInteger(totalSize)
-          ? `匹配 ${matchedCount} 项合计：约 ${formatBytes(totalSize)}`
-          : `已匹配 ${matchedCount}/${chosenEntries.length} 项 · ${knownSizes.length > 0 && Number.isSafeInteger(totalSize) ? `已知约 ${formatBytes(totalSize)}` : "大小待确定"}`
-      : `预计文件大小：${bytes === null ? "暂无法估算" : `约 ${formatBytes(bytes)}`}`;
+          ? t("匹配 {0} 项合计：约 {1}", [matchedCount, formatBytes(totalSize)])
+          : t("已匹配 {0}/{1} 项 · {2}", [
+              matchedCount,
+              chosenEntries.length,
+              knownSizes.length > 0 && Number.isSafeInteger(totalSize)
+                ? t("已知约 {0}", [formatBytes(totalSize)])
+                : t("大小待确定"),
+            ])
+      : t("预计文件大小：{0}", [
+          bytes === null ? t("暂无法估算") : t("约 {0}", [formatBytes(bytes)]),
+        ]);
 
   function changePlaylistItems(items: number[]) {
     setPlaylistItems(items);
@@ -279,16 +293,16 @@ export function DownloadPage({
   const audios = audioFormats(mediaInfo?.formats ?? [], audioOnly);
   const videoOptions = videos.map((format) => ({
     value: format.formatId,
-    label: formatLabel(format, "video") + (format.audioCodec ? " · 含音轨" : ""),
+    label: formatLabel(format, "video") + (format.audioCodec ? t(" · 含音轨") : ""),
   }));
   const audioOptions = audios.map((format) => ({
     value: format.formatId,
     label:
       formatLabel(format, "audio") +
       (format.formatId === automaticSelection?.audio?.formatId
-        ? "（推荐 · 自动匹配）"
+        ? t("（推荐 · 自动匹配）")
         : !audioOnly && currentVideo && isRecommendedAudio(currentVideo, format)
-          ? "（兼容推荐）"
+          ? t("（兼容推荐）")
           : ""),
   }));
   const subtitleTracks = mediaInfo?.playlist
@@ -315,9 +329,9 @@ export function DownloadPage({
               <IconLink size={21} stroke={1.8} />
             </div>
             <Stack gap={4}>
-              <Title order={2}>添加视频链接</Title>
+              <Title order={2}>{t("添加视频链接")}</Title>
               <Text c="dimmed" size="sm">
-                输入公开的视频页面网址，读取标题、封面、可用格式和字幕。此步骤不会下载媒体。
+                {t("输入公开的视频页面网址，读取标题、封面、可用格式和字幕。此步骤不会下载媒体。")}
               </Text>
             </Stack>
           </Group>
@@ -329,7 +343,7 @@ export function DownloadPage({
                   autoComplete="url"
                   autoCapitalize="off"
                   spellCheck={false}
-                  label="视频链接"
+                  label={t("视频链接")}
                   placeholder="https://example.com/video"
                   value={url}
                   onChange={(event) => handleChange(event.currentTarget.value)}
@@ -343,12 +357,14 @@ export function DownloadPage({
                   disabled={loadingDefaults || !!defaultsError || isStartingDownload}
                   leftSection={<IconSearch size={16} stroke={1.8} />}
                 >
-                  解析视频信息
+                  {t("解析视频信息")}
                 </Button>
               </div>
               <Checkbox
-                label="使用代理"
-                description="不勾选时直接连接；勾选后，解析、大小估算和本次下载使用设置中已保存的自定义代理。"
+                label={t("使用代理")}
+                description={t(
+                  "不勾选时直接连接；勾选后，解析、大小估算和本次下载使用设置中已保存的自定义代理。",
+                )}
                 checked={useProxy}
                 disabled={isInspecting || isStartingDownload}
                 onChange={(event) => {
@@ -358,14 +374,14 @@ export function DownloadPage({
                 }}
               />
               <Text id="url-input-hint" size="xs" c="dimmed">
-                仅支持 http:// 和 https://；需要已在设置中配置 yt-dlp。
+                {t("仅支持 http:// 和 https://；需要已在设置中配置 yt-dlp。")}
               </Text>
 
               {defaultsError && (
-                <Alert color="red" title="无法读取下载选项" role="alert">
+                <Alert color="red" title={t("无法读取下载选项")} role="alert">
                   {defaultsError}
                   <Button variant="subtle" onClick={retryDefaults}>
-                    重新读取下载选项
+                    {t("重新读取下载选项")}
                   </Button>
                 </Alert>
               )}
@@ -374,7 +390,7 @@ export function DownloadPage({
                 <Alert
                   color="red"
                   icon={<IconAlertCircle size={18} />}
-                  title="操作未完成"
+                  title={t("操作未完成")}
                   role="alert"
                   aria-live="assertive"
                 >
@@ -385,7 +401,7 @@ export function DownloadPage({
                 <Alert color="yellow" role="status">
                   {queuedNotice}
                   <Button variant="subtle" onClick={() => navigate("/tasks")}>
-                    查看任务
+                    {t("查看任务")}
                   </Button>
                 </Alert>
               )}
@@ -399,7 +415,7 @@ export function DownloadPage({
               <Paper
                 className="media-info-card download-source-panel"
                 component="section"
-                aria-label="媒体与格式"
+                aria-label={t("媒体与格式")}
                 withBorder
                 radius="md"
                 p="md"
@@ -409,7 +425,7 @@ export function DownloadPage({
                     {thumbnail && !thumbnailFailed ? (
                       <Image
                         src={thumbnail}
-                        alt="视频封面"
+                        alt={t("视频封面")}
                         className="download-thumbnail"
                         w={144}
                         h={81}
@@ -426,19 +442,20 @@ export function DownloadPage({
                         justify="center"
                       >
                         <IconPhotoOff size={24} aria-hidden="true" />
-                        <Text size="xs">封面暂不可用</Text>
+                        <Text size="xs">{t("封面暂不可用")}</Text>
                       </Stack>
                     )}
                     <div className="download-media-details">
                       <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
-                        {isMultipart ? "多 P 视频" : "媒体信息"}
+                        {isMultipart ? t("多 P 视频") : t("媒体信息")}
                       </Text>
                       <Title order={3} mt={4}>
                         {mediaInfo.title}
                       </Title>
                       {isMultipart && (
                         <Text size="sm" c="dimmed">
-                          视频 ID：{mediaInfo.id} · 共{" "}
+                          {t("视频 ID：")}
+                          {mediaInfo.id} {t(" · 共")}{" "}
                           {mediaInfo.playlist?.totalCount ?? playlistEntries.length} P
                         </Text>
                       )}
@@ -449,7 +466,8 @@ export function DownloadPage({
                       )}
                       {mediaInfo.durationSeconds && (
                         <Text size="sm" c="dimmed">
-                          时长 {Math.floor(mediaInfo.durationSeconds / 60)}:
+                          {t("时长 ")}
+                          {Math.floor(mediaInfo.durationSeconds / 60)}:
                           {String(Math.floor(mediaInfo.durationSeconds % 60)).padStart(2, "0")}
                         </Text>
                       )}
@@ -458,11 +476,11 @@ export function DownloadPage({
                   {!mediaInfo.playlist &&
                     (videos.length > 0 || audios.length > 0 ? (
                       <Stack gap="sm">
-                        <Text fw={600}>视频与音轨</Text>
+                        <Text fw={600}>{t("视频与音轨")}</Text>
                         {!audioOnly && (
                           <Select
-                            label="视频画质"
-                            description="默认优先最佳画质。独立音频将在下载后自动合并。"
+                            label={t("视频画质")}
+                            description={t("默认优先最佳画质。独立音频将在下载后自动合并。")}
                             data={videoOptions}
                             value={selectedVideoId}
                             onChange={setSelectedVideoId}
@@ -471,17 +489,21 @@ export function DownloadPage({
                         )}
                         <Text size="sm" c="dimmed">
                           {usesEmbeddedAudio
-                            ? `音频：使用视频内置音轨（${codecLabel(currentVideo?.audioCodec ?? null)}）`
+                            ? t("音频：使用视频内置音轨（{0}）", [
+                                codecLabel(currentVideo?.audioCodec ?? null),
+                              ])
                             : automaticSelection?.audio
-                              ? `${manualAudio ? "推荐音频" : "自动匹配音频"}：${formatLabel(automaticSelection.audio, "audio")}`
-                              : "站点未提供独立音频轨道。"}
+                              ? `${manualAudio ? t("推荐音频") : t("自动匹配音频")}：${formatLabel(automaticSelection.audio, "audio")}`
+                              : t("站点未提供独立音频轨道。")}
                         </Text>
                         <Checkbox
-                          label="手动选择音频"
+                          label={t("手动选择音频")}
                           description={
                             usesEmbeddedAudio
-                              ? "该视频格式已包含音轨；选择音视频分离的视频格式后可更换独立音轨。"
-                              : "展开可用音频列表，按推荐标识、编码、码率或语言选择。"
+                              ? t(
+                                  "该视频格式已包含音轨；选择音视频分离的视频格式后可更换独立音轨。",
+                                )
+                              : t("展开可用音频列表，按推荐标识、编码、码率或语言选择。")
                           }
                           checked={manualAudio && !usesEmbeddedAudio}
                           disabled={usesEmbeddedAudio || audios.length === 0}
@@ -499,8 +521,10 @@ export function DownloadPage({
                         />
                         {manualAudio && !usesEmbeddedAudio && (
                           <Select
-                            label="音频轨道"
-                            description="推荐项优先保持视频容器兼容；更换编码后，输出格式可能改变。"
+                            label={t("音频轨道")}
+                            description={t(
+                              "推荐项优先保持视频容器兼容；更换编码后，输出格式可能改变。",
+                            )}
                             data={audioOptions}
                             value={selectedAudioId}
                             onChange={(value) => setSelectedAudioId(value ?? AUTOMATIC_AUDIO)}
@@ -508,14 +532,16 @@ export function DownloadPage({
                           />
                         )}
                         {!audioOnly && selection && !selection.audio && (
-                          <Alert color="yellow" title="该格式没有音轨">
-                            站点未提供独立音频，此选择将下载无声视频。可尝试选择包含音轨的视频格式。
+                          <Alert color="yellow" title={t("该格式没有音轨")}>
+                            {t(
+                              "站点未提供独立音频，此选择将下载无声视频。可尝试选择包含音轨的视频格式。",
+                            )}
                           </Alert>
                         )}
                       </Stack>
                     ) : (
-                      <Alert color="yellow" title="没有可选格式">
-                        网站没有返回可供下载的媒体格式。
+                      <Alert color="yellow" title={t("没有可选格式")}>
+                        {t("网站没有返回可供下载的媒体格式。")}
                       </Alert>
                     ))}
                 </Stack>
@@ -537,7 +563,7 @@ export function DownloadPage({
               {mediaInfo.playlist && (
                 <Paper
                   component="section"
-                  aria-label={isMultipart ? "选择分 P" : "选择系列视频"}
+                  aria-label={isMultipart ? t("选择分 P") : t("选择系列视频")}
                   withBorder
                   p="md"
                   className="download-series-panel"
@@ -545,8 +571,11 @@ export function DownloadPage({
                   <Stack gap="sm" className="download-series-content">
                     <Text fw={600}>
                       {isMultipart
-                        ? `选择分 P（已选 ${chosenEntries.length}/${playlistEntries.length} P）`
-                        : `选择下载条目（已选 ${chosenEntries.length} 项）`}
+                        ? t("选择分 P（已选 {0}/{1} P）", [
+                            chosenEntries.length,
+                            playlistEntries.length,
+                          ])
+                        : t("选择下载条目（已选 {0} 项）", [chosenEntries.length])}
                     </Text>
                     <Group justify="space-between">
                       {!isMultipart && (
@@ -560,7 +589,7 @@ export function DownloadPage({
                             )
                           }
                         >
-                          订阅此系列
+                          {t("订阅此系列")}
                         </Button>
                       )}
                       <Group gap="xs">
@@ -576,7 +605,7 @@ export function DownloadPage({
                             )
                           }
                         >
-                          全选
+                          {t("全选")}
                         </Button>
                         <Button
                           type="button"
@@ -584,30 +613,32 @@ export function DownloadPage({
                           variant="subtle"
                           onClick={() => changePlaylistItems([])}
                         >
-                          取消全选
+                          {t("取消全选")}
                         </Button>
                       </Group>
                     </Group>
                     <Text size="sm">
                       {isMultipart
                         ? mediaInfo.playlist.truncated
-                          ? "分 P 超过安全上限，本次展示前 50 P，可分别勾选下载。"
-                          : "各 P 独立下载，可共用画质或单独调整。"
+                          ? t("分 P 超过安全上限，本次展示前 50 P，可分别勾选下载。")
+                          : t("各 P 独立下载，可共用画质或单独调整。")
                         : mediaInfo.playlist.truncated
-                          ? "系列超过安全上限，当前最多展示前 50 项，可勾选其中一部分。"
-                          : `检测到 ${mediaInfo.playlist.totalCount ?? playlistEntries.length} 项，分 P 展开后最多展示 50 个可下载文件，可分别勾选。`}
+                          ? t("系列超过安全上限，当前最多展示前 50 项，可勾选其中一部分。")
+                          : t("检测到 {0} 项，分 P 展开后最多展示 50 个可下载文件，可分别勾选。", [
+                              mediaInfo.playlist.totalCount ?? playlistEntries.length,
+                            ])}
                     </Text>
                     <Group justify="space-between" gap="xs">
                       <Text size="xs" c="dimmed" role="status">
-                        {series.loading ? "正在读取标题与格式" : "条目详情"}：{series.done}/
+                        {series.loading ? t("正在读取标题与格式") : t("条目详情")}：{series.done}/
                         {mediaInfo.playlist.entries.filter((entry) => entry.available).length}{" "}
                         {isMultipart
-                          ? "个分 P（不下载媒体）"
-                          : "个合集条目（分 P 独立读取，不下载媒体）"}
+                          ? t("个分 P（不下载媒体）")
+                          : t("个合集条目（分 P 独立读取，不下载媒体）")}
                       </Text>
                       {series.loading ? (
                         <Button variant="subtle" size="compact-xs" onClick={series.stop}>
-                          停止后续读取
+                          {t("停止后续读取")}
                         </Button>
                       ) : (
                         <Button
@@ -616,7 +647,7 @@ export function DownloadPage({
                           disabled={isStartingDownload}
                           onClick={series.reload}
                         >
-                          重新读取详情
+                          {t("重新读取详情")}
                         </Button>
                       )}
                     </Group>
@@ -645,14 +676,14 @@ export function DownloadPage({
                     {seriesReady && matchedCount < chosenEntries.length && (
                       <Text c="orange" size="xs">
                         {chosenEntries.length - matchedCount}{" "}
-                        项未匹配，将跳过；请单独调整、重新读取或取消勾选。
+                        {t("项未匹配，将跳过；请单独调整、重新读取或取消勾选。")}
                       </Text>
                     )}
                     <Checkbox
                       checked={playlistConfirmed}
                       disabled={!seriesReady || !matchedCount || isStartingDownload}
                       onChange={(event) => setPlaylistConfirmed(event.currentTarget.checked)}
-                      label={`我确认下载匹配的 ${matchedCount} 项`}
+                      label={t("我确认下载匹配的 {0} 项", [matchedCount])}
                     />
                   </Stack>
                 </Paper>
@@ -661,7 +692,7 @@ export function DownloadPage({
                 className="download-start-actions"
                 justify="space-between"
                 role="group"
-                aria-label="下载操作"
+                aria-label={t("下载操作")}
               >
                 <Text
                   component="div"
@@ -669,7 +700,9 @@ export function DownloadPage({
                   c="dimmed"
                   aria-live="polite"
                   className="download-size-hint"
-                  title="估算最终媒体大小，不含字幕、封面、JSON 和保留的中间文件；封装后可能略有差异，源格式可能随时间变化。"
+                  title={t(
+                    "估算最终媒体大小，不含字幕、封面、JSON 和保留的中间文件；封装后可能略有差异，源格式可能随时间变化。",
+                  )}
                 >
                   <span>{sizeText}</span>
                 </Text>
@@ -680,7 +713,7 @@ export function DownloadPage({
                     disabled={isStartingDownload || loadingDefaults || !!defaultsError}
                     onClick={() => setAdvancedOpen(true)}
                   >
-                    高级设置
+                    {t("高级设置")}
                   </Button>
                   <Button
                     type="button"
@@ -693,7 +726,7 @@ export function DownloadPage({
                       (writeAutomaticSubtitles && subtitleLanguages.length === 0)
                     }
                   >
-                    开始下载
+                    {t("开始下载")}
                   </Button>
                 </Group>
               </Group>

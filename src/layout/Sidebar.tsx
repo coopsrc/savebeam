@@ -1,3 +1,4 @@
+import { t, useUiLocale } from "../i18n/translate.ts";
 import { NavLink, Stack, Text, Tooltip } from "@mantine/core";
 import {
   IconDownload,
@@ -9,19 +10,51 @@ import {
 import { Link, useLocation } from "react-router-dom";
 
 const primaryItems = [
-  { path: "/download", label: "下载", icon: IconDownload },
-  { path: "/tasks", label: "任务", icon: IconListCheck },
-  { path: "/history", label: "历史", icon: IconHistory },
-  { path: "/subscriptions", label: "订阅", icon: IconRss },
+  {
+    path: "/download",
+    get label() {
+      return t("下载");
+    },
+    icon: IconDownload,
+  },
+  {
+    path: "/tasks",
+    get label() {
+      return t("任务");
+    },
+    icon: IconListCheck,
+  },
+  {
+    path: "/history",
+    get label() {
+      return t("历史");
+    },
+    icon: IconHistory,
+  },
+  {
+    path: "/subscriptions",
+    get label() {
+      return t("订阅");
+    },
+    icon: IconRss,
+  },
 ];
 
-const settingsItem = { path: "/settings", label: "设置", icon: IconSettings };
+const settingsItem = {
+  path: "/settings",
+  get label() {
+    return t("设置");
+  },
+  icon: IconSettings,
+};
 
 interface SidebarProps {
   compact: boolean;
 }
 
 export function Sidebar({ compact }: SidebarProps) {
+  useUiLocale();
+
   const { pathname } = useLocation();
 
   const renderItem = (item: (typeof primaryItems)[number]) => {
@@ -52,7 +85,7 @@ export function Sidebar({ compact }: SidebarProps) {
         {!compact && <Text fw={700}>Savebeam</Text>}
       </div>
 
-      <nav className="sidebar-primary" aria-label="主导航">
+      <nav className="sidebar-primary" aria-label={t("主导航")}>
         <Stack gap={6}>{primaryItems.map(renderItem)}</Stack>
       </nav>
 

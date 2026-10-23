@@ -185,7 +185,7 @@ async function sidebarGeometry(page) {
 try {
   for (const mode of ["series", "single"]) {
     for (const width of [1600, 1280, 1200, 1199, 1100, 800, 560]) {
-      const page = await browser.newPage({ viewport: { width, height: 960 } });
+      const page = await browser.newPage({ locale: "zh-CN", viewport: { width, height: 960 } });
       const errors = [];
       page.on("pageerror", (error) => errors.push(error.message));
       const media = structuredClone(fixture);

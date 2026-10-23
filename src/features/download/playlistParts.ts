@@ -1,3 +1,4 @@
+import { t } from "../../i18n/translate.ts";
 import type {
   MediaInfo,
   PlaylistDetails,
@@ -22,7 +23,7 @@ export function expandedEntries(
         ? row.parts.map((part) => ({
             index: part.index,
             id: part.id,
-            title: part.title ?? "分 P 标题待补全",
+            title: part.title ?? t("分 P 标题待补全"),
             available: entry.available,
             part: part.part,
             parentTitle: row.title ?? entry.title,
@@ -42,10 +43,10 @@ export function selectedDownloadEntries(entries: DownloadEntry[], keys: number[]
 
 export function entryLabel(entry: DownloadEntry, multipart = false) {
   return entry.part
-    ? `第 ${entry.part.parentIndex} 项 · P${entry.part.partIndex}`
+    ? t("第 {0} 项 · P{1}", [entry.part.parentIndex, entry.part.partIndex])
     : multipart
       ? `P${entry.index}`
-      : `第 ${entry.index} 项`;
+      : t("第 {0} 项", [entry.index]);
 }
 
 export function mediaType(media: MediaInfo | null) {

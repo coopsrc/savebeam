@@ -1,3 +1,4 @@
+import { t } from "../../i18n/translate.ts";
 const MAX_MEDIA_URL_LENGTH = 4096;
 
 export type MediaUrlValidation =
@@ -41,14 +42,14 @@ export function getMediaUrlError(
 ): string {
   switch (reason) {
     case "empty":
-      return "请输入视频链接。";
+      return t("请输入视频链接。");
     case "too-long":
-      return "链接过长，请检查后重试。";
+      return t("链接过长，请检查后重试。");
     case "malformed":
-      return "链接格式不正确，请输入完整的网址（例如 https://example.com/video）。";
+      return t("链接格式不正确，请输入完整的网址（例如 https://example.com/video）。");
     case "unsupported-protocol":
-      return "仅支持以 http:// 或 https:// 开头的链接。";
+      return t("仅支持以 http:// 或 https:// 开头的链接。");
     case "credentials":
-      return "链接中不能包含用户名或密码。";
+      return t("链接中不能包含用户名或密码。");
   }
 }

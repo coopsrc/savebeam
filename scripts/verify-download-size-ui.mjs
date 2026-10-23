@@ -15,7 +15,10 @@ try {
     [true, false],
     [true, true],
   ]) {
-    const page = await browser.newPage({ viewport: { width: 1500, height: 1100 } });
+    const page = await browser.newPage({
+      locale: "zh-CN",
+      viewport: { width: 1500, height: 1100 },
+    });
     await page.addInitScript((series) => {
       window.calls = [];
       window.partial = series;

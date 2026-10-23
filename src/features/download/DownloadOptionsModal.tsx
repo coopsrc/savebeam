@@ -1,3 +1,4 @@
+import { t, useUiLocale } from "../../i18n/translate.ts";
 import { useState } from "react";
 import { Button, Group, Modal, Stack, Text } from "@mantine/core";
 import type { DownloadOptionDefaults, SubtitleTrack } from "../../types/domain";
@@ -24,6 +25,8 @@ export function DownloadOptionsModal({
   subtitleScope?: SubtitleScope;
   opened?: boolean;
 }) {
+  useUiLocale();
+
   const [draft, setDraft] = useState(() => copyDownloadOptions(value));
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -44,13 +47,15 @@ export function DownloadOptionsModal({
       opened={opened}
       returnFocus={opened}
       onClose={onClose}
-      title="高级设置"
+      title={t("高级设置")}
       size="lg"
       centered
     >
       <Stack gap="md">
         <Text size="sm" c="dimmed">
-          仅调整本次下载，不修改全局默认。创建任务后会保存此配置，排队、重启恢复及重试均保持不变。
+          {t(
+            "仅调整本次下载，不修改全局默认。创建任务后会保存此配置，排队、重启恢复及重试均保持不变。",
+          )}
         </Text>
         <div className="download-advanced-fields">
           <DownloadOptionFields
@@ -72,11 +77,11 @@ export function DownloadOptionsModal({
         )}
         <Group justify="space-between">
           <Button variant="subtle" loading={loading} onClick={() => void restoreDefaults()}>
-            使用全局默认
+            {t("使用全局默认")}
           </Button>
           <Group gap="xs">
             <Button variant="default" onClick={onClose}>
-              取消
+              {t("取消")}
             </Button>
             <Button
               disabled={loading}
@@ -90,7 +95,7 @@ export function DownloadOptionsModal({
                 onClose();
               }}
             >
-              应用到本次下载
+              {t("应用到本次下载")}
             </Button>
           </Group>
         </Group>

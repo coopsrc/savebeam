@@ -1,4 +1,5 @@
 import type { DownloadOptionDefaults, SubtitleTrack } from "../../types/domain";
+import { t } from "../../i18n/translate.ts";
 
 export type SubtitleScope = "preferences" | "video" | "series";
 export interface SubtitleChoice {
@@ -44,7 +45,7 @@ export function subtitleChoices(
     const common = commonLanguages.find(([code]) => code === language)?.[1];
     const choice = choices.get(language) ?? {
       language,
-      label: `${name || common || language}${name || common ? `（${language}）` : ""}`,
+      label: `${name && name !== common ? name : common ? t(common) : language}${name || common ? `（${language}）` : ""}`,
       manual: false,
       automatic: false,
       formats: [],
@@ -93,9 +94,10 @@ export function updateSubtitleSelection(
 
 export function subtitleChoiceDescription(choice: SubtitleChoice, scope: SubtitleScope): string {
   if (!choice.available)
-    return scope === "video" ? "本视频未提供，将跳过" : "语言偏好 · 下载时按各视频匹配";
-  const sources = [choice.manual ? "人工字幕" : "", choice.automatic ? "自动生成" : ""].filter(
-    Boolean,
-  );
-  return `${scope === "series" ? "已读取条目可用 · " : ""}${sources.join(" / ")}${choice.formats.length ? ` · ${choice.formats.join(" / ").toUpperCase()}` : ""}`;
+    return scope === "video" ? t("本视频未提供，将跳过") : t("语言偏好 · 下载时按各视频匹配");
+  const sources = [
+    choice.manual ? t("人工字幕") : "",
+    choice.automatic ? t("自动生成") : "",
+  ].filter(Boolean);
+  return `${scope === "series" ? t("已读取条目可用 · ") : ""}${sources.join(" / ")}${choice.formats.length ? ` · ${choice.formats.join(" / ").toUpperCase()}` : ""}`;
 }

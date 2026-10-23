@@ -11,6 +11,7 @@ const browser = await chromium.launch({
 const base = process.argv[3] ?? "http://127.0.0.1:1421/";
 async function fixture(scenario) {
   const page = await browser.newPage({
+    locale: "zh-CN",
     viewport: { width: 1280, height: 800 },
     colorScheme: scenario === "direct-many" ? "dark" : "light",
   });

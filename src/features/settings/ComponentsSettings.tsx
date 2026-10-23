@@ -1,3 +1,4 @@
+import { t, useUiLocale } from "../../i18n/translate.ts";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActionIcon,
@@ -42,19 +43,35 @@ const componentNames: Record<ComponentKind, string> = {
 };
 
 const sourceNames: Record<NonNullable<ComponentInstallation["source"]>, string> = {
-  app_managed: "应用管理",
-  system: "系统安装",
-  custom: "自定义路径",
+  get app_managed() {
+    return t("应用管理");
+  },
+  get system() {
+    return t("系统安装");
+  },
+  get custom() {
+    return t("自定义路径");
+  },
 };
 
 const statusNames: Record<ComponentInstallation["status"], string> = {
-  missing: "未检测到",
-  available: "可用",
-  outdated: "需要更新",
-  unhealthy: "无法正常运行",
+  get missing() {
+    return t("未检测到");
+  },
+  get available() {
+    return t("可用");
+  },
+  get outdated() {
+    return t("需要更新");
+  },
+  get unhealthy() {
+    return t("无法正常运行");
+  },
 };
 
 export function ComponentsSettings() {
+  useUiLocale();
+
   const profile = usePlatformProfile();
   const platformGuide = installationPlatform(profile.platform);
   const [components, setComponents] = useState<ComponentInstallation[]>([]);
@@ -97,7 +114,7 @@ export function ComponentsSettings() {
       const result = await invokeCommand<ComponentInstallation[]>("get_component_status");
       acceptComponents(result);
     } catch (cause) {
-      setProbeError(cause instanceof Error ? cause.message : "读取组件状态失败。");
+      setProbeError(cause instanceof Error ? cause.message : t("读取组件状态失败。"));
     } finally {
       setLoading(false);
     }
@@ -110,7 +127,7 @@ export function ComponentsSettings() {
         const result = await invokeCommand<ComponentInstallation[]>("get_component_status");
         if (active) acceptComponents(result);
       } catch (cause) {
-        if (active) setProbeError(cause instanceof Error ? cause.message : "读取组件状态失败。");
+        if (active) setProbeError(cause instanceof Error ? cause.message : t("读取组件状态失败。"));
       } finally {
         if (active) setLoading(false);
       }
@@ -134,7 +151,7 @@ export function ComponentsSettings() {
       );
       setReleaseChecked(true);
     } catch (cause) {
-      setReleaseError(cause instanceof Error ? cause.message : "读取组件发行目录失败。");
+      setReleaseError(cause instanceof Error ? cause.message : t("读取组件发行目录失败。"));
     } finally {
       releasePending.current = false;
       setCheckingReleases(false);
@@ -169,7 +186,7 @@ export function ComponentsSettings() {
       await invokeCommand<ComponentInstallation>("install_component_from_release", { kind });
       await refresh();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "安装组件失败。");
+      setError(cause instanceof Error ? cause.message : t("安装组件失败。"));
     } finally {
       setInstallingKind(null);
       setInstallProgress(null);
@@ -180,21 +197,21 @@ export function ComponentsSettings() {
     try {
       await invokeCommand<void>("cancel_component_install", { kind });
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "无法取消组件安装。");
+      setError(cause instanceof Error ? cause.message : t("无法取消组件安装。"));
     }
   }
 
   async function saveCustomPath(kind: ComponentKind) {
     const path = customPaths[kind]?.trim();
     if (!path) {
-      setError("请输入组件可执行文件的完整路径。");
+      setError(t("请输入组件可执行文件的完整路径。"));
       return;
     }
     try {
       await invokeCommand<void>("set_component_custom_path", { kind, path });
       await refresh();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "保存组件路径失败。");
+      setError(cause instanceof Error ? cause.message : t("保存组件路径失败。"));
     }
   }
 
@@ -204,7 +221,7 @@ export function ComponentsSettings() {
       setCustomPaths((previous) => ({ ...previous, [kind]: "" }));
       await refresh();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "恢复自动检测失败。");
+      setError(cause instanceof Error ? cause.message : t("恢复自动检测失败。"));
     }
   }
 
@@ -218,14 +235,16 @@ export function ComponentsSettings() {
         1800,
       );
     } catch {
-      setError("无法访问剪贴板。请手动选择并复制安装命令。");
+      setError(t("无法访问剪贴板。请手动选择并复制安装命令。"));
     }
   }
 
   async function removeManaged(kind: ComponentKind) {
     if (
       !window.confirm(
-        `确定删除 Savebeam 管理的 ${componentNames[kind]} 及其回滚版本？系统和自定义组件不会被删除。`,
+        t("确定删除 Savebeam 管理的 {0} 及其回滚版本？系统和自定义组件不会被删除。", [
+          componentNames[kind],
+        ]),
       )
     )
       return;
@@ -235,7 +254,7 @@ export function ComponentsSettings() {
       await invokeCommand("remove_managed_component", { kind });
       await refresh();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "无法删除应用管理组件。");
+      setError(reason instanceof Error ? reason.message : t("无法删除应用管理组件。"));
     } finally {
       setRemovingKind(null);
     }
@@ -245,9 +264,11 @@ export function ComponentsSettings() {
     <Stack gap="lg">
       <Group justify="space-between" align="flex-start">
         <div>
-          <Title order={2}>运行组件</Title>
+          <Title order={2}>{t("运行组件")}</Title>
           <Text c="dimmed" size="sm" mt={4}>
-            本机检测仅运行固定的版本参数，不联网。应用管理组件的安装或更新，请单独点击“检查组件更新”。
+            {t(
+              "本机检测仅运行固定的版本参数，不联网。应用管理组件的安装或更新，请单独点击“检查组件更新”。",
+            )}
           </Text>
         </div>
         <Group>
@@ -257,7 +278,7 @@ export function ComponentsSettings() {
             onClick={() => void refresh()}
             loading={loading}
           >
-            重新检测
+            {t("重新检测")}
           </Button>
           <Button
             variant="light"
@@ -265,22 +286,22 @@ export function ComponentsSettings() {
             loading={checkingReleases}
             disabled={installingKind !== null}
           >
-            检查组件更新
+            {t("检查组件更新")}
           </Button>
         </Group>
       </Group>
 
       {error && (
         <ErrorState
-          title="组件操作失败"
+          title={t("组件操作失败")}
           description={error}
-          actionLabel="关闭提示"
+          actionLabel={t("关闭提示")}
           onAction={() => setError(null)}
         />
       )}
       {probeError && (
         <ErrorState
-          title="本机组件检测失败"
+          title={t("本机组件检测失败")}
           description={probeError}
           onAction={() => void refresh()}
         />
@@ -296,31 +317,36 @@ export function ComponentsSettings() {
       )}
       {!loading && probeError && components.length > 0 && (
         <Text size="sm" c="dimmed">
-          下方保留上次成功检测结果，当前状态尚未确认。
+          {t("下方保留上次成功检测结果，当前状态尚未确认。")}
         </Text>
       )}
       {releaseError && (
         <Alert
           role="alert"
           color="blue"
-          title="在线组件目录暂不可用"
+          title={t("在线组件目录暂不可用")}
           withCloseButton
-          closeButtonLabel="关闭在线检查提示"
+          closeButtonLabel={t("关闭在线检查提示")}
           onClose={() => setReleaseError(null)}
         >
-          {releaseError} 仅影响 Savebeam
-          管理组件的安装或更新，不影响已经可用的本机组件；本机状态以下方检测结果为准。可点击“检查组件更新”重试，或使用下方手动安装建议。
+          {releaseError}{" "}
+          {t(
+            " 仅影响 Savebeam 管理组件的安装或更新，不影响已经可用的本机组件；本机状态以下方检测结果为准。可点击“检查组件更新”重试，或使用下方手动安装建议。",
+          )}
         </Alert>
       )}
       {releaseChecked && !checkingReleases && !releaseError && (
         <Text role="status" size="sm" c="dimmed">
           {releases.length
-            ? `在线组件目录已读取，当前平台有 ${releases.length} 个发行包；这不代表系统或自定义组件已是最新版。`
-            : "当前平台暂无可用的应用管理发行包，不影响系统或自定义组件使用。"}
+            ? t(
+                "在线组件目录已读取，当前平台有 {0} 个发行包；这不代表系统或自定义组件已是最新版。",
+                [releases.length],
+              )
+            : t("当前平台暂无可用的应用管理发行包，不影响系统或自定义组件使用。")}
         </Text>
       )}
       {loading ? (
-        <LoadingState label="正在检测组件…" />
+        <LoadingState label={t("正在检测组件…")} />
       ) : (
         <Stack gap="md">
           {components.map((component) => (
@@ -330,7 +356,7 @@ export function ComponentsSettings() {
                   <div>
                     <Text fw={650}>{componentNames[component.kind]}</Text>
                     <Text size="sm" c="dimmed" mt={3}>
-                      {component.executablePath ?? "尚未找到可执行文件"}
+                      {component.executablePath ?? t("尚未找到可执行文件")}
                     </Text>
                   </div>
                   <Badge
@@ -348,12 +374,21 @@ export function ComponentsSettings() {
                 </Group>
                 <Group gap="xs">
                   {component.source && (
-                    <Badge variant="outline">来源：{sourceNames[component.source]}</Badge>
+                    <Badge variant="outline">
+                      {t("来源：")}
+                      {sourceNames[component.source]}
+                    </Badge>
                   )}
-                  {component.version && <Badge variant="outline">版本：{component.version}</Badge>}
+                  {component.version && (
+                    <Badge variant="outline">
+                      {t("版本：")}
+                      {component.version}
+                    </Badge>
+                  )}
                 </Group>
                 <Text size="xs" c="dimmed">
-                  许可证：{licenseSummary(component.kind)}
+                  {t("许可证：")}
+                  {licenseSummary(component.kind)}
                 </Text>
                 {(() => {
                   const release = releases.find((item) => item.kind === component.kind);
@@ -376,7 +411,7 @@ export function ComponentsSettings() {
                           <Progress
                             flex={1}
                             value={progressPercent}
-                            aria-label={`正在下载 ${componentNames[component.kind]}`}
+                            aria-label={t("正在下载 {0}", [componentNames[component.kind]])}
                           />
                           <Text size="xs" c="dimmed" miw={72} ta="right">
                             {progressPercent.toFixed(0)}%
@@ -387,7 +422,7 @@ export function ComponentsSettings() {
                             variant="subtle"
                             onClick={() => void cancelInstall(component.kind)}
                           >
-                            取消
+                            {t("取消")}
                           </Button>
                         </Group>
                       ) : (
@@ -400,8 +435,8 @@ export function ComponentsSettings() {
                             onClick={() => void installRelease(component.kind)}
                           >
                             {component.version === release.version
-                              ? "安装此版本"
-                              : `安装 / 更新到 ${release.version}`}
+                              ? t("安装此版本")
+                              : t("安装 / 更新到 {0}", [release.version])}
                           </Button>
                         </Group>
                       )}
@@ -417,15 +452,15 @@ export function ComponentsSettings() {
                       loading={removingKind === component.kind}
                       onClick={() => void removeManaged(component.kind)}
                     >
-                      删除应用管理版本
+                      {t("删除应用管理版本")}
                     </Button>
                   </Group>
                 )}
                 <Group align="end" wrap="nowrap">
                   <TextInput
                     className="component-path-input"
-                    label="自定义可执行文件路径"
-                    placeholder="输入完整路径，例如 /opt/homebrew/bin/yt-dlp"
+                    label={t("自定义可执行文件路径")}
+                    placeholder={t("输入完整路径，例如 /opt/homebrew/bin/yt-dlp")}
                     value={customPaths[component.kind] ?? ""}
                     onChange={(event) => {
                       const path = event.currentTarget.value;
@@ -436,11 +471,11 @@ export function ComponentsSettings() {
                     }}
                   />
                   <Button variant="light" onClick={() => void saveCustomPath(component.kind)}>
-                    使用此路径
+                    {t("使用此路径")}
                   </Button>
                   {component.source === "custom" && (
                     <Button variant="subtle" onClick={() => void resetCustomPath(component.kind)}>
-                      自动检测
+                      {t("自动检测")}
                     </Button>
                   )}
                 </Group>
@@ -450,15 +485,15 @@ export function ComponentsSettings() {
         </Stack>
       )}
 
-      <Paper component="section" aria-label="手动安装建议" withBorder radius="md" p="md">
+      <Paper component="section" aria-label={t("手动安装建议")} withBorder radius="md" p="md">
         <Stack gap="sm">
           <div>
             <Group justify="space-between" gap="xs">
-              <Text fw={650}>手动安装建议</Text>
+              <Text fw={650}>{t("手动安装建议")}</Text>
               <Badge variant="light">{platformGuide.label}</Badge>
             </Group>
             <Text size="sm" c="dimmed" mt={3}>
-              Savebeam 只提供命令和官方说明链接，不会代替你执行包管理器。
+              {t("Savebeam 只提供命令和官方说明链接，不会代替你执行包管理器。")}
             </Text>
           </div>
           {(["yt_dlp", "ffmpeg", "ffprobe", "javascript_runtime"] as const).map((kind) => {
@@ -466,7 +501,7 @@ export function ComponentsSettings() {
             return (
               <Group
                 role="group"
-                aria-label={`${componentNames[kind]} 手动安装建议`}
+                aria-label={t("{0} 手动安装建议", [componentNames[kind]])}
                 key={kind}
                 justify="space-between"
                 align="flex-start"
@@ -488,20 +523,20 @@ export function ComponentsSettings() {
                   )}
                   {guide.url && (
                     <a href={guide.url} target="_blank" rel="noreferrer">
-                      查看 Deno 官方安装说明
+                      {t("查看 Deno 官方安装说明")}
                     </a>
                   )}
                 </div>
                 {guide.command && (
                   <Button
-                    aria-label={`复制 ${componentNames[kind]} 安装命令`}
+                    aria-label={t("复制 {0} 安装命令", [componentNames[kind]])}
                     size="xs"
                     variant="light"
                     onClick={() => void copyCommand(kind, guide.command!)}
                   >
                     {copiedCommand?.kind === kind && copiedCommand.command === guide.command
-                      ? "已复制"
-                      : "复制命令"}
+                      ? t("已复制")
+                      : t("复制命令")}
                   </Button>
                 )}
               </Group>
@@ -511,14 +546,16 @@ export function ComponentsSettings() {
             {platformGuide.note}
           </Text>
           <a href={platformGuide.ffmpegUrl} target="_blank" rel="noreferrer">
-            FFmpeg 官网 {profile.label} 下载入口
+            {t("FFmpeg 官网 ")}
+            {profile.label} {t(" 下载入口")}
           </a>
         </Stack>
       </Paper>
 
       <Text size="xs" c="dimmed">
-        自定义路径保存在本机，重启后继续使用；文件失效时请重新指定或恢复自动检测。应用管理组件只从已验签的
-        Savebeam GitHub Releases 清单安装；下载文件通过 SHA-256 校验后才会解压和启用。
+        {t(
+          "自定义路径保存在本机，重启后继续使用；文件失效时请重新指定或恢复自动检测。应用管理组件只从已验签的 Savebeam GitHub Releases 清单安装；下载文件通过 SHA-256 校验后才会解压和启用。",
+        )}
       </Text>
     </Stack>
   );
@@ -526,12 +563,16 @@ export function ComponentsSettings() {
 
 function licenseSummary(kind: ComponentKind): string {
   if (kind === "yt_dlp")
-    return "yt-dlp 源码为 Unlicense；独立可执行文件还包含第三方依赖，须按对应发行包附带 notices 展示。";
-  if (kind === "javascript_runtime") return "Deno 使用 MIT 许可；具体发布包仍需核对其 notices。";
-  return "FFmpeg 构建许可取决于构建方启用的组件与编译选项；未确定构建前不推断为 LGPL 或 GPL。";
+    return t(
+      "yt-dlp 源码为 Unlicense；独立可执行文件还包含第三方依赖，须按对应发行包附带 notices 展示。",
+    );
+  if (kind === "javascript_runtime") return t("Deno 使用 MIT 许可；具体发布包仍需核对其 notices。");
+  return t("FFmpeg 构建许可取决于构建方启用的组件与编译选项；未确定构建前不推断为 LGPL 或 GPL。");
 }
 
 export function DiagnosticsPanel() {
+  useUiLocale();
+
   const [exporting, setExporting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -542,22 +583,24 @@ export function DiagnosticsPanel() {
     setExporting(true);
     try {
       const approved = await confirm(
-        "诊断文件只包含 Savebeam 版本、操作系统、CPU 架构和下载任务状态计数；不包含链接、标题、Cookie、日志或文件路径。文件只保存在你选择的位置，不会自动发送。是否继续？",
-        { title: "导出诊断信息", kind: "info", okLabel: "继续", cancelLabel: "取消" },
+        t(
+          "诊断文件只包含 Savebeam 版本、操作系统、CPU 架构和下载任务状态计数；不包含链接、标题、Cookie、日志或文件路径。文件只保存在你选择的位置，不会自动发送。是否继续？",
+        ),
+        { title: t("导出诊断信息"), kind: "info", okLabel: t("继续"), cancelLabel: t("取消") },
       );
       if (!approved) return;
 
       const destination = await save({
-        title: "保存 Savebeam 诊断信息",
+        title: t("保存 Savebeam 诊断信息"),
         defaultPath: "savebeam-diagnostics.json",
         filters: [{ name: "JSON", extensions: ["json"] }],
       });
       if (!destination) return;
 
       await invokeCommand("export_diagnostics", { destination });
-      setMessage("诊断文件已保存到所选位置。");
+      setMessage(t("诊断文件已保存到所选位置。"));
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "无法导出诊断文件。");
+      setError(reason instanceof Error ? reason.message : t("无法导出诊断文件。"));
     } finally {
       setExporting(false);
     }
@@ -567,9 +610,9 @@ export function DiagnosticsPanel() {
     <Paper withBorder radius="md" p="md">
       <Stack gap="sm">
         <div>
-          <Text fw={650}>隐私与诊断</Text>
+          <Text fw={650}>{t("诊断信息")}</Text>
           <Text size="sm" c="dimmed" mt={3}>
-            仅在你确认并选择保存位置后生成本地 JSON 报告；不会自动上传。
+            {t("仅在你确认并选择保存位置后生成本地 JSON 报告；不会自动上传。")}
           </Text>
         </div>
         {error && (
@@ -584,7 +627,7 @@ export function DiagnosticsPanel() {
         )}
         <Group justify="flex-end">
           <Button variant="light" loading={exporting} onClick={() => void exportReport()}>
-            导出诊断信息
+            {t("导出诊断信息")}
           </Button>
         </Group>
       </Stack>
@@ -593,6 +636,8 @@ export function DiagnosticsPanel() {
 }
 
 export function CookiePreferencesPanel() {
+  useUiLocale();
+
   const [preferences, setPreferences] = useState<CookiePreferences>({
     cookiesFilePath: null,
     cookiesBrowser: null,
@@ -610,7 +655,7 @@ export function CookiePreferencesPanel() {
         setSource(value.cookiesFilePath ? "file" : value.cookiesBrowser ? "browser" : "none");
       })
       .catch((reason: unknown) =>
-        setError(reason instanceof Error ? reason.message : "无法读取登录 Cookie 设置。"),
+        setError(reason instanceof Error ? reason.message : t("无法读取登录 Cookie 设置。")),
       );
   }, []);
 
@@ -628,8 +673,8 @@ export function CookiePreferencesPanel() {
   async function chooseCookiesFile() {
     try {
       const selected = await open({
-        title: "选择 cookies.txt",
-        filters: [{ name: "Cookie 文本文件", extensions: ["txt"] }],
+        title: t("选择 cookies.txt"),
+        filters: [{ name: t("Cookie 文本文件"), extensions: ["txt"] }],
         multiple: false,
         directory: false,
         fileAccessMode: "scoped",
@@ -643,7 +688,7 @@ export function CookiePreferencesPanel() {
         setSaved(false);
       }
     } catch {
-      setError("无法打开系统文件选择器，请稍后重试。");
+      setError(t("无法打开系统文件选择器，请稍后重试。"));
     }
   }
 
@@ -658,7 +703,7 @@ export function CookiePreferencesPanel() {
       setPreferences(next);
       setSaved(true);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "无法保存登录 Cookie 设置。");
+      setError(reason instanceof Error ? reason.message : t("无法保存登录 Cookie 设置。"));
     } finally {
       setSaving(false);
     }
@@ -680,17 +725,17 @@ export function CookiePreferencesPanel() {
     <Paper withBorder radius="md" p="md">
       <Stack gap="sm">
         <div>
-          <Text fw={650}>Cookie 与登录</Text>
+          <Text fw={650}>{t("Cookie 与登录")}</Text>
           <Text size="sm" c="dimmed" mt={3}>
-            配置后全局用于解析媒体信息和下载，适用于需要登录才能查看的内容或更高画质。
+            {t("配置后全局用于解析媒体信息和下载，适用于需要登录才能查看的内容或更高画质。")}
           </Text>
         </div>
         <Select
-          label="登录信息来源"
+          label={t("登录信息来源")}
           data={[
-            { value: "none", label: "不使用登录信息" },
-            { value: "file", label: "使用 cookies.txt 文件" },
-            { value: "browser", label: "从本机浏览器读取" },
+            { value: "none", label: t("不使用登录信息") },
+            { value: "file", label: t("使用 cookies.txt 文件") },
+            { value: "browser", label: t("从本机浏览器读取") },
           ]}
           value={source}
           onChange={(value) =>
@@ -701,19 +746,20 @@ export function CookiePreferencesPanel() {
         {source === "file" && (
           <Group align="center" wrap="wrap">
             <Button variant="default" onClick={() => void chooseCookiesFile()}>
-              选择 cookies.txt
+              {t("选择 cookies.txt")}
             </Button>
             {preferences.cookiesFilePath && (
               <Text size="sm" c="dimmed">
-                已选择：{preferences.cookiesFilePath.split(/[\\/]/).pop() ?? "cookies.txt"}
+                {t("已选择：")}
+                {preferences.cookiesFilePath.split(/[\\/]/).pop() ?? "cookies.txt"}
               </Text>
             )}
           </Group>
         )}
         {source === "browser" && (
           <Select
-            label="选择浏览器"
-            placeholder="选择已登录的浏览器"
+            label={t("选择浏览器")}
+            placeholder={t("选择已登录的浏览器")}
             data={browserOptions}
             value={preferences.cookiesBrowser}
             onChange={(value) => {
@@ -730,10 +776,10 @@ export function CookiePreferencesPanel() {
         )}
         {source !== "none" && (
           <>
-            <Alert color="yellow" title="敏感权限确认">
-              yt-dlp 将在本机读取登录 Cookie，并同时用于解析和下载。Cookie 可代表你的账号访问网站；
-              cookies.txt 可能被 yt-dlp 更新，浏览器配置可能需要先退出浏览器。应用不会读取或上传
-              Cookie 内容。仅对你信任的网站使用。
+            <Alert color="yellow" title={t("敏感权限确认")}>
+              {t(
+                "yt-dlp 将在本机读取登录 Cookie，并同时用于解析和下载。Cookie 可代表你的账号访问网站； cookies.txt 可能被 yt-dlp 更新，浏览器配置可能需要先退出浏览器。应用不会读取或上传 Cookie 内容。仅对你信任的网站使用。",
+              )}
             </Alert>
             <Checkbox
               checked={preferences.accessConfirmed}
@@ -749,7 +795,7 @@ export function CookiePreferencesPanel() {
                 }));
                 setSaved(false);
               }}
-              label="我授权 Savebeam 全局使用所选登录 Cookie 进行媒体解析和下载"
+              label={t("我授权 Savebeam 全局使用所选登录 Cookie 进行媒体解析和下载")}
             />
           </>
         )}
@@ -760,12 +806,12 @@ export function CookiePreferencesPanel() {
         )}
         {saved && (
           <Text size="sm" c="green" role="status">
-            Cookie 设置已保存。
+            {t("Cookie 设置已保存。")}
           </Text>
         )}
         <Group justify="flex-end">
           <Button onClick={() => void savePreferences()} loading={saving}>
-            保存 Cookie 设置
+            {t("保存 Cookie 设置")}
           </Button>
         </Group>
       </Stack>
@@ -774,6 +820,8 @@ export function CookiePreferencesPanel() {
 }
 
 export function DownloadPreferencesPanel() {
+  useUiLocale();
+
   const [preferences, setPreferences] = useState<DownloadPreferences>({
     outputDirectory: "",
     maxConcurrent: 1,
@@ -788,7 +836,7 @@ export function DownloadPreferencesPanel() {
     invokeCommand<DownloadPreferences>("get_download_preferences")
       .then(setPreferences)
       .catch((reason: unknown) =>
-        setError(reason instanceof Error ? reason.message : "无法读取下载设置。"),
+        setError(reason instanceof Error ? reason.message : t("无法读取下载设置。")),
       );
   }, []);
 
@@ -802,7 +850,7 @@ export function DownloadPreferencesPanel() {
       );
       setSaved(true);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "无法保存下载设置。");
+      setError(reason instanceof Error ? reason.message : t("无法保存下载设置。"));
     } finally {
       setSaving(false);
     }
@@ -813,7 +861,7 @@ export function DownloadPreferencesPanel() {
     setError(null);
     try {
       const selected = await open({
-        title: "选择默认下载目录",
+        title: t("选择默认下载目录"),
         directory: true,
         multiple: false,
         defaultPath: preferences.outputDirectory.trim() ? preferences.outputDirectory : undefined,
@@ -824,7 +872,7 @@ export function DownloadPreferencesPanel() {
         setSaved(false);
       }
     } catch {
-      setError("无法打开系统文件夹选择器，请手动填写目录或稍后重试。");
+      setError(t("无法打开系统文件夹选择器，请手动填写目录或稍后重试。"));
     } finally {
       setSelectingDirectory(false);
     }
@@ -834,26 +882,26 @@ export function DownloadPreferencesPanel() {
     <Paper withBorder radius="md" p="md">
       <Stack gap="sm">
         <div>
-          <Text fw={650}>下载设置</Text>
+          <Text fw={650}>{t("下载设置")}</Text>
           <Text size="sm" c="dimmed" mt={3}>
-            目录必须已存在；留空时使用系统下载目录。并发数限制为 1–4。
+            {t("目录必须已存在；留空时使用系统下载目录。并发数限制为 1–4。")}
           </Text>
         </div>
         <TextInput
-          label="默认下载目录"
-          placeholder="留空使用系统下载目录"
+          label={t("默认下载目录")}
+          placeholder={t("留空使用系统下载目录")}
           value={preferences.outputDirectory}
           disabled={saving || selectingDirectory}
           rightSectionWidth={44}
           rightSectionPointerEvents="auto"
           rightSection={
-            <Tooltip label="选择文件夹">
+            <Tooltip label={t("选择文件夹")}>
               <ActionIcon
                 type="button"
                 variant="subtle"
                 color="gray"
                 size={32}
-                aria-label="选择下载文件夹"
+                aria-label={t("选择下载文件夹")}
                 loading={selectingDirectory}
                 disabled={saving || selectingDirectory}
                 onClick={() => void chooseDirectory()}
@@ -871,7 +919,7 @@ export function DownloadPreferencesPanel() {
         />
         <Group grow align="end">
           <NumberInput
-            label="最大并发任务数"
+            label={t("最大并发任务数")}
             min={1}
             max={4}
             step={1}
@@ -884,11 +932,11 @@ export function DownloadPreferencesPanel() {
             }
           />
           <Select
-            label="文件重名时"
+            label={t("文件重名时")}
             value={preferences.conflictStrategy}
             data={[
-              { value: "skip", label: "跳过已有文件" },
-              { value: "overwrite", label: "覆盖已有文件" },
+              { value: "skip", label: t("跳过已有文件") },
+              { value: "overwrite", label: t("覆盖已有文件") },
             ]}
             onChange={(value) => {
               if (value === "skip" || value === "overwrite")
@@ -903,12 +951,12 @@ export function DownloadPreferencesPanel() {
         )}
         {saved && (
           <Text size="sm" c="green" role="status">
-            设置已保存。
+            {t("设置已保存。")}
           </Text>
         )}
         <Group justify="flex-end">
           <Button onClick={() => void save()} loading={saving} disabled={selectingDirectory}>
-            保存下载设置
+            {t("保存下载设置")}
           </Button>
         </Group>
       </Stack>

@@ -32,7 +32,7 @@ try {
     "delete",
     "delete-error",
   ]) {
-    const page = await browser.newPage({ viewport: { width: 1160, height: 900 } });
+    const page = await browser.newPage({ locale: "zh-CN", viewport: { width: 1160, height: 900 } });
     const errors = [];
     page.on("pageerror", (error) => errors.push(error.message));
     await page.addInitScript(

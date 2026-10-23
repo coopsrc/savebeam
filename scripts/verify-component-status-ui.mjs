@@ -10,7 +10,7 @@ const browser = await chromium.launch({
 });
 const base = process.argv[3] ?? "http://127.0.0.1:1421/";
 try {
-  const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+  const page = await browser.newPage({ locale: "zh-CN", viewport: { width: 1280, height: 800 } });
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.addInitScript(() => {

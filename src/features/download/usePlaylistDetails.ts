@@ -1,3 +1,4 @@
+import { t } from "../../i18n/translate.ts";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   MediaInfo,
@@ -62,7 +63,7 @@ export function usePlaylistDetails(
                     title: null,
                     durationSeconds: null,
                     formats: [],
-                    error: "条目 ID 已变化或未返回，请重新读取。",
+                    error: t("条目 ID 已变化或未返回，请重新读取。"),
                   };
             for (const part of details[entry.index].parts ?? []) details[part.index] = part;
           }
@@ -91,7 +92,7 @@ export function usePlaylistDetails(
                   details[part.index] =
                     rows.length === 1
                       ? rows[0]
-                      : { ...part, error: "分 P 身份已变化，请重新读取。" };
+                      : { ...part, error: t("分 P 身份已变化，请重新读取。") };
                 }
               } catch (reason) {
                 if (cancelled) return;

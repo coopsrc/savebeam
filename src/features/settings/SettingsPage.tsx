@@ -1,3 +1,4 @@
+import { t, useUiLocale } from "../../i18n/translate.ts";
 import { useLayoutEffect, useRef, useState } from "react";
 import { Stack, Tabs } from "@mantine/core";
 import {
@@ -8,16 +9,44 @@ import {
 } from "./ComponentsSettings";
 import { DownloadOptionsPanel } from "./DownloadOptionsPanel";
 import { NetworkPreferencesPanel } from "./NetworkPreferencesPanel";
+import { GeneralPreferencesPanel } from "./GeneralPreferencesPanel";
 
 const groups = [
-  { value: "download", label: "下载" },
-  { value: "network", label: "网络与代理" },
-  { value: "cookies", label: "Cookie 与登录" },
-  { value: "components", label: "运行组件" },
-  { value: "diagnostics", label: "隐私与诊断" },
+  {
+    value: "general",
+    get label() {
+      return t("通用");
+    },
+  },
+  {
+    value: "download",
+    get label() {
+      return t("下载");
+    },
+  },
+  {
+    value: "network",
+    get label() {
+      return t("网络与代理");
+    },
+  },
+  {
+    value: "cookies",
+    get label() {
+      return t("Cookie 与登录");
+    },
+  },
+  {
+    value: "components",
+    get label() {
+      return t("运行组件");
+    },
+  },
 ] as const;
 
 export function SettingsPage({ active }: { active: boolean }) {
+  useUiLocale();
+
   const [tab, setTab] = useState("download");
   const root = useRef<HTMLElement>(null);
   const scrollPositions = useRef<Record<string, number>>({});
@@ -56,7 +85,7 @@ export function SettingsPage({ active }: { active: boolean }) {
         classNames={{ list: "settings-tab-list", tab: "settings-tab", panel: "settings-tab-panel" }}
       >
         <div className="settings-tab-bar">
-          <Tabs.List aria-label="设置分组">
+          <Tabs.List aria-label={t("设置分组")}>
             {groups.map((group) => (
               <Tabs.Tab value={group.value} key={group.value}>
                 {group.label}
@@ -64,6 +93,12 @@ export function SettingsPage({ active }: { active: boolean }) {
             ))}
           </Tabs.List>
         </div>
+        <Tabs.Panel value="general">
+          <Stack gap="lg">
+            <GeneralPreferencesPanel />
+            <DiagnosticsPanel />
+          </Stack>
+        </Tabs.Panel>
         <Tabs.Panel value="download">
           <Stack gap="lg">
             <DownloadPreferencesPanel />
@@ -78,9 +113,6 @@ export function SettingsPage({ active }: { active: boolean }) {
         </Tabs.Panel>
         <Tabs.Panel value="components">
           <ComponentsSettings />
-        </Tabs.Panel>
-        <Tabs.Panel value="diagnostics">
-          <DiagnosticsPanel />
         </Tabs.Panel>
       </Tabs>
     </main>

@@ -18,6 +18,7 @@ try {
     for (const viewportWidth of [1280, 800])
       for (const colorScheme of ["light", "dark"]) {
         const page = await browser.newPage({
+          locale: "zh-CN",
           viewport: { width: viewportWidth, height: 900 },
           colorScheme,
         });

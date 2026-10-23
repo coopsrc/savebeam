@@ -1,14 +1,20 @@
+import { t, useUiLocale } from "../../i18n/translate.ts";
 import { Button, Checkbox, Divider, Group, Select, SimpleGrid, Stack, Text } from "@mantine/core";
 import type { PlaylistQuality } from "../../types/domain";
 
-const best = { value: "best", label: "Best（最佳可用）" };
+const best = {
+  value: "best",
+  get label() {
+    return t("Best（最佳可用）");
+  },
+};
 const numbers = (values: number[], unit: string) => [
   best,
   ...values.map((value) => ({ value: String(value), label: `${value}${unit}` })),
 ];
 const automatic = (preferred: string) => ({
   value: "auto",
-  label: `自动推荐（优先 ${preferred}）`,
+  label: t("自动推荐（优先 {0}）", [preferred]),
 });
 const extensions = (values: string[], preferred: string) => [
   automatic(preferred),
@@ -35,6 +41,8 @@ export function PlaylistQualityFields({
   audioOnly: boolean;
   disabled?: boolean;
 }) {
+  useUiLocale();
+
   const setNumber = (
     key: "resolutionHeight" | "frameRate" | "maxAudioBitrateKbps",
     v: string | null,
@@ -45,13 +53,13 @@ export function PlaylistQualityFields({
   ) => onChange({ ...value, automaticRecommendations: true, [key]: !v || v === "auto" ? null : v });
   return (
     <Stack gap="sm">
-      <Stack component="section" aria-label="视频选择策略" gap="xs">
+      <Stack component="section" aria-label={t("视频选择策略")} gap="xs">
         <Group justify="space-between">
-          <Text fw={600}>视频</Text>
+          <Text fw={600}>{t("视频")}</Text>
           <Button
             size="compact-xs"
             variant="subtle"
-            aria-label="视频恢复默认"
+            aria-label={t("视频恢复默认")}
             disabled={disabled || audioOnly}
             onClick={() =>
               onChange({
@@ -66,13 +74,13 @@ export function PlaylistQualityFields({
               })
             }
           >
-            恢复默认
+            {t("恢复默认")}
           </Button>
         </Group>
         <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
           <Select
             {...qualitySelectPresentation}
-            label="分辨率"
+            label={t("分辨率")}
             data={numbers([4320, 2160, 1440, 1080, 720, 480, 360, 240, 144], "p")}
             value={String(value.resolutionHeight ?? "best")}
             onChange={(v) => setNumber("resolutionHeight", v)}
@@ -81,7 +89,7 @@ export function PlaylistQualityFields({
           />
           <Select
             {...qualitySelectPresentation}
-            label="帧率（FPS）"
+            label={t("帧率（FPS）")}
             data={numbers([240, 144, 120, 100, 90, 60, 50, 48, 30, 25, 24, 15], " fps")}
             value={String(value.frameRate ?? "best")}
             onChange={(v) => setNumber("frameRate", v)}
@@ -90,7 +98,7 @@ export function PlaylistQualityFields({
           />
           <Select
             {...qualitySelectPresentation}
-            label="视频格式"
+            label={t("视频格式")}
             data={extensions(["mp4", "webm", "mkv", "mov", "flv", "ts", "m4v"], "MP4")}
             value={value.videoExtension ?? "auto"}
             onChange={(v) => setText("videoExtension", v)}
@@ -99,7 +107,7 @@ export function PlaylistQualityFields({
           />
           <Select
             {...qualitySelectPresentation}
-            label="视频编码"
+            label={t("视频编码")}
             data={[
               automatic("HEVC"),
               { value: "h264", label: "H.264 / AVC" },
@@ -117,13 +125,13 @@ export function PlaylistQualityFields({
         </SimpleGrid>
       </Stack>
       <Divider />
-      <Stack component="section" aria-label="音频选择策略" gap="xs">
+      <Stack component="section" aria-label={t("音频选择策略")} gap="xs">
         <Group justify="space-between">
-          <Text fw={600}>音频</Text>
+          <Text fw={600}>{t("音频")}</Text>
           <Button
             size="compact-xs"
             variant="subtle"
-            aria-label="音频恢复默认"
+            aria-label={t("音频恢复默认")}
             disabled={disabled}
             onClick={() =>
               onChange({
@@ -135,13 +143,13 @@ export function PlaylistQualityFields({
               })
             }
           >
-            恢复默认
+            {t("恢复默认")}
           </Button>
         </Group>
         <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
           <Select
             {...qualitySelectPresentation}
-            label="音频格式"
+            label={t("音频格式")}
             data={extensions(
               ["m4a", "webm", "mp3", "ogg", "opus", "flac", "wav", "mp4", "aac"],
               "M4A",
@@ -153,7 +161,7 @@ export function PlaylistQualityFields({
           />
           <Select
             {...qualitySelectPresentation}
-            label="音频编码"
+            label={t("音频编码")}
             data={[
               automatic("AAC"),
               ...["aac", "opus", "vorbis", "mp3", "flac", "alac", "ac3", "eac3", "pcm"].map(
@@ -167,7 +175,7 @@ export function PlaylistQualityFields({
           />
           <Select
             {...qualitySelectPresentation}
-            label="音频码率"
+            label={t("音频码率")}
             data={[
               best,
               ...[1536, 512, 320, 256, 192, 160, 128, 96, 64, 32].map((rate) => ({
@@ -183,17 +191,18 @@ export function PlaylistQualityFields({
         </SimpleGrid>
       </Stack>
       <Checkbox
-        label="无匹配时允许回退 Best"
-        description="默认严格匹配所选条件，无匹配则跳过。勾选后可忽略条件使用 Best，并在条目标明。"
+        label={t("无匹配时允许回退 Best")}
+        description={t(
+          "默认严格匹配所选条件，无匹配则跳过。勾选后可忽略条件使用 Best，并在条目标明。",
+        )}
         checked={value.allowExceed}
         onChange={(event) => onChange({ ...value, allowExceed: event.currentTarget.checked })}
         disabled={disabled}
       />
       <Text size="xs" c="dimmed">
-        分辨率按源视频高度匹配；30/60 FPS 包含 29.97/59.94
-        等近似帧率。格式和编码指源轨道，不转码；最终容器按音视频兼容性决定。音频码率在上限内选最佳；MP3
-        模式只应用音频条件，转换后大小待定。 自动推荐在同等分辨率与 FPS 下优先 MP4、HEVC，音频优先
-        M4A、AAC；没有推荐项时自动选其他可用项，不因此跳过。
+        {t(
+          "分辨率按源视频高度匹配；30/60 FPS 包含 29.97/59.94 等近似帧率。格式和编码指源轨道，不转码；最终容器按音视频兼容性决定。音频码率在上限内选最佳；MP3 模式只应用音频条件，转换后大小待定。 自动推荐在同等分辨率与 FPS 下优先 MP4、HEVC，音频优先 M4A、AAC；没有推荐项时自动选其他可用项，不因此跳过。",
+        )}
       </Text>
     </Stack>
   );

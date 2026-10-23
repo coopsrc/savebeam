@@ -19,7 +19,7 @@ const defaults = {
   keepIntermediateFiles: false,
 };
 async function fixture(mode, width = 1280) {
-  const page = await browser.newPage({ viewport: { width, height: 850 } });
+  const page = await browser.newPage({ locale: "zh-CN", viewport: { width, height: 850 } });
   page.setDefaultTimeout(15_000);
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
