@@ -43,8 +43,12 @@ impl ComponentDetector {
     }
 
     pub fn detect(&self, kind: ComponentKind, custom_path: Option<&Path>) -> ComponentInstallation {
-        if let Some(path) = custom_path.filter(|path| is_usable_file(path)) {
-            return installation(kind, ComponentSource::Custom, path);
+        if let Some(path) = custom_path {
+            let mut detected = installation(kind, ComponentSource::Custom, path);
+            if !is_usable_file(path) {
+                detected.status = ComponentStatus::Missing;
+            }
+            return detected;
         }
 
         for path in self.managed_paths.managed_executable_paths(kind) {

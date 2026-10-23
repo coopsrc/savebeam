@@ -32,11 +32,7 @@ pub(crate) fn configured_media_engine(
     use_proxy: Option<bool>,
 ) -> CommandResult<YtDlpProcessEngine> {
     let registry = app.state::<ComponentRegistry>();
-    let custom = registry
-        .custom_paths
-        .lock()
-        .map_err(|_| AppError::new(ErrorCode::Unknown, "组件设置暂时不可用。", true))?
-        .clone();
+    let custom = registry.custom_paths()?;
     let paths = ComponentPaths::from_app_data_dir(
         app.path()
             .app_data_dir()
@@ -86,11 +82,7 @@ pub async fn inspect_media(
         AppError::new(ErrorCode::Unknown, "无法访问应用数据目录。", false)
             .with_diagnostic(error.to_string())
     })?;
-    let custom_paths = registry
-        .custom_paths
-        .lock()
-        .map_err(|_| AppError::new(ErrorCode::Unknown, "组件设置暂时不可用。", true))?
-        .clone();
+    let custom_paths = registry.custom_paths()?;
     let cookies = load_cookie_preferences(database.inner())?;
     let network =
         load_task_network_preferences(database.database()?, Some(use_proxy.unwrap_or(false)))?;

@@ -15,6 +15,7 @@ use crate::{
         component_manifest::ComponentRelease,
         error::{AppError, ErrorCode},
     },
+    infrastructure::database::{Database, repositories::SettingsRepository},
     services::{
         component_detector::{ComponentDetector, is_usable_file},
         component_install_flow::{available_releases, install_from_catalog},
@@ -26,7 +27,94 @@ use crate::{
 
 #[derive(Clone, Default)]
 pub struct ComponentRegistry {
-    pub(crate) custom_paths: Arc<Mutex<HashMap<ComponentKind, PathBuf>>>,
+    database: Arc<Mutex<Option<Database>>>,
+}
+
+impl ComponentRegistry {
+    pub fn initialize(&self, database: Database) -> CommandResult<()> {
+        *self.database.lock().map_err(|_| settings_error())? = Some(database);
+        Ok(())
+    }
+
+    fn settings(&self) -> CommandResult<SettingsRepository> {
+        self.database
+            .lock()
+            .map_err(|_| settings_error())?
+            .clone()
+            .map(SettingsRepository::new)
+            .ok_or_else(settings_error)
+    }
+
+    pub(crate) fn custom_paths(&self) -> CommandResult<HashMap<ComponentKind, PathBuf>> {
+        let settings = self.settings()?;
+        let mut paths = HashMap::new();
+        for kind in ComponentKind::ALL {
+            if let Some(path) = settings.get::<String>(path_key(kind))? {
+                if !PathBuf::from(&path).is_absolute() || path.contains('\0') || path.len() > 32768
+                {
+                    return Err(AppError::new(
+                        ErrorCode::InvalidPath,
+                        "保存的组件路径无效，请重新指定或恢复自动检测。",
+                        false,
+                    ));
+                }
+                paths.insert(kind, PathBuf::from(path));
+            }
+        }
+        Ok(paths)
+    }
+
+    fn save_path(&self, kind: ComponentKind, path: &str) -> CommandResult<()> {
+        let canonical = PathBuf::from(path.trim()).canonicalize().map_err(|error| {
+            AppError::new(
+                ErrorCode::InvalidPath,
+                "找不到该组件文件，请检查路径。",
+                false,
+            )
+            .with_diagnostic(error.to_string())
+        })?;
+        if !is_usable_file(&canonical) {
+            return Err(AppError::new(
+                ErrorCode::InvalidPath,
+                "所选路径不是可执行文件。",
+                false,
+            ));
+        }
+        let path = canonical.to_str().ok_or_else(|| {
+            AppError::new(ErrorCode::InvalidPath, "组件路径必须是有效文本。", false)
+        })?;
+        let updated = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_err(|_| settings_error())?
+            .as_millis();
+        self.settings()?.set(
+            path_key(kind),
+            &path,
+            u64::try_from(updated).map_err(|_| settings_error())?,
+        )
+    }
+
+    fn clear_path(&self, kind: ComponentKind) -> CommandResult<()> {
+        self.settings()?.remove(path_key(kind))?;
+        Ok(())
+    }
+}
+
+fn settings_error() -> AppError {
+    AppError::new(
+        ErrorCode::Unknown,
+        "组件设置暂时不可用，请检查本地数据库。",
+        true,
+    )
+}
+
+fn path_key(kind: ComponentKind) -> &'static str {
+    match kind {
+        ComponentKind::YtDlp => "component.path.yt_dlp",
+        ComponentKind::Ffmpeg => "component.path.ffmpeg",
+        ComponentKind::Ffprobe => "component.path.ffprobe",
+        ComponentKind::JavaScriptRuntime => "component.path.javascript_runtime",
+    }
 }
 
 #[tauri::command]
@@ -93,11 +181,7 @@ pub async fn get_component_status(
             .with_diagnostic(error.to_string())
     })?;
     let paths = ComponentPaths::from_app_data_dir(app_data_dir);
-    let custom_paths = registry
-        .custom_paths
-        .lock()
-        .map_err(|_| AppError::new(ErrorCode::Unknown, "组件设置暂时不可用。", true))?
-        .clone();
+    let custom_paths = registry.custom_paths()?;
 
     tauri::async_runtime::spawn_blocking(move || {
         let detector = ComponentDetector::from_environment(paths);
@@ -116,30 +200,7 @@ pub fn set_component_custom_path(
     path: String,
     registry: State<'_, ComponentRegistry>,
 ) -> CommandResult<()> {
-    let path = PathBuf::from(path.trim());
-    let canonical_path = path.canonicalize().map_err(|error| {
-        AppError::new(
-            ErrorCode::InvalidPath,
-            "找不到该组件文件，请检查路径。",
-            false,
-        )
-        .with_diagnostic(error.to_string())
-    })?;
-
-    if !is_usable_file(&canonical_path) {
-        return Err(AppError::new(
-            ErrorCode::InvalidPath,
-            "所选路径不是可执行文件。",
-            false,
-        ));
-    }
-
-    registry
-        .custom_paths
-        .lock()
-        .map_err(|_| AppError::new(ErrorCode::Unknown, "组件设置暂时不可用。", true))?
-        .insert(kind, canonical_path);
-    Ok(())
+    registry.save_path(kind, &path)
 }
 
 #[tauri::command]
@@ -147,12 +208,7 @@ pub fn clear_component_custom_path(
     kind: ComponentKind,
     registry: State<'_, ComponentRegistry>,
 ) -> CommandResult<()> {
-    registry
-        .custom_paths
-        .lock()
-        .map_err(|_| AppError::new(ErrorCode::Unknown, "组件设置暂时不可用。", true))?
-        .remove(&kind);
-    Ok(())
+    registry.clear_path(kind)
 }
 
 #[tauri::command]
@@ -165,11 +221,7 @@ pub fn remove_managed_component(
         AppError::new(ErrorCode::Unknown, "无法访问应用数据目录。", false)
             .with_diagnostic(error.to_string())
     })?;
-    let custom_paths = registry
-        .custom_paths
-        .lock()
-        .map_err(|_| AppError::new(ErrorCode::Unknown, "组件设置暂时不可用。", true))?
-        .clone();
+    let custom_paths = registry.custom_paths()?;
     let paths = ComponentPaths::from_app_data_dir(app_data_dir);
     let detector = ComponentDetector::from_environment(paths.clone());
     let installation = detector.detect(kind, custom_paths.get(&kind).map(PathBuf::as_path));
@@ -181,4 +233,140 @@ pub fn remove_managed_component(
         ));
     }
     crate::services::component_installer::remove_managed_component(kind, &paths)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::component::{ComponentSource, ComponentStatus};
+
+    fn root() -> PathBuf {
+        let root = std::env::temp_dir().join(format!(
+            "savebeam-component-settings-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&root).unwrap();
+        root
+    }
+    fn executable(path: &std::path::Path) {
+        std::fs::write(path, "fixture").unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755)).unwrap();
+        }
+    }
+    fn registry(database: Database) -> ComponentRegistry {
+        let registry = ComponentRegistry::default();
+        registry.initialize(database).unwrap();
+        registry
+    }
+
+    #[test]
+    fn paths_survive_database_and_registry_reopen_and_reset_is_persistent() {
+        let root = root();
+        let path = root.join("工具 with spaces");
+        executable(&path);
+        let expected = path.canonicalize().unwrap();
+        {
+            let first = registry(Database::open(root.join("state.sqlite3")).unwrap());
+            for kind in ComponentKind::ALL {
+                first.save_path(kind, path.to_str().unwrap()).unwrap();
+            }
+        }
+        {
+            let second = registry(Database::open(root.join("state.sqlite3")).unwrap());
+            for kind in ComponentKind::ALL {
+                assert_eq!(second.custom_paths().unwrap()[&kind], expected);
+            }
+            second.clear_path(ComponentKind::YtDlp).unwrap();
+        }
+        let third = registry(Database::open(root.join("state.sqlite3")).unwrap());
+        assert_eq!(third.custom_paths().unwrap().len(), 3);
+        assert!(
+            !third
+                .custom_paths()
+                .unwrap()
+                .contains_key(&ComponentKind::YtDlp)
+        );
+    }
+
+    #[test]
+    fn failed_validation_and_database_writes_never_replace_a_saved_path() {
+        let root = root();
+        let old = root.join("old");
+        let new = root.join("new");
+        executable(&old);
+        executable(&new);
+        let database = Database::open_in_memory().unwrap();
+        let registry = registry(database.clone());
+        registry
+            .save_path(ComponentKind::Ffmpeg, old.to_str().unwrap())
+            .unwrap();
+        assert!(
+            registry
+                .save_path(ComponentKind::Ffmpeg, root.to_str().unwrap())
+                .is_err()
+        );
+        assert!(
+            registry
+                .save_path(ComponentKind::Ffmpeg, "missing")
+                .is_err()
+        );
+        database.with_connection(|connection| connection.execute_batch("CREATE TRIGGER reject_settings BEFORE INSERT ON app_settings BEGIN SELECT RAISE(ABORT, 'fixture'); END;")).unwrap();
+        assert!(
+            registry
+                .save_path(ComponentKind::Ffmpeg, new.to_str().unwrap())
+                .is_err()
+        );
+        assert_eq!(
+            registry.custom_paths().unwrap()[&ComponentKind::Ffmpeg],
+            old.canonicalize().unwrap()
+        );
+    }
+
+    #[test]
+    fn corrupt_settings_are_not_silently_ignored_and_can_be_cleared() {
+        let database = Database::open_in_memory().unwrap();
+        let registry = registry(database.clone());
+        let settings = SettingsRepository::new(database);
+        settings
+            .set(path_key(ComponentKind::YtDlp), &42, 0)
+            .unwrap();
+        assert!(registry.custom_paths().is_err());
+        registry.clear_path(ComponentKind::YtDlp).unwrap();
+        assert!(registry.custom_paths().unwrap().is_empty());
+        assert!(ComponentRegistry::default().custom_paths().is_err());
+    }
+
+    #[test]
+    fn missing_saved_executable_remains_visible_and_does_not_silently_fall_back() {
+        let root = root();
+        let custom = root.join("custom");
+        executable(&custom);
+        let registry = registry(Database::open_in_memory().unwrap());
+        registry
+            .save_path(ComponentKind::YtDlp, custom.to_str().unwrap())
+            .unwrap();
+        std::fs::remove_file(&custom).unwrap();
+        executable(&root.join("yt-dlp"));
+        let detector = ComponentDetector::with_search_paths(
+            ComponentPaths::from_app_data_dir(root.join("data")),
+            vec![root.clone()],
+            vec![],
+        );
+        let paths = registry.custom_paths().unwrap();
+        let detected = detector.detect(ComponentKind::YtDlp, Some(&paths[&ComponentKind::YtDlp]));
+        assert_eq!(detected.source, Some(ComponentSource::Custom));
+        assert_eq!(detected.status, ComponentStatus::Missing);
+        registry.clear_path(ComponentKind::YtDlp).unwrap();
+        assert_eq!(
+            detector.detect(ComponentKind::YtDlp, None).source,
+            Some(ComponentSource::System)
+        );
+    }
 }

@@ -551,11 +551,7 @@ fn run_task(
             AppError::new(ErrorCode::Unknown, "无法访问应用数据目录。", false)
                 .with_diagnostic(error.to_string())
         })?;
-        let custom_paths = components
-            .custom_paths
-            .lock()
-            .map_err(|_| AppError::new(ErrorCode::Unknown, "组件设置暂时不可用。", true))?
-            .clone();
+        let custom_paths = components.custom_paths()?;
         let detector =
             ComponentDetector::from_environment(ComponentPaths::from_app_data_dir(app_data));
         let installations = probe_all(detector.detect_all(&custom_paths));

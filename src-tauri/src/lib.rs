@@ -23,6 +23,8 @@ pub fn run() {
             let database_manager = app.state::<infrastructure::database::DatabaseManager>();
             database_manager.initialize(app_data.join("savebeam.sqlite3"));
             if let Ok(database) = database_manager.database() {
+                app.state::<commands::components::ComponentRegistry>()
+                    .initialize(database.clone())?;
                 if let Ok(Some(preferences)) =
                     infrastructure::database::repositories::SettingsRepository::new(
                         database.clone(),

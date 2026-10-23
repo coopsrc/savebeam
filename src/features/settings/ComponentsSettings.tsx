@@ -482,8 +482,8 @@ export function ComponentsSettings() {
       </Paper>
 
       <Text size="xs" c="dimmed">
-        自定义路径仅保存在本次运行内存中。应用管理组件只从已验签的 Savebeam GitHub Releases
-        清单安装；下载文件通过 SHA-256 校验后才会解压和启用。
+        自定义路径保存在本机，重启后继续使用；文件失效时请重新指定或恢复自动检测。应用管理组件只从已验签的
+        Savebeam GitHub Releases 清单安装；下载文件通过 SHA-256 校验后才会解压和启用。
       </Text>
     </Stack>
   );

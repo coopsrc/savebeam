@@ -14,6 +14,9 @@ const PROBE_TIMEOUT: Duration = Duration::from_secs(5);
 const MAX_CAPTURE_BYTES: usize = 16 * 1024;
 
 pub fn probe_installation(installation: &ComponentInstallation) -> ComponentInstallation {
+    if installation.status == ComponentStatus::Missing {
+        return installation.clone();
+    }
     let Some(executable_path) = installation.executable_path.as_deref() else {
         return installation.clone();
     };
