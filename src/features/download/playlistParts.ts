@@ -40,10 +40,60 @@ export function selectedDownloadEntries(entries: DownloadEntry[], keys: number[]
   );
 }
 
-export function entryLabel(entry: DownloadEntry) {
+export function entryLabel(entry: DownloadEntry, multipart = false) {
   return entry.part
     ? `第 ${entry.part.parentIndex} 项 · P${entry.part.partIndex}`
-    : `第 ${entry.index} 项`;
+    : multipart
+      ? `P${entry.index}`
+      : `第 ${entry.index} 项`;
+}
+
+export function mediaType(media: MediaInfo | null) {
+  return media?.mediaType ?? (media?.playlist ? "collection" : "single");
+}
+
+/** Preview images are display-only, never echoed into matching or persisted tasks. */
+export function taskDetails(value: PlaylistDetails): PlaylistDetails {
+  return { ...value, preview: undefined };
+}
+
+export function shortPartTitle(title: string, parentTitle: string | undefined, index: number) {
+  const suffix =
+    parentTitle && title.startsWith(parentTitle) ? title.slice(parentTitle.length).trim() : title;
+  return (
+    suffix
+      .replace(new RegExp(`^(?:p0*${index}\\b|第\\s*${index}\\s*[pP])\\s*[-·:：]?\\s*`, "i"), "")
+      .trim() || title
+  );
+}
+
+export function entryGroups(entries: DownloadEntry[]) {
+  const groups: { parentIndex: number | null; entries: DownloadEntry[] }[] = [];
+  const parents = new Map<number, (typeof groups)[number]>();
+  for (const entry of entries) {
+    if (!entry.part) {
+      groups.push({ parentIndex: null, entries: [entry] });
+      continue;
+    }
+    let group = parents.get(entry.part.parentIndex);
+    if (!group) {
+      group = { parentIndex: entry.part.parentIndex, entries: [] };
+      parents.set(entry.part.parentIndex, group);
+      groups.push(group);
+    }
+    group.entries.push(entry);
+  }
+  return groups;
+}
+
+export function toggleGroupSelection(
+  entries: DownloadEntry[],
+  selectedKeys: number[],
+  checked: boolean,
+) {
+  const keys = new Set(entries.filter((e) => e.available).map((e) => e.index));
+  const result = selectedKeys.filter((key) => !keys.has(key));
+  return checked ? [...new Set([...result, ...keys])] : result;
 }
 
 export function expandedOverrides(

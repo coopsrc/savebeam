@@ -17,6 +17,8 @@ use crate::domain::{
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct PlaylistDetails {
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub preview: Option<crate::domain::media::MediaPreview>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub part: Option<crate::domain::download::PlaylistPartContext>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub parts: Vec<PlaylistDetails>,
@@ -94,6 +96,7 @@ pub fn map_details(raw: &Value, requested: &[PlaylistSizeRequestItem]) -> Vec<Pl
                 formats.clear();
             }
             PlaylistDetails {
+                preview: None,
                 part: None,
                 parts: Vec::new(),
                 index: item.index,
@@ -522,6 +525,7 @@ mod tests {
 
     fn item(index: u32, height: u32) -> PlaylistDetails {
         PlaylistDetails {
+            preview: None,
             part: None,
             parts: Vec::new(),
             index,

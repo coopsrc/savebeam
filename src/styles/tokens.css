@@ -116,6 +116,16 @@ body {
   grid-template-areas: "media" "quality" "list" "actions";
 }
 
+.download-part-children {
+  margin: 12px 0 0 14px;
+  padding: 8px 0 4px 16px;
+  border-left: 2px solid var(--sb-color-border);
+}
+
+.download-part-children > * + * {
+  margin-top: 14px;
+}
+
 .download-source-panel {
   grid-area: media;
 }
@@ -249,11 +259,15 @@ body {
   .download-workbench--series {
     grid-template-columns: minmax(480px, 0.9fr) minmax(340px, 1.1fr);
     grid-template-areas: "media list" "quality list" "actions actions";
-    grid-template-rows: auto auto auto;
+    grid-template-rows: max-content 1fr auto;
   }
 
   .download-workbench--series .download-source-panel {
     align-self: start;
+  }
+
+  .download-workbench--series .download-quality-panel {
+    align-self: stretch;
   }
 
   .download-workbench--series .download-series-panel {

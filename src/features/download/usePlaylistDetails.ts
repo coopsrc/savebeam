@@ -7,7 +7,7 @@ import type {
 } from "../../types/domain";
 import { invokeCommand } from "../../ipc/client";
 import { optionError } from "./useDownloadOptions";
-import { expandedEntries, expandedOverrides } from "./playlistParts";
+import { expandedEntries, expandedOverrides, taskDetails } from "./playlistParts";
 
 export function usePlaylistDetails(
   media: MediaInfo | null,
@@ -143,7 +143,8 @@ export function usePlaylistDetails(
   const input = useMemo(() => {
     const items = expandedEntries(media, details)
       .map((entry) => details[entry.index])
-      .filter((entry) => entry?.id && !entry.parts?.length);
+      .filter((entry) => entry?.id && !entry.parts?.length)
+      .map(taskDetails);
     return {
       items,
       policy,

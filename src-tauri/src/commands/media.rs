@@ -217,12 +217,44 @@ pub async fn inspect_playlist_entries(
     tauri::async_runtime::spawn_blocking(move || {
         let _guard = guard;
         let cookies = load_cookie_preferences(app.state::<DatabaseManager>().inner())?;
-        let engine = configured_media_engine(&app, Some(use_proxy.unwrap_or(false)))?;
+        let network = load_task_network_preferences(
+            app.state::<DatabaseManager>().database()?,
+            Some(use_proxy.unwrap_or(false)),
+        )?;
+        let engine = configured_media_engine(&app, Some(use_proxy.unwrap_or(false)))?
+            .with_network_preferences(network.clone());
         let raw = engine
             .clone()
             .for_size_estimate(&indices)?
             .inspect_with_cookies(&url, &cookies)?;
         let mut rows = crate::services::playlist_quality::map_details(&raw, &items);
+        // Reuse P1 metadata already fetched for formats; no second yt-dlp call for the header.
+        if map_media_info(&raw, &url)
+            .ok()
+            .is_some_and(|media| media.media_type == crate::domain::media::MediaType::Multipart)
+            && let Some(row) = rows
+                .iter_mut()
+                .find(|row| row.index == 1 && row.error.is_none())
+            && let Some(entry) = raw["entries"].as_array().and_then(|entries| {
+                entries.iter().find(|entry| {
+                    entry["playlist_index"].as_u64() == Some(1)
+                        && entry["id"].as_str() == row.id.as_deref()
+                })
+            })
+            && let Ok(first) = map_media_info(entry, &url)
+        {
+            row.preview = Some(crate::domain::media::MediaPreview {
+                uploader: first.uploader,
+                thumbnail_data_url: first.thumbnail_url.as_deref().and_then(|thumbnail| {
+                    load_thumbnail_with_network(
+                        thumbnail,
+                        &url,
+                        entry["http_headers"]["User-Agent"].as_str(),
+                        &network,
+                    )
+                }),
+            });
+        }
         crate::services::playlist_parts::expand(&engine, &cookies, &url, &raw, &items, &mut rows);
         Ok(rows)
     })

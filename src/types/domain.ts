@@ -83,6 +83,8 @@ export interface SubtitleTrack {
 }
 
 export interface MediaInfo {
+  /** Optional only for older backend/fixture compatibility; new inspections always return it. */
+  mediaType?: "single" | "multipart" | "collection";
   id: string;
   title: string;
   webpageUrl: string;
@@ -131,6 +133,7 @@ export interface PlaylistQuality {
   allowExceed: boolean;
 }
 export interface PlaylistDetails {
+  preview?: { uploader: string | null; thumbnailDataUrl: string | null } | null;
   part?: PlaylistPartContext | null;
   parts?: PlaylistDetails[];
   index: number;

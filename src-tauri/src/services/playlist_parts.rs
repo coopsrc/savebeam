@@ -156,6 +156,7 @@ pub fn expand(
                 .map(|(offset, child)| {
                     let part_index = offset as u32 + 1;
                     PlaylistDetails {
+                        preview: None,
                         index: item.index * 1000 + part_index,
                         id: Some(format!("{id}_p{part_index}")),
                         title: child["title"]
@@ -298,6 +299,7 @@ mod tests {
     fn part(index: u32) -> PlaylistDetails {
         let p = context(index);
         PlaylistDetails {
+            preview: None,
             index: 13000 + index,
             id: Some(format!("{}_p{index}", p.parent_id)),
             title: Some(format!("第 {index} P")),

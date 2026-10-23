@@ -10,7 +10,10 @@ const browser = await chromium.launch({
 });
 const base = process.argv[3] ?? "http://127.0.0.1:1421/";
 async function fixture(scenario) {
-  const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+  const page = await browser.newPage({
+    viewport: { width: 1280, height: 800 },
+    colorScheme: scenario === "direct-many" ? "dark" : "light",
+  });
   page.setDefaultTimeout(15_000);
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
@@ -154,16 +157,20 @@ async function fixture(scenario) {
           if (scenario === "pending")
             await new Promise((resolve) => window.setTimeout(resolve, 350));
           state.inspected = true;
-          const count =
-            scenario === "retention" || scenario.startsWith("multipart")
+          const count = scenario.startsWith("direct-")
+            ? scenario === "direct-many"
+              ? 20
+              : 2
+            : scenario === "retention" || scenario.startsWith("multipart")
               ? 17
               : scenario === "stop" || (scenario === "stale" && args.url.endsWith("old"))
                 ? 7
                 : 3;
           return {
-            id: "series",
-            title: "系列测试",
-            uploader: "作者",
+            id: scenario.startsWith("direct-") ? "BV1uVy7BCErV" : "series",
+            mediaType: scenario.startsWith("direct-") ? "multipart" : "collection",
+            title: scenario.startsWith("direct-") ? "避震特别篇" : "系列测试",
+            uploader: scenario.startsWith("direct-") ? null : "作者",
             webpageUrl: args.url,
             thumbnailUrl: null,
             thumbnailDataUrl: null,
@@ -178,7 +185,11 @@ async function fixture(scenario) {
               truncated: false,
               entries: Array.from({ length: count }, (_, i) => ({
                 index: i + 1,
-                id: scenario.startsWith("multipart") && i === 12 ? "BV1uVy7BCErV" : `BV${i + 1}`,
+                id: scenario.startsWith("direct-")
+                  ? `BV1uVy7BCErV_p${i + 1}`
+                  : scenario.startsWith("multipart") && i === 12
+                    ? "BV1uVy7BCErV"
+                    : `BV${i + 1}`,
                 title: "标题待补全",
                 available: true,
               })),
@@ -195,6 +206,21 @@ async function fixture(scenario) {
             durationSeconds: 100,
             formats: formats(item.index),
             error: null,
+            ...(scenario.startsWith("direct-")
+              ? {
+                  title: `避震特别篇 p${String(item.index).padStart(2, "0")} ${item.index === 1 ? "解说版" : item.index === 2 ? "纯享版" : `第 ${item.index} 段`}`,
+                  durationSeconds: item.index === 1 ? 345 : 386,
+                  ...(item.index === 1
+                    ? {
+                        preview: {
+                          uploader: "测试作者",
+                          thumbnailDataUrl:
+                            "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/KxkAAAAASUVORK5CYII=",
+                        },
+                      }
+                    : {}),
+                }
+              : {}),
             ...(scenario.startsWith("multipart") && item.index === 13
               ? {
                   formats: [],
@@ -313,9 +339,111 @@ try {
     "multipart",
     "multipart-partial",
     "multipart-read-error",
+    "direct-parts",
+    "direct-many",
   ]) {
     const { page, errors } = await fixture(scenario);
+    if (scenario.startsWith("direct-")) {
+      const count = scenario === "direct-many" ? 20 : 2;
+      await confirmed(page, count);
+      assert.equal(await page.locator(".download-card--series").count(), 1);
+      await page.locator(".download-workbench--multipart").waitFor();
+      const assertColumns = async () => {
+        const media = await page.locator(".download-source-panel").boundingBox();
+        const quality = await page.locator(".download-quality-panel").boundingBox();
+        const list = await page.locator(".download-series-panel").boundingBox();
+        assert.ok(list.x >= media.x + media.width, "P list stays in the right column");
+        assert.ok(Math.abs(list.y - media.y) <= 1, "P list top aligns with media");
+        assert.ok(
+          Math.abs(list.y + list.height - quality.y - quality.height) <= 1,
+          "P list bottom aligns with shared quality",
+        );
+      };
+      assert.equal(await page.getByRole("button", { name: "订阅此系列", exact: true }).count(), 0);
+      assert.equal(await page.getByText("避震特别篇", { exact: true }).count(), 1);
+      await page.getByText("测试作者", { exact: true }).waitFor();
+      await page.getByRole("img", { name: "视频封面", exact: true }).waitFor();
+      const policy = page.getByRole("region", { name: "共用画质", exact: true });
+      await assertColumns();
+      assert.ok((await policy.getByRole("combobox").count()) > 0);
+      assert.equal(
+        await page.getByRole("button", { name: "调整共用画质", exact: true }).count(),
+        0,
+      );
+      await choose(page, policy, "分辨率", "720p");
+      await page.waitForTimeout(250);
+      await assertColumns();
+      assert.equal(
+        await policy.getByRole("combobox", { name: "分辨率", exact: true }).inputValue(),
+        "720p",
+      );
+      await page.getByRole("button", { name: "取消全选", exact: true }).click();
+      const p1 = page.getByRole("checkbox", { name: /^P1 · 避震特别篇 p01 解说版$/ });
+      const p2 = page.getByRole("checkbox", { name: /^P2 · 避震特别篇 p02 纯享版$/ });
+      await p1.check();
+      await page.getByRole("button", { name: "P1单独设置", exact: true }).click();
+      const dialog = page.getByRole("dialog", { name: "P1 · 单独画质设置", exact: true });
+      await choose(page, dialog, "分辨率", "2160p");
+      await dialog.getByRole("button", { name: "应用", exact: true }).click();
+      const list = page.getByRole("group", { name: "可选分 P", exact: true });
+      if (count > 2) {
+        await list.evaluate((e) => {
+          e.scrollTop = 180;
+        });
+      }
+      const scroll = await list.evaluate((e) => e.scrollTop);
+      if (count > 2) assert.ok(scroll > 0, "long P list scrolls internally");
+      await page.getByRole("link", { name: "设置", exact: true }).click();
+      await page.getByRole("link", { name: "下载", exact: true }).click();
+      assert.equal(await p1.isChecked(), true);
+      assert.equal(await p2.isChecked(), false);
+      assert.equal(await list.evaluate((e) => e.scrollTop), scroll);
+      assert.equal(
+        await policy.getByRole("combobox", { name: "分辨率", exact: true }).inputValue(),
+        "720p",
+      );
+      await confirmed(page, 1);
+      assert.ok(
+        await page.locator(".page-content").evaluate((e) => e.scrollWidth <= e.clientWidth + 1),
+      );
+      await assertColumns();
+      await page.screenshot({
+        path: `/tmp/savebeam-${scenario}-two-column.png`,
+        fullPage: true,
+      });
+      await page.getByRole("button", { name: "开始下载", exact: true }).click();
+      await page.waitForURL(/#\/tasks$/);
+      const request = await page.evaluate(
+        () =>
+          window.qualityFixture.calls.filter((c) => c.command === "start_playlist_download").at(-1)
+            .args.request,
+      );
+      assert.equal(request.items.length, 1);
+      assert.equal(request.items[0].id, "BV1uVy7BCErV_p1");
+      assert.equal(request.items[0].index, 1);
+      assert.equal(request.items[0].preview, undefined);
+      assert.equal(request.policy.resolutionHeight, 720);
+      assert.equal(request.overrides[0].policy.resolutionHeight, 2160);
+      assert.ok(
+        !(await page.evaluate(() => window.qualityFixture.calls)).some(
+          (c) => c.command === "inspect_playlist_parts",
+        ),
+      );
+      assert.deepEqual(errors, []);
+      await page.close();
+      process.stdout.write(
+        `${scenario}: aligned two-column P layout, compact titles, shared header/policy, independent override and navigation passed\n`,
+      );
+      continue;
+    }
     if (scenario.startsWith("multipart")) {
+      const expand = page.getByRole("button", { name: "展开第 13 项分 P", exact: true });
+      await expand.waitFor();
+      assert.equal(
+        await page.getByRole("checkbox", { name: /第 13 项 · P1 · 避震特别篇/ }).count(),
+        0,
+      );
+      await expand.click();
       if (scenario === "multipart-read-error") {
         await page.getByText("分 P 读取失败，请重试", { exact: false }).first().waitFor();
         await page.getByRole("button", { name: "重新读取详情", exact: true }).click();
@@ -335,8 +463,17 @@ try {
       await choose(page, dialog, "分辨率", "720p");
       await dialog.getByRole("button", { name: "应用", exact: true }).click();
       await p1.uncheck();
+      const parent = page.getByRole("checkbox", { name: "第 13 项 · 避震特别篇", exact: true });
+      assert.equal(await parent.evaluate((e) => e.indeterminate), true);
+      const collapse = page.getByRole("button", { name: "收起第 13 项分 P", exact: true });
+      await collapse.focus();
+      await collapse.press("Enter");
+      assert.equal(await p1.count(), 0);
       await page.getByRole("link", { name: "设置", exact: true }).click();
       await page.getByRole("link", { name: "下载", exact: true }).click();
+      await expand.waitFor();
+      await expand.focus();
+      await expand.press("Enter");
       assert.equal(await p1.isChecked(), false);
       assert.equal(await p2.isChecked(), true);
       await confirmed(page, 17);

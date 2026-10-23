@@ -6,7 +6,7 @@ use serde_json::Value;
 
 use crate::domain::{
     error::{AppError, ErrorCode},
-    media::{FormatOption, MediaInfo, PlaylistEntry, PlaylistInfo, SubtitleTrack},
+    media::{FormatOption, MediaInfo, MediaType, PlaylistEntry, PlaylistInfo, SubtitleTrack},
 };
 
 use crate::domain::download::MAX_PLAYLIST_ITEMS;
@@ -23,6 +23,7 @@ pub fn map_media_info(raw: &Value, requested_url: &str) -> Result<MediaInfo, App
         .unwrap_or_else(|| requested_url.to_owned());
 
     Ok(MediaInfo {
+        media_type: MediaType::Single,
         id,
         title,
         webpage_url,
@@ -47,6 +48,7 @@ fn map_playlist_info(raw: &Value, requested_url: &str) -> Result<MediaInfo, AppE
     }
 
     let observed_count = entries.len() as u64;
+    let multipart = is_bilibili_multipart(raw, requested_url, entries);
     let total_count = raw
         .get("playlist_count")
         .and_then(Value::as_u64)
@@ -68,7 +70,11 @@ fn map_playlist_info(raw: &Value, requested_url: &str) -> Result<MediaInfo, AppE
                 .and_then(|index| u32::try_from(index).ok())
                 .filter(|index| *index > 0)
                 .unwrap_or(offset as u32 + 1);
-            let id = nonempty_string(entry.get("id"));
+            let id = if multipart {
+                super::subscriptions::entry_id(entry)
+            } else {
+                nonempty_string(entry.get("id"))
+            };
             let has_url = entry
                 .get("url")
                 .and_then(Value::as_str)
@@ -90,6 +96,11 @@ fn map_playlist_info(raw: &Value, requested_url: &str) -> Result<MediaInfo, AppE
         .count() as u8;
 
     Ok(MediaInfo {
+        media_type: if multipart {
+            MediaType::Multipart
+        } else {
+            MediaType::Collection
+        },
         id: nonempty_string(raw.get("id")).unwrap_or_else(|| requested_url.to_owned()),
         title: nonempty_string(raw.get("title")).unwrap_or_else(|| "播放列表".into()),
         webpage_url: nonempty_string(raw.get("webpage_url"))
@@ -114,6 +125,42 @@ fn map_playlist_info(raw: &Value, requested_url: &str) -> Result<MediaInfo, AppE
             entries: selectable_entries,
         }),
     })
+}
+
+/// A playlist is not necessarily a collection. Require one verified BV parent and
+/// explicit P relationships; never classify arbitrary short playlists by their length.
+fn is_bilibili_multipart(raw: &Value, requested_url: &str, entries: &[Value]) -> bool {
+    let Some(id) = raw["id"].as_str().filter(|id| {
+        id.len() == 12 && id.starts_with("BV") && id.bytes().all(|b| b.is_ascii_alphanumeric())
+    }) else {
+        return false;
+    };
+    let Some(url) = raw["webpage_url"]
+        .as_str()
+        .or(Some(requested_url))
+        .and_then(|u| reqwest::Url::parse(u).ok())
+    else {
+        return false;
+    };
+    if !matches!(url.scheme(), "http" | "https")
+        || !matches!(
+            url.host_str(),
+            Some("bilibili.com" | "www.bilibili.com" | "m.bilibili.com")
+        )
+        || url.path().trim_end_matches('/') != format!("/video/{id}")
+    {
+        return false;
+    }
+    let mut seen = BTreeSet::new();
+    !entries.is_empty()
+        && entries.iter().enumerate().all(|(offset, entry)| {
+            let index = entry["playlist_index"]
+                .as_u64()
+                .unwrap_or(offset as u64 + 1);
+            seen.insert(index)
+                && super::subscriptions::entry_id(entry).as_deref()
+                    == Some(&format!("{id}_p{index}"))
+        })
 }
 
 fn thumbnail_url(raw: &Value) -> Option<String> {
@@ -268,6 +315,64 @@ mod tests {
     use crate::domain::error::ErrorCode;
 
     use super::map_media_info;
+
+    #[test]
+    fn distinguishes_direct_multipart_video_from_collection_and_derives_exact_part_ids() {
+        use crate::domain::media::MediaType;
+        let raw = json!({"id":"BV1uVy7BCErV","_type":"playlist","title":"避震特别篇", "entries":[
+            {"url":"https://www.bilibili.com/video/BV1uVy7BCErV?p=1"},
+            {"url":"https://www.bilibili.com/video/BV1uVy7BCErV?p=2"}
+        ]});
+        let result = map_media_info(&raw, "https://www.bilibili.com/video/BV1uVy7BCErV").unwrap();
+        assert_eq!(result.media_type, MediaType::Multipart);
+        assert_eq!(
+            result
+                .playlist
+                .unwrap()
+                .entries
+                .iter()
+                .map(|e| e.id.as_deref())
+                .collect::<Vec<_>>(),
+            [Some("BV1uVy7BCErV_p1"), Some("BV1uVy7BCErV_p2")]
+        );
+        assert_eq!(
+            map_media_info(
+                &raw,
+                "https://space.bilibili.com/123/channel/collectiondetail?sid=1"
+            )
+            .unwrap()
+            .media_type,
+            MediaType::Collection
+        );
+        assert_eq!(
+            map_media_info(&raw, "https://bilibili.com.evil.invalid/video/BV1uVy7BCErV")
+                .unwrap()
+                .media_type,
+            MediaType::Collection
+        );
+        let mut mixed = raw.clone();
+        mixed["entries"][1]["url"] = json!("https://www.bilibili.com/video/BV19wee6BEeP?p=2");
+        assert_eq!(
+            map_media_info(&mixed, "https://www.bilibili.com/video/BV1uVy7BCErV")
+                .unwrap()
+                .media_type,
+            MediaType::Collection
+        );
+        let generic = json!({"id":"list","_type":"playlist","title":"两条视频的合集","entries":[{"id":"a"},{"id":"b"}]});
+        assert_eq!(
+            map_media_info(&generic, "https://example.invalid/list")
+                .unwrap()
+                .media_type,
+            MediaType::Collection
+        );
+        let single = json!({"id":"BV1uVy7BCErV_p2","title":"纯享版","formats":[]});
+        assert_eq!(
+            map_media_info(&single, "https://www.bilibili.com/video/BV1uVy7BCErV?p=2")
+                .unwrap()
+                .media_type,
+            MediaType::Single
+        );
+    }
 
     #[test]
     fn maps_media_formats_and_subtitle_sources_to_stable_fields() {

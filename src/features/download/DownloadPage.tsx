@@ -26,7 +26,14 @@ import { invokeCommand } from "../../ipc/client";
 import { useAppStore } from "../../stores/appStore";
 import { inspectMedia } from "./mediaApi";
 import { getMediaUrlError, validateMediaUrl } from "./validateMediaUrl";
-import { selectedDownloadEntries, entryLabel, expandedOverrides } from "./playlistParts";
+import {
+  selectedDownloadEntries,
+  entryLabel,
+  expandedOverrides,
+  mediaType,
+  taskDetails,
+} from "./playlistParts";
+import { DownloadEntryList } from "./DownloadEntryList";
 import { DownloadOptionsModal } from "./DownloadOptionsModal";
 import { useDownloadOptions } from "./useDownloadOptions";
 import { estimateOutputBytes } from "./outputEstimate";
@@ -89,6 +96,9 @@ export function DownloadPage({
   const [qualityOverrides, setQualityOverrides] = useState<Record<number, PlaylistQuality>>({});
   const [editingQuality, setEditingQuality] = useState<number | null>(null);
   const [queuedNotice, setQueuedNotice] = useState<string | null>(null);
+  const [expandedParents, setExpandedParents] = useState<Record<number, boolean>>({});
+  const isMultipart = mediaType(mediaInfo) === "multipart";
+  const hasDownloadList = !!mediaInfo?.playlist;
   const series = usePlaylistDetails(mediaInfo, useProxy, quality, qualityOverrides, audioOnly);
   const sizeEpoch = useRef(0);
   const upsertDownloadTask = useAppStore((state) => state.upsertDownloadTask);
@@ -113,6 +123,7 @@ export function DownloadPage({
     setQualityOverrides({});
     setEditingQuality(null);
     setQueuedNotice(null);
+    setExpandedParents({});
 
     const checked = validateMediaUrl(url);
     if (!checked.valid || loadingDefaults || defaultsError) return;
@@ -151,6 +162,7 @@ export function DownloadPage({
     setPlaylistConfirmed(false);
     setRequestError(null);
     setHasSubmitted(false);
+    setExpandedParents({});
   }
 
   async function handleStartDownload() {
@@ -184,7 +196,7 @@ export function DownloadPage({
         const result = await invokeCommand<QueuedPlaylistTasks>("start_playlist_download", {
           request: {
             url: mediaInfo.webpageUrl,
-            items: chosenEntries.map((entry) => series.details[entry.index]),
+            items: chosenEntries.map((entry) => taskDetails(series.details[entry.index])),
             policy: quality,
             overrides: expandedOverrides(chosenEntries, qualityOverrides),
             downloadOptions: advancedOptions,
@@ -280,6 +292,9 @@ export function DownloadPage({
   const subtitleTracks = mediaInfo?.playlist
     ? Object.values(series.details).flatMap((item) => item.subtitles ?? [])
     : (mediaInfo?.subtitles ?? []);
+  const preview = isMultipart ? series.details[1]?.preview : null;
+  const thumbnail = mediaInfo?.thumbnailDataUrl ?? preview?.thumbnailDataUrl;
+  const uploader = mediaInfo?.uploader ?? preview?.uploader;
   return (
     <main
       className="download-page"
@@ -287,7 +302,7 @@ export function DownloadPage({
       style={active ? undefined : { display: "none" }}
     >
       <Paper
-        className={`download-card${mediaInfo?.playlist ? " download-card--series" : ""}`}
+        className={`download-card${hasDownloadList ? " download-card--series" : ""}`}
         shadow="sm"
         radius="lg"
         withBorder
@@ -377,7 +392,7 @@ export function DownloadPage({
 
           {mediaInfo && (
             <div
-              className={`download-workbench${mediaInfo.playlist ? " download-workbench--series" : ""}`}
+              className={`download-workbench${hasDownloadList ? " download-workbench--series" : ""}${isMultipart ? " download-workbench--multipart" : ""}`}
             >
               <Paper
                 className="media-info-card download-source-panel"
@@ -389,9 +404,9 @@ export function DownloadPage({
               >
                 <Stack gap="md">
                   <Group align="flex-start" wrap="nowrap" className="download-media-header">
-                    {mediaInfo.thumbnailDataUrl && !thumbnailFailed ? (
+                    {thumbnail && !thumbnailFailed ? (
                       <Image
-                        src={mediaInfo.thumbnailDataUrl}
+                        src={thumbnail}
                         alt="视频封面"
                         className="download-thumbnail"
                         w={144}
@@ -414,14 +429,20 @@ export function DownloadPage({
                     )}
                     <div className="download-media-details">
                       <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
-                        媒体信息
+                        {isMultipart ? "多 P 视频" : "媒体信息"}
                       </Text>
                       <Title order={3} mt={4}>
                         {mediaInfo.title}
                       </Title>
-                      {mediaInfo.uploader && (
+                      {isMultipart && (
                         <Text size="sm" c="dimmed">
-                          {mediaInfo.uploader}
+                          视频 ID：{mediaInfo.id} · 共{" "}
+                          {mediaInfo.playlist?.totalCount ?? playlistEntries.length} P
+                        </Text>
+                      )}
+                      {uploader && (
+                        <Text size="sm" c="dimmed">
+                          {uploader}
                         </Text>
                       )}
                       {mediaInfo.durationSeconds && (
@@ -500,17 +521,19 @@ export function DownloadPage({
               {mediaInfo.playlist && (
                 <Paper
                   component="section"
-                  aria-label="系列画质策略"
+                  aria-label={isMultipart ? "共用画质" : "系列画质策略"}
                   className="download-quality-panel"
                   withBorder
                   radius="md"
                   p="md"
                 >
                   <Stack gap="sm">
-                    <Title order={3}>系列画质策略</Title>
+                    <Title order={3}>{isMultipart ? "共用画质" : "系列画质策略"}</Title>
                     <Text size="sm" c="dimmed">
-                      分辨率和 FPS 可选
-                      Best；格式与编码自动推荐，也可手动指定。少数例外可点右侧“单独设置”。
+                      分辨率和 FPS 可选 Best；格式与编码自动推荐，也可手动指定。
+                      {isMultipart
+                        ? "各 P 按自身可用格式匹配，也可单独设置。"
+                        : "少数例外可点右侧“单独设置”。"}
                     </Text>
                     <PlaylistQualityFields
                       value={quality}
@@ -530,24 +553,32 @@ export function DownloadPage({
               {mediaInfo.playlist && (
                 <Paper
                   component="section"
-                  aria-label="选择系列视频"
+                  aria-label={isMultipart ? "选择分 P" : "选择系列视频"}
                   withBorder
                   p="md"
                   className="download-series-panel"
                 >
                   <Stack gap="sm" className="download-series-content">
-                    <Text fw={600}>选择下载条目（已选 {chosenEntries.length} 项）</Text>
+                    <Text fw={600}>
+                      {isMultipart
+                        ? `选择分 P（已选 ${chosenEntries.length}/${playlistEntries.length} P）`
+                        : `选择下载条目（已选 ${chosenEntries.length} 项）`}
+                    </Text>
                     <Group justify="space-between">
-                      <Button
-                        type="button"
-                        size="xs"
-                        variant="light"
-                        onClick={() =>
-                          navigate(`/subscriptions?url=${encodeURIComponent(mediaInfo.webpageUrl)}`)
-                        }
-                      >
-                        订阅此系列
-                      </Button>
+                      {!isMultipart && (
+                        <Button
+                          type="button"
+                          size="xs"
+                          variant="light"
+                          onClick={() =>
+                            navigate(
+                              `/subscriptions?url=${encodeURIComponent(mediaInfo.webpageUrl)}`,
+                            )
+                          }
+                        >
+                          订阅此系列
+                        </Button>
+                      )}
                       <Group gap="xs">
                         <Button
                           type="button"
@@ -574,15 +605,21 @@ export function DownloadPage({
                       </Group>
                     </Group>
                     <Text size="sm">
-                      {mediaInfo.playlist.truncated
-                        ? "系列超过安全上限，当前最多展示前 50 项，可勾选其中一部分。"
-                        : `检测到 ${mediaInfo.playlist.totalCount ?? playlistEntries.length} 项，分 P 展开后最多展示 50 个可下载文件，可分别勾选。`}
+                      {isMultipart
+                        ? mediaInfo.playlist.truncated
+                          ? "分 P 超过安全上限，本次展示前 50 P，可分别勾选下载。"
+                          : "各 P 独立下载，可共用画质或单独调整。"
+                        : mediaInfo.playlist.truncated
+                          ? "系列超过安全上限，当前最多展示前 50 项，可勾选其中一部分。"
+                          : `检测到 ${mediaInfo.playlist.totalCount ?? playlistEntries.length} 项，分 P 展开后最多展示 50 个可下载文件，可分别勾选。`}
                     </Text>
                     <Group justify="space-between" gap="xs">
                       <Text size="xs" c="dimmed" role="status">
                         {series.loading ? "正在读取标题与格式" : "条目详情"}：{series.done}/
                         {mediaInfo.playlist.entries.filter((entry) => entry.available).length}{" "}
-                        个合集条目（分 P 独立读取，不下载媒体）
+                        {isMultipart
+                          ? "个分 P（不下载媒体）"
+                          : "个合集条目（分 P 独立读取，不下载媒体）"}
                       </Text>
                       {series.loading ? (
                         <Button variant="subtle" size="compact-xs" onClick={series.stop}>
@@ -604,106 +641,23 @@ export function DownloadPage({
                         {series.error || series.matchError}
                       </Text>
                     )}
-                    <div
-                      className="download-playlist-list"
-                      role="group"
-                      aria-label="可选视频条目"
-                      tabIndex={0}
-                    >
-                      {playlistEntries.map((entry, offset) => {
-                        const details = series.details[entry.index];
-                        const matched = series.matches.find((row) => row.index === entry.index);
-                        const tracks = matched?.formatId
-                          ?.split("+")
-                          .map((id) => details?.formats.find((format) => format.formatId === id));
-                        const videoTrack = tracks?.find(
-                          (format) => format?.videoCodec && format.videoCodec !== "none",
-                        );
-                        const audioTrack = tracks?.find(
-                          (format) => format?.audioCodec && format.audioCodec !== "none",
-                        );
-                        const videoSpec = videoTrack
-                          ? ` · ${videoTrack.fps ? `${Number(videoTrack.fps.toFixed(3))} fps · ` : ""}${videoTrack.extension} · ${codecLabel(videoTrack.videoCodec)}`
-                          : "";
-                        const audioSpec = audioTrack
-                          ? ` · ${audioTrack.extension} · ${codecLabel(audioTrack.audioCodec)}`
-                          : "";
-                        const bitrate = (value: number | null) =>
-                          value === null ? "未知" : `${Math.round(value)} kbps`;
-                        const info =
-                          details?.error ??
-                          matched?.error ??
-                          (matched?.formatId
-                            ? `${audioOnly ? "MP3" : `${matched.resolution ?? "分辨率未知"}${videoSpec}`} · ${audioOnly ? "" : `视频 ${bitrate(matched.videoBitrateKbps)} · `}音频 ${bitrate(matched.audioBitrateKbps)}${audioSpec} · ${matched.bytes === null ? "大小待定" : `约 ${formatBytes(matched.bytes)}`}${matched.fallbackUsed ? " · 已回退 Best（未满足指定条件）" : ""}`
-                            : details
-                              ? "正在匹配规格…"
-                              : "等待读取标题与格式…");
-                        return (
-                          <div className="download-playlist-row" key={`${entry.index}-${offset}`}>
-                            <Checkbox
-                              label={`${entryLabel(entry)} · ${details?.title ?? entry.title}`}
-                              description={
-                                <>
-                                  {entry.part && (
-                                    <Text component="span" display="block" size="xs" c="dimmed">
-                                      {entry.parentTitle} · 共 {entry.part.partCount} 个分 P
-                                    </Text>
-                                  )}
-                                  <span>{`视频 ID：${details?.id ?? entry.id ?? "待解析"}`}</span>
-                                  <Text
-                                    component="span"
-                                    display="block"
-                                    size="xs"
-                                    c={
-                                      details?.error || matched?.error
-                                        ? "red"
-                                        : matched?.fallbackUsed
-                                          ? "orange"
-                                          : "dimmed"
-                                    }
-                                  >
-                                    {info}
-                                    {qualityOverrides[entry.index] ? " · 单独策略" : ""}
-                                  </Text>
-                                </>
-                              }
-                              checked={chosenEntries.some((chosen) => chosen.index === entry.index)}
-                              disabled={!entry.available || isStartingDownload}
-                              onChange={(event) => {
-                                const checked = event.currentTarget.checked;
-                                changePlaylistItems(
-                                  checked
-                                    ? [
-                                        ...new Set([
-                                          ...chosenEntries.map((e) => e.index),
-                                          entry.index,
-                                        ]),
-                                      ]
-                                    : chosenEntries
-                                        .filter((e) => e.index !== entry.index)
-                                        .map((e) => e.index),
-                                );
-                              }}
-                            />
-                            <Button
-                              type="button"
-                              variant="subtle"
-                              size="compact-xs"
-                              aria-label={`${entryLabel(entry)}单独设置`}
-                              disabled={!entry.available || isStartingDownload}
-                              onClick={() => setEditingQuality(entry.index)}
-                            >
-                              单独设置
-                            </Button>
-                          </div>
-                        );
-                      })}
-                      {!playlistEntries.length && (
-                        <Text c="dimmed" size="sm">
-                          未返回可选条目，请重新解析链接。
-                        </Text>
-                      )}
-                    </div>
+                    <DownloadEntryList
+                      media={mediaInfo}
+                      multipart={isMultipart}
+                      entries={playlistEntries}
+                      details={series.details}
+                      matches={series.matches}
+                      selectedKeys={chosenEntries.map((e) => e.index)}
+                      overrides={qualityOverrides}
+                      audioOnly={audioOnly}
+                      disabled={isStartingDownload}
+                      expanded={expandedParents}
+                      onExpand={(index) =>
+                        setExpandedParents((current) => ({ ...current, [index]: !current[index] }))
+                      }
+                      onSelect={changePlaylistItems}
+                      onEdit={setEditingQuality}
+                    />
                     {seriesReady && matchedCount < chosenEntries.length && (
                       <Text c="orange" size="xs">
                         {chosenEntries.length - matchedCount}{" "}
@@ -787,7 +741,7 @@ export function DownloadPage({
         <PlaylistQualityModal
           opened={active}
           index={editingQuality}
-          label={entryLabel(editingEntry)}
+          label={entryLabel(editingEntry, isMultipart)}
           value={qualityOverrides[editingQuality] ?? quality}
           audioOnly={audioOnly}
           onClose={() => setEditingQuality(null)}

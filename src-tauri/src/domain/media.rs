@@ -2,9 +2,25 @@
 
 use serde::{Deserialize, Serialize};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum MediaType {
+    Single,
+    Multipart,
+    Collection,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct MediaPreview {
+    pub uploader: Option<String>,
+    pub thumbnail_data_url: Option<String>,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MediaInfo {
+    pub media_type: MediaType,
     pub id: String,
     pub title: String,
     pub webpage_url: String,
@@ -70,11 +86,12 @@ pub struct SubtitleTrack {
 
 #[cfg(test)]
 mod tests {
-    use super::{FormatOption, MediaInfo, SubtitleTrack};
+    use super::{FormatOption, MediaInfo, MediaType, SubtitleTrack};
 
     #[test]
     fn serializes_stable_media_shape_in_camel_case() {
         let media = MediaInfo {
+            media_type: MediaType::Single,
             id: "abc".into(),
             title: "Example".into(),
             webpage_url: "https://example.com/watch/abc".into(),
@@ -108,6 +125,7 @@ mod tests {
 
         let value = serde_json::to_value(media).expect("media should serialize");
         assert_eq!(value["webpageUrl"], "https://example.com/watch/abc");
+        assert_eq!(value["mediaType"], "single");
         assert_eq!(value["formats"][0]["formatId"], "best");
         assert_eq!(value["formats"][0]["approximateFileSizeBytes"], 1024);
         assert_eq!(value["subtitles"][0]["automatic"], false);

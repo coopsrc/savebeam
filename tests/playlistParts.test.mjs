@@ -5,6 +5,11 @@ import {
   selectedDownloadEntries,
   entryLabel,
   expandedOverrides,
+  entryGroups,
+  toggleGroupSelection,
+  shortPartTitle,
+  mediaType,
+  taskDetails,
 } from "../src/features/download/playlistParts.ts";
 
 const part = (index) => ({
@@ -14,6 +19,45 @@ const part = (index) => ({
   formats: [],
   error: null,
   part: { parentIndex: 13, partIndex: index, partCount: 2 },
+});
+
+test("header previews remain UI-only without mutating the hydrated source", () => {
+  const source = {
+    ...part(1),
+    preview: { uploader: "作者", thumbnailDataUrl: "data:image/png;base64,test" },
+  };
+  const request = taskDetails(source);
+  assert.equal(request.preview, undefined);
+  assert.ok(source.preview);
+  assert.equal(JSON.stringify(request).includes("thumbnailDataUrl"), false);
+  assert.equal(request.id, source.id);
+});
+
+test("collapsible parent groups preserve selection keys, mixed state and independent other entries", () => {
+  const entries = expandedEntries(media, details);
+  const groups = entryGroups(entries);
+  assert.deepEqual(
+    groups.map((g) => g.parentIndex),
+    [null, 13, null],
+  );
+  const children = groups[1].entries;
+  assert.deepEqual(toggleGroupSelection(children, [12, 13001, 14], true), [12, 14, 13001, 13002]);
+  assert.deepEqual(toggleGroupSelection(children, [12, 13001, 14], false), [12, 14]);
+  assert.deepEqual(
+    selectedDownloadEntries(entries, [13002]).map((e) => e.index),
+    [13002],
+  );
+  assert.equal(entryLabel({ index: 2 }, true), "P2");
+});
+
+test("display-only short titles remove only the exact parent prefix and matching P marker", () => {
+  assert.equal(shortPartTitle("避震特别篇 p01 解说版", "避震特别篇", 1), "解说版");
+  assert.equal(shortPartTitle("避震特别篇 p02 纯享版", "避震特别篇", 2), "纯享版");
+  assert.equal(shortPartTitle("另一个完整标题", "避震特别篇", 2), "另一个完整标题");
+  assert.equal(shortPartTitle("p03 不同P", undefined, 2), "p03 不同P");
+  assert.equal(mediaType({ mediaType: "multipart", playlist: {} }), "multipart");
+  assert.equal(mediaType({ playlist: {} }), "collection");
+  assert.equal(mediaType(null), "single");
 });
 const media = {
   playlist: {
