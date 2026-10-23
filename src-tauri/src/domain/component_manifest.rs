@@ -233,6 +233,26 @@ mod tests {
     }
 
     #[test]
+    fn runtime_kind_alias_preserves_existing_signed_payload_and_tamper_detection() {
+        let key = SigningKey::from_bytes(&[9; 32]);
+        let mut manifest = unsigned_manifest();
+        manifest.entries[0].kind = ComponentKind::JavaScriptRuntime;
+        let payload = manifest.signed_payload().unwrap();
+        assert!(
+            String::from_utf8(payload.clone())
+                .unwrap()
+                .contains("java_script_runtime")
+        );
+        manifest.signature = hex::encode(key.sign(&payload).to_bytes());
+        let bytes = serde_json::to_vec(&manifest).unwrap();
+        let mut restored: ComponentManifest = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(restored.signed_payload().unwrap(), payload);
+        restored.verify(&key.verifying_key().to_bytes()).unwrap();
+        restored.entries[0].version = "changed".into();
+        assert!(restored.verify(&key.verifying_key().to_bytes()).is_err());
+    }
+
+    #[test]
     fn rejects_insecure_urls_bad_hashes_and_duplicate_targets() {
         let mut manifest = unsigned_manifest();
         manifest.entries[0].url = "http://example.com/tool".into();

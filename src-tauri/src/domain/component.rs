@@ -8,6 +8,8 @@ pub enum ComponentKind {
     YtDlp,
     Ffmpeg,
     Ffprobe,
+    // Preserve legacy serialization/signature bytes; accept the frontend's canonical spelling.
+    #[serde(alias = "javascript_runtime")]
     JavaScriptRuntime,
 }
 
@@ -76,5 +78,23 @@ impl ComponentInstallation {
             executable_path: None,
             version: None,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn runtime_accepts_frontend_kind_without_changing_signed_manifest_serialization() {
+        for value in ["javascript_runtime", "java_script_runtime"] {
+            assert_eq!(
+                serde_json::from_value::<ComponentKind>(serde_json::json!(value)).unwrap(),
+                ComponentKind::JavaScriptRuntime
+            );
+        }
+        assert_eq!(
+            serde_json::to_value(ComponentKind::JavaScriptRuntime).unwrap(),
+            "java_script_runtime"
+        );
     }
 }

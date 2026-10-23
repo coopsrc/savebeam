@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActionIcon,
   Alert,
@@ -32,6 +32,7 @@ import type {
 } from "../../types/domain";
 import { IPC_EVENTS, listenToEvent } from "../../ipc/events";
 import { componentRecommendation, installationPlatform } from "./componentInstallGuides";
+import { localComponentSummary, normalizeComponentKinds } from "./componentStatus";
 
 const componentNames: Record<ComponentKind, string> = {
   yt_dlp: "yt-dlp",
@@ -60,6 +61,7 @@ export function ComponentsSettings() {
   const [customPaths, setCustomPaths] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [probeError, setProbeError] = useState<string | null>(null);
   const [copiedCommand, setCopiedCommand] = useState<{
     kind: ComponentKind;
     command: string;
@@ -68,14 +70,17 @@ export function ComponentsSettings() {
   const [releases, setReleases] = useState<ComponentRelease[]>([]);
   const [checkingReleases, setCheckingReleases] = useState(false);
   const [releaseError, setReleaseError] = useState<string | null>(null);
+  const [releaseChecked, setReleaseChecked] = useState(false);
+  const releasePending = useRef(false);
   const [installingKind, setInstallingKind] = useState<ComponentKind | null>(null);
   const [installProgress, setInstallProgress] = useState<ComponentInstallProgress | null>(null);
 
   const acceptComponents = useCallback((result: ComponentInstallation[]) => {
-    setComponents(result);
+    const normalized = normalizeComponentKinds(result);
+    setComponents(normalized);
     setCustomPaths((previous) => {
       const next = { ...previous };
-      for (const component of result) {
+      for (const component of normalized) {
         if (component.source === "custom" && component.executablePath) {
           next[component.kind] = component.executablePath;
         }
@@ -87,11 +92,12 @@ export function ComponentsSettings() {
   const refresh = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setProbeError(null);
     try {
       const result = await invokeCommand<ComponentInstallation[]>("get_component_status");
       acceptComponents(result);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "读取组件状态失败。");
+      setProbeError(cause instanceof Error ? cause.message : "读取组件状态失败。");
     } finally {
       setLoading(false);
     }
@@ -104,7 +110,7 @@ export function ComponentsSettings() {
         const result = await invokeCommand<ComponentInstallation[]>("get_component_status");
         if (active) acceptComponents(result);
       } catch (cause) {
-        if (active) setError(cause instanceof Error ? cause.message : "读取组件状态失败。");
+        if (active) setProbeError(cause instanceof Error ? cause.message : "读取组件状态失败。");
       } finally {
         if (active) setLoading(false);
       }
@@ -116,23 +122,26 @@ export function ComponentsSettings() {
   }, [acceptComponents]);
 
   const refreshReleases = useCallback(async () => {
+    if (releasePending.current) return;
+    releasePending.current = true;
     setCheckingReleases(true);
     setReleaseError(null);
+    setReleaseChecked(false);
+    setReleases([]);
     try {
-      setReleases(await invokeCommand<ComponentRelease[]>("get_component_releases"));
+      setReleases(
+        normalizeComponentKinds(await invokeCommand<ComponentRelease[]>("get_component_releases")),
+      );
+      setReleaseChecked(true);
     } catch (cause) {
       setReleaseError(cause instanceof Error ? cause.message : "读取组件发行目录失败。");
     } finally {
+      releasePending.current = false;
       setCheckingReleases(false);
     }
   }, []);
 
   useEffect(() => {
-    void invokeCommand<ComponentRelease[]>("get_component_releases")
-      .then(setReleases)
-      .catch((cause: unknown) =>
-        setReleaseError(cause instanceof Error ? cause.message : "读取组件发行目录失败。"),
-      );
     let unlisten: (() => void) | undefined;
     let active = true;
     void listenToEvent<ComponentInstallProgress>(
@@ -150,7 +159,7 @@ export function ComponentsSettings() {
       active = false;
       unlisten?.();
     };
-  }, [refreshReleases]);
+  }, []);
 
   async function installRelease(kind: ComponentKind) {
     setInstallingKind(kind);
@@ -238,7 +247,7 @@ export function ComponentsSettings() {
         <div>
           <Title order={2}>运行组件</Title>
           <Text c="dimmed" size="sm" mt={4}>
-            Savebeam 不会覆盖系统或自定义组件。组件检测只运行固定的版本参数。
+            本机检测仅运行固定的版本参数，不联网。应用管理组件的安装或更新，请单独点击“检查组件更新”。
           </Text>
         </div>
         <Group>
@@ -262,11 +271,52 @@ export function ComponentsSettings() {
       </Group>
 
       {error && (
-        <ErrorState title="组件操作失败" description={error} onAction={() => void refresh()} />
+        <ErrorState
+          title="组件操作失败"
+          description={error}
+          actionLabel="关闭提示"
+          onAction={() => setError(null)}
+        />
+      )}
+      {probeError && (
+        <ErrorState
+          title="本机组件检测失败"
+          description={probeError}
+          onAction={() => void refresh()}
+        />
+      )}
+      {!loading && !probeError && (
+        <Text
+          role="status"
+          size="sm"
+          c={localComponentSummary(components).ready ? "green" : "dimmed"}
+        >
+          {localComponentSummary(components).message}
+        </Text>
+      )}
+      {!loading && probeError && components.length > 0 && (
+        <Text size="sm" c="dimmed">
+          下方保留上次成功检测结果，当前状态尚未确认。
+        </Text>
       )}
       {releaseError && (
-        <Text role="alert" c="orange" size="sm">
-          暂时无法检查应用管理组件：{releaseError} 可使用下方手动安装建议，或稍后重试。
+        <Alert
+          role="alert"
+          color="blue"
+          title="在线组件目录暂不可用"
+          withCloseButton
+          closeButtonLabel="关闭在线检查提示"
+          onClose={() => setReleaseError(null)}
+        >
+          {releaseError} 仅影响 Savebeam
+          管理组件的安装或更新，不影响已经可用的本机组件；本机状态以下方检测结果为准。可点击“检查组件更新”重试，或使用下方手动安装建议。
+        </Alert>
+      )}
+      {releaseChecked && !checkingReleases && !releaseError && (
+        <Text role="status" size="sm" c="dimmed">
+          {releases.length
+            ? `在线组件目录已读取，当前平台有 ${releases.length} 个发行包；这不代表系统或自定义组件已是最新版。`
+            : "当前平台暂无可用的应用管理发行包，不影响系统或自定义组件使用。"}
         </Text>
       )}
       {loading ? (
