@@ -503,10 +503,12 @@ Windows/Linux UI 应表述为“从 FFmpeg 官网列出的构建来源下载”�
 
 ### 8.4 系统包管理器
 
+手动安装建议跟随共用桌面平台自动识别及开发预览平台切换，明确显示当前平台/包管理器，命令、复制内容、平台说明与 FFmpeg 官网对应平台锚点同步变化。macOS 使用 Homebrew，Windows 使用 WinGet，Linux 当前明确标注 Ubuntu/Debian apt-get 示例，不宣称通用于所有发行版；Linux 的 Deno 仅提供官方安装说明，不虚构官方 apt 源。复制状态关联组件与具体命令，换平台后不沿用旧命令的“已复制”提示。此模块不运行安装命令，不收集管理员密码，也不改变组件路径或安装来源。
+
 - Windows：winget。
 - macOS：Homebrew。
 - Ubuntu/Debian：apt。
-- 其他 Linux：根据 `/etc/os-release` 提供相应说明。
+- 其他 Linux：当前提示使用对应发行版包管理器；后续可根据 `/etc/os-release` 提供发行版专用说明。
 
 应用不收集管理员密码，也不静默执行 `sudo`。首版提供命令展示、复制、打开终端和重新检测。系统仓库版本可能过旧，必须执行最低版本和能力检查。
 

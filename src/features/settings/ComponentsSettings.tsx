@@ -31,6 +31,7 @@ import type {
   DownloadPreferences,
 } from "../../types/domain";
 import { IPC_EVENTS, listenToEvent } from "../../ipc/events";
+import { componentRecommendation, installationPlatform } from "./componentInstallGuides";
 
 const componentNames: Record<ComponentKind, string> = {
   yt_dlp: "yt-dlp",
@@ -52,50 +53,17 @@ const statusNames: Record<ComponentInstallation["status"], string> = {
   unhealthy: "无法正常运行",
 };
 
-function recommendation(kind: ComponentKind, platform: "macos" | "windows" | "linux") {
-  if (platform === "macos") {
-    if (kind === "yt_dlp") return { command: "brew install yt-dlp" };
-    if (kind === "ffmpeg" || kind === "ffprobe") {
-      return { command: "brew install ffmpeg", note: "ffprobe 随 FFmpeg 一同提供。" };
-    }
-    return { command: "brew install deno" };
-  }
-
-  if (platform === "windows") {
-    if (kind === "yt_dlp") return { command: "winget install --id yt-dlp.yt-dlp -e" };
-    if (kind === "ffmpeg" || kind === "ffprobe") {
-      return {
-        command: "winget install --id Gyan.FFmpeg -e",
-        note: "此 winget 包由 Gyan 提供；ffprobe 通常包含在该构建中。",
-      };
-    }
-    return { command: "winget install --id DenoLand.Deno -e" };
-  }
-
-  if (kind === "yt_dlp")
-    return {
-      command: "sudo apt-get install yt-dlp",
-      note: "Ubuntu/Debian 示例；其他发行版请使用其包管理器。",
-    };
-  if (kind === "ffmpeg" || kind === "ffprobe") {
-    return {
-      command: "sudo apt-get install ffmpeg",
-      note: "Ubuntu/Debian 示例；ffprobe 随 FFmpeg 一同提供。",
-    };
-  }
-  return {
-    note: "Deno 没有官方 apt 源；请查看 Deno 官方安装说明或使用发行版推荐的包管理器。",
-    url: "https://docs.deno.com/runtime/getting_started/installation/",
-  };
-}
-
 export function ComponentsSettings() {
   const profile = usePlatformProfile();
+  const platformGuide = installationPlatform(profile.platform);
   const [components, setComponents] = useState<ComponentInstallation[]>([]);
   const [customPaths, setCustomPaths] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [copiedKind, setCopiedKind] = useState<ComponentKind | null>(null);
+  const [copiedCommand, setCopiedCommand] = useState<{
+    kind: ComponentKind;
+    command: string;
+  } | null>(null);
   const [removingKind, setRemovingKind] = useState<ComponentKind | null>(null);
   const [releases, setReleases] = useState<ComponentRelease[]>([]);
   const [checkingReleases, setCheckingReleases] = useState(false);
@@ -234,8 +202,12 @@ export function ComponentsSettings() {
   async function copyCommand(kind: ComponentKind, command: string) {
     try {
       await navigator.clipboard.writeText(command);
-      setCopiedKind(kind);
-      window.setTimeout(() => setCopiedKind(null), 1800);
+      const copied = { kind, command };
+      setCopiedCommand(copied);
+      window.setTimeout(
+        () => setCopiedCommand((current) => (current === copied ? null : current)),
+        1800,
+      );
     } catch {
       setError("无法访问剪贴板。请手动选择并复制安装命令。");
     }
@@ -428,18 +400,28 @@ export function ComponentsSettings() {
         </Stack>
       )}
 
-      <Paper withBorder radius="md" p="md">
+      <Paper component="section" aria-label="手动安装建议" withBorder radius="md" p="md">
         <Stack gap="sm">
           <div>
-            <Text fw={650}>手动安装建议</Text>
+            <Group justify="space-between" gap="xs">
+              <Text fw={650}>手动安装建议</Text>
+              <Badge variant="light">{platformGuide.label}</Badge>
+            </Group>
             <Text size="sm" c="dimmed" mt={3}>
               Savebeam 只提供命令和官方说明链接，不会代替你执行包管理器。
             </Text>
           </div>
           {(["yt_dlp", "ffmpeg", "ffprobe", "javascript_runtime"] as const).map((kind) => {
-            const guide = recommendation(kind, profile.platform);
+            const guide = componentRecommendation(kind, profile.platform);
             return (
-              <Group key={kind} justify="space-between" align="flex-start" wrap="nowrap">
+              <Group
+                role="group"
+                aria-label={`${componentNames[kind]} 手动安装建议`}
+                key={kind}
+                justify="space-between"
+                align="flex-start"
+                wrap="nowrap"
+              >
                 <div className="package-guide-copy">
                   <Text size="sm" fw={550}>
                     {componentNames[kind]}
@@ -462,21 +444,24 @@ export function ComponentsSettings() {
                 </div>
                 {guide.command && (
                   <Button
+                    aria-label={`复制 ${componentNames[kind]} 安装命令`}
                     size="xs"
                     variant="light"
                     onClick={() => void copyCommand(kind, guide.command!)}
                   >
-                    {copiedKind === kind ? "已复制" : "复制命令"}
+                    {copiedCommand?.kind === kind && copiedCommand.command === guide.command
+                      ? "已复制"
+                      : "复制命令"}
                   </Button>
                 )}
               </Group>
             );
           })}
           <Text size="xs" c="dimmed">
-            macOS 命令来自 Homebrew；Windows 使用 WinGet；Linux 命令为 Ubuntu/Debian 示例。
+            {platformGuide.note}
           </Text>
-          <a href="https://ffmpeg.org/download.html" target="_blank" rel="noreferrer">
-            FFmpeg 官网平台下载入口
+          <a href={platformGuide.ffmpegUrl} target="_blank" rel="noreferrer">
+            FFmpeg 官网 {profile.label} 下载入口
           </a>
         </Stack>
       </Paper>
