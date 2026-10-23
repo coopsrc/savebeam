@@ -22,6 +22,8 @@ import type { DownloadOptionDefaults } from "../../types/domain";
 import { DownloadOptionsModal } from "../download/DownloadOptionsModal";
 import { useDownloadOptions } from "../download/useDownloadOptions";
 import { useRetainedPageScroll } from "../../layout/useRetainedPageScroll";
+import { SubscriptionEntries } from "./SubscriptionEntries";
+import { mergeSubscriptionMetadata, patchEntryMetadata } from "./entryMetadata";
 
 function message(error: unknown) {
   return error instanceof Error ? error.message : "订阅操作失败，请重试。";
@@ -72,7 +74,7 @@ export function SubscriptionsPage({ active }: { active: boolean }) {
     void Promise.all([subscriptionApi.list(), subscriptionApi.candidates()])
       .then(([list, known]) => {
         if (!disposed) {
-          setSubscriptions(list);
+          setSubscriptions((previous) => mergeSubscriptionMetadata(previous, list));
           setCandidates(known);
           setBusy(null);
         }
@@ -95,7 +97,7 @@ export function SubscriptionsPage({ active }: { active: boolean }) {
     void subscriptionApi
       .list()
       .then((list) => {
-        if (!disposed) setSubscriptions(list);
+        if (!disposed) setSubscriptions((previous) => mergeSubscriptionMetadata(previous, list));
       })
       .catch(() => {});
     void subscriptionApi
@@ -119,7 +121,8 @@ export function SubscriptionsPage({ active }: { active: boolean }) {
       setError(message(error));
     } finally {
       try {
-        setSubscriptions(await subscriptionApi.list());
+        const list = await subscriptionApi.list();
+        setSubscriptions((previous) => mergeSubscriptionMetadata(previous, list));
       } catch (error: unknown) {
         setError(message(error));
       }
@@ -398,40 +401,32 @@ export function SubscriptionsPage({ active }: { active: boolean }) {
                   {expanded[item.id] ? "收起条目" : `展开条目（${visible.length}）`}
                 </Button>
                 {expanded[item.id] && (
-                  <Stack
-                    gap="sm"
-                    mah={320}
-                    style={{ overflowY: "auto" }}
-                    aria-label={`${item.title}条目`}
-                  >
-                    {visible.map((entry) => (
-                      <Checkbox
-                        key={entry.id}
-                        checked={chosen.includes(entry.id)}
-                        disabled={
-                          !!busy ||
-                          !isPending(entry) ||
-                          (!chosen.includes(entry.id) && chosen.length >= 50)
-                        }
-                        label={`第 ${entry.index} 项 · ${entry.title}${entry.isNew && !entry.downloaded ? " · 新增" : ""}`}
-                        description={`ID：${entry.id} · ${entry.downloaded ? "已下载" : !entry.available ? "不可用 / 已移出列表" : !isPending(entry) ? "已加入下载任务" : entry.taskStatus === "failed" || entry.taskStatus === "cancelled" ? "上次未完成，可重新下载" : "待下载"}`}
-                        onChange={(event) => {
-                          const checked = event.currentTarget.checked;
-                          setSelected((previous) => ({
-                            ...previous,
-                            [item.id]: checked
-                              ? [...chosen, entry.id]
-                              : chosen.filter((id) => id !== entry.id),
-                          }));
-                        }}
-                      />
-                    ))}
-                    {!visible.length && (
-                      <Text size="sm" c="dimmed">
-                        当前已知条目均已下载，或站点未返回可识别的视频 ID。
-                      </Text>
-                    )}
-                  </Stack>
+                  <SubscriptionEntries
+                    id={item.id}
+                    title={item.title}
+                    active={active}
+                    checkedAt={item.lastCheckedUnixMs}
+                    entries={visible}
+                    chosen={chosen}
+                    disabled={!!busy}
+                    onSelect={(id, checked) =>
+                      setSelected((previous) => ({
+                        ...previous,
+                        [item.id]: checked
+                          ? [...chosen, id]
+                          : chosen.filter((value) => value !== id),
+                      }))
+                    }
+                    onMetadata={(rows) =>
+                      setSubscriptions((previous) =>
+                        previous.map((series) =>
+                          series.id === item.id
+                            ? { ...series, entries: patchEntryMetadata(series.entries, rows) }
+                            : series,
+                        ),
+                      )
+                    }
+                  />
                 )}
                 <Text size="xs" c="dimmed">
                   下载采用当前默认目录及重名策略，逐项自动匹配视频与音频并合并。保留“系列名称

@@ -5,10 +5,18 @@ export interface SubscriptionEntry {
   id: string;
   index: number;
   title: string;
+  durationSeconds?: number | null;
   downloaded: boolean;
   isNew: boolean;
   available: boolean;
   taskStatus: string | null;
+}
+export interface SubscriptionEntryMetadata {
+  id: string;
+  index: number;
+  title: string | null;
+  durationSeconds: number | null;
+  error: string | null;
 }
 export interface SeriesSubscription {
   id: number;
@@ -44,6 +52,8 @@ export const subscriptionApi = {
   candidates: () => invoke<SeriesCandidate[]>("get_subscription_candidates"),
   subscribe: (url: string) => invoke<number>("subscribe_series", { url }),
   check: (id: number) => invoke<void>("check_subscription", { id }),
+  details: (id: number, mediaIds: string[]) =>
+    invoke<SubscriptionEntryMetadata[]>("inspect_subscription_entries", { id, mediaIds }),
   remove: (id: number) => invoke<void>("unsubscribe_series", { id }),
   download: (
     id: number,

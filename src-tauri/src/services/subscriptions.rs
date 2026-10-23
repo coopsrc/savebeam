@@ -2,7 +2,7 @@
 use crate::{
     domain::error::{AppError, ErrorCode},
     infrastructure::{
-        database::subscriptions::{SeriesSnapshot, SubscriptionEntry},
+        database::subscriptions::{SeriesSnapshot, SubscriptionEntry, SubscriptionEntryMetadata},
         process_supervisor::CompletedMedia,
     },
 };
@@ -47,10 +47,14 @@ pub fn map_snapshot(raw: &Value) -> Result<SeriesSnapshot, AppError> {
                 index: index as u32,
                 title: entry["title"]
                     .as_str()
-                    .unwrap_or("未命名视频")
+                    .map(str::trim)
+                    .unwrap_or("")
                     .chars()
                     .take(1024)
                     .collect(),
+                duration_seconds: entry["duration"]
+                    .as_f64()
+                    .filter(|n| n.is_finite() && *n > 0.0 && *n < 1e9),
                 downloaded: false,
                 is_new: false,
                 available: entry["_type"] != "playlist"
@@ -78,6 +82,58 @@ pub fn map_snapshot(raw: &Value) -> Result<SeriesSnapshot, AppError> {
                 .is_some_and(|total| total > entries.len() as u64),
         entries: mapped,
     })
+}
+
+/// Project only verified titles/durations, not formats, URLs, headers or cookies.
+pub fn map_entry_metadata(
+    raw: &Value,
+    requested: &[SubscriptionEntry],
+) -> Vec<SubscriptionEntryMetadata> {
+    requested
+        .iter()
+        .map(|item| {
+            let candidates: Vec<_> = if let Some(entries) = raw["entries"].as_array() {
+                entries
+                    .iter()
+                    .filter(|entry| entry["playlist_index"].as_u64() == Some(u64::from(item.index)))
+                    .collect()
+            } else if requested.len() == 1 {
+                vec![raw]
+            } else {
+                Vec::new()
+            };
+            let entry = (candidates.len() == 1)
+                .then(|| candidates[0])
+                .filter(|entry| {
+                    entry["_type"] != "playlist"
+                        && entry_id(entry).as_deref() == Some(item.id.as_str())
+                        && entry.get("playlist_index").is_none_or(|index| {
+                            index.is_null() || index.as_u64() == Some(u64::from(item.index))
+                        })
+                });
+            let title = entry
+                .and_then(|entry| entry["title"].as_str())
+                .map(str::trim)
+                .filter(|t| !t.is_empty())
+                .map(|t| t.chars().take(1024).collect::<String>());
+            let duration = entry
+                .and_then(|entry| entry["duration"].as_f64())
+                .filter(|n| n.is_finite() && *n > 0.0 && *n < 1e9);
+            SubscriptionEntryMetadata {
+                id: item.id.clone(),
+                index: item.index,
+                duration_seconds: if entry.is_some() { duration } else { None },
+                error: if entry.is_none() {
+                    Some("条目不可用或视频 ID 已变化，请检查列表后重试。".into())
+                } else if title.is_none() {
+                    Some("站点暂未返回视频标题，可稍后重试。".into())
+                } else {
+                    None
+                },
+                title,
+            }
+        })
+        .collect()
 }
 
 fn entry_id(entry: &Value) -> Option<String> {
@@ -139,6 +195,50 @@ pub fn verified_ids(
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn missing_flat_titles_stay_unknown_and_details_require_matching_ids_and_positions() {
+        let flat = json!({"_type":"playlist","id":"list","entries":[{"id":"one","playlist_index":72},{"id":"two","playlist_index":999,"title":""}]});
+        let snapshot = map_snapshot(&flat).unwrap();
+        assert!(snapshot.entries[0].title.is_empty());
+        let raw = json!({"entries":[{"id":"one","playlist_index":72,"title":"  真正的视频标题  ","duration":123.5,"url":"https://secret.invalid/media","http_headers":{"Cookie":"secret"}}, {"id":"different","playlist_index":999,"title":"不要显示","duration":9}]});
+        let rows = map_entry_metadata(&raw, &snapshot.entries);
+        assert_eq!(rows[0].title.as_deref(), Some("真正的视频标题"));
+        assert_eq!(rows[0].duration_seconds, Some(123.5));
+        assert!(rows[0].error.is_none());
+        assert!(
+            rows[1].error.is_some()
+                && rows[1].title.is_none()
+                && rows[1].duration_seconds.is_none()
+        );
+        assert!(!serde_json::to_string(&rows).unwrap().contains("secret"));
+        let duplicate = json!({"entries":[{"id":"one","playlist_index":72,"title":"a"},{"id":"one","playlist_index":72,"title":"b"}]});
+        assert!(
+            map_entry_metadata(&duplicate, &snapshot.entries)[0]
+                .error
+                .is_some()
+        );
+        let nested = json!({"entries":[{"_type":"playlist","id":"one","playlist_index":72,"title":"wrong"}]});
+        assert!(
+            map_entry_metadata(&nested, &snapshot.entries)[0]
+                .error
+                .is_some()
+        );
+        let single = json!({"id":"one","title":"single","duration":-1});
+        let one = map_entry_metadata(&single, &snapshot.entries[..1]);
+        assert!(one[0].error.is_none() && one[0].duration_seconds.is_none());
+        let wrong_position = json!({"id":"one","title":"wrong","playlist_index":73});
+        assert!(
+            map_entry_metadata(&wrong_position, &snapshot.entries[..1])[0]
+                .error
+                .is_some()
+        );
+        assert!(
+            map_entry_metadata(&single, &snapshot.entries)[0]
+                .error
+                .is_some()
+        );
+    }
 
     #[test]
     fn subscription_scan_keeps_positions_beyond_fifty_and_reports_incomplete_results() {

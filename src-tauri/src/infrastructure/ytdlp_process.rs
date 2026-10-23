@@ -105,6 +105,30 @@ impl YtDlpProcessEngine {
         Ok(self)
     }
 
+    pub(crate) fn for_subscription_details(mut self, indices: &[u32]) -> Result<Self, AppError> {
+        let selected: std::collections::BTreeSet<_> = indices.iter().copied().collect();
+        if selected.is_empty()
+            || selected.len() > 5
+            || selected.len() != indices.len()
+            || selected.iter().any(|i| !(1..=1000).contains(i))
+        {
+            return Err(AppError::new(
+                ErrorCode::InvalidPath,
+                "每批最多读取 5 条订阅信息，序号范围为 1–1000。",
+                false,
+            ));
+        }
+        self.size_estimate_selector = Some(
+            selected
+                .iter()
+                .map(u32::to_string)
+                .collect::<Vec<_>>()
+                .join(","),
+        );
+        self.playlist_limit = 1001;
+        Ok(self)
+    }
+
     /// Reads yt-dlp JSON without downloading media or loading user configuration.
     pub fn inspect(&self, url: &str) -> Result<Value, AppError> {
         self.inspect_cancellable(url, &CancellationToken::default())
@@ -447,6 +471,39 @@ mod tests {
             assert_eq!(value["id"], "v");
             fs::remove_dir_all(exe.parent().unwrap()).unwrap();
         }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn subscription_details_are_small_sparse_metadata_only_batches_past_fifty() {
+        let exe = write_script(
+            "yt-dlp",
+            r#"
+[ "$4" = "--no-flat-playlist" ] || exit 11
+[ "$7" = "1001" ] || exit 12
+[ "$9" = "72,1000" ] || exit 13
+[ "${14}" = "--skip-download" ] || exit 14
+printf '%s' '{"entries":[{"id":"last","playlist_index":1000,"title":"Video"}]}'
+"#,
+        );
+        let engine = YtDlpProcessEngine::new(&exe, None);
+        for indices in [
+            vec![],
+            vec![0],
+            vec![1001],
+            vec![72, 72],
+            vec![1, 2, 3, 4, 5, 6],
+        ] {
+            assert!(engine.clone().for_subscription_details(&indices).is_err());
+        }
+        assert!(engine.clone().for_size_estimate(&[72]).is_err());
+        let raw = engine
+            .for_subscription_details(&[1000, 72])
+            .unwrap()
+            .inspect("https://example.invalid/list")
+            .unwrap();
+        assert_eq!(raw["entries"][0]["playlist_index"], 1000);
+        fs::remove_dir_all(exe.parent().unwrap()).unwrap();
     }
 
     #[cfg(unix)]

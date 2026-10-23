@@ -28,6 +28,8 @@ use tauri::{AppHandle, Manager, State};
 
 #[derive(Clone, Default)]
 pub struct SubscriptionOperations(Arc<Mutex<()>>);
+#[derive(Clone, Default)]
+pub struct SubscriptionMetadataOperations(Arc<Mutex<()>>);
 
 fn busy() -> AppError {
     AppError::new(
@@ -186,6 +188,51 @@ pub async fn check_subscription(app: AppHandle, id: i64) -> CommandResult<()> {
 }
 
 #[tauri::command]
+pub async fn inspect_subscription_entries(
+    app: AppHandle,
+    id: i64,
+    media_ids: Vec<String>,
+) -> CommandResult<Vec<crate::infrastructure::database::subscriptions::SubscriptionEntryMetadata>> {
+    let operations = app
+        .state::<SubscriptionMetadataOperations>()
+        .inner()
+        .clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let _guard = operations.0.try_lock().map_err(|_| busy())?;
+        let wanted: HashSet<_> = media_ids.iter().collect();
+        if wanted.is_empty()
+            || wanted.len() > 5
+            || wanted.len() != media_ids.len()
+            || media_ids.iter().any(|id| id.is_empty() || id.len() > 512)
+        {
+            return Err(invalid("每批请选择 1–5 条不重复的订阅信息。"));
+        }
+        let repo = SubscriptionRepository(app.state::<DatabaseManager>().database()?);
+        let subscription = repo.get(id)?;
+        let entries: Vec<_> = subscription
+            .entries
+            .iter()
+            .filter(|entry| wanted.contains(&entry.id) && entry.available)
+            .cloned()
+            .collect();
+        if entries.len() != wanted.len() {
+            return Err(invalid("所选条目已移除或不可用，请检查列表后重试。"));
+        }
+        let cookies = load_cookie_preferences(app.state::<DatabaseManager>().inner())?;
+        let indices: Vec<_> = entries.iter().map(|e| e.index).collect();
+        let raw = subscription_engine(&app)?
+            .for_subscription_details(&indices)?
+            .inspect_with_cookies(&subscription.url, &cookies)?;
+        repo.save_metadata(
+            id,
+            &crate::services::subscriptions::map_entry_metadata(&raw, &entries),
+        )
+    })
+    .await
+    .map_err(|_| invalid("读取订阅条目信息中断，请重试。"))?
+}
+
+#[tauri::command]
 pub async fn unsubscribe_series(app: AppHandle, id: i64) -> CommandResult<()> {
     worker(app, move |app| {
         SubscriptionRepository(app.state::<DatabaseManager>().database()?).delete(id)
@@ -278,10 +325,18 @@ pub async fn download_subscription_items(
         };
         for entry in chosen {
             let mut options = DownloadOptions {
-                title: format!("{} · {}", current.title, entry.title)
-                    .chars()
-                    .take(1024)
-                    .collect(),
+                title: format!(
+                    "{} · {}",
+                    current.title,
+                    if entry.title.trim().is_empty() {
+                        &entry.id
+                    } else {
+                        &entry.title
+                    }
+                )
+                .chars()
+                .take(1024)
+                .collect(),
                 url: subscription.url.clone(),
                 format_id: if download_options.audio_only {
                     "bestaudio/best"

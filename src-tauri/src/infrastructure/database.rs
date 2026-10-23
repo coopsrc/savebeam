@@ -10,7 +10,7 @@ use rusqlite::{Connection, TransactionBehavior};
 
 use crate::domain::error::{AppError, ErrorCode};
 
-pub const CURRENT_SCHEMA_VERSION: u32 = 13;
+pub const CURRENT_SCHEMA_VERSION: u32 = 14;
 
 pub mod repositories;
 pub mod subscriptions;
@@ -106,6 +106,8 @@ const MIGRATIONS: &[(u32, &str)] = &[(
        files_json TEXT NOT NULL,
        UNIQUE(root_task_id, version_number)
      );"
+) , (14,
+    "ALTER TABLE subscription_entries ADD COLUMN duration_seconds REAL;"
 )];
 
 #[derive(Debug, Clone)]
@@ -259,6 +261,23 @@ mod tests {
 
         assert_eq!(version, CURRENT_SCHEMA_VERSION);
         assert_eq!(table_count, 3);
+    }
+
+    #[test]
+    fn upgrades_v13_subscription_rows_with_unknown_duration_and_no_data_loss() {
+        let mut c = Connection::open_in_memory().unwrap();
+        for (version, sql) in super::MIGRATIONS.iter().filter(|(v, _)| *v <= 13) {
+            c.execute_batch(sql).unwrap();
+            c.pragma_update(None, "user_version", version).unwrap();
+        }
+        c.execute_batch("INSERT INTO subscriptions VALUES(1,'https://example.invalid/list','test:list','Course',1,0); INSERT INTO subscription_entries VALUES(1,'BVfixture',72,'未命名视频',1,0,1);").unwrap();
+        migrate(&mut c).unwrap();
+        migrate(&mut c).unwrap();
+        let row=c.query_row("SELECT media_id,position,title,downloaded,duration_seconds FROM subscription_entries",[],|r|Ok((r.get::<_,String>(0)?,r.get::<_,u32>(1)?,r.get::<_,String>(2)?,r.get::<_,bool>(3)?,r.get::<_,Option<f64>>(4)?))).unwrap();
+        assert_eq!(
+            row,
+            ("BVfixture".into(), 72, "未命名视频".into(), true, None)
+        );
     }
 
     #[test]

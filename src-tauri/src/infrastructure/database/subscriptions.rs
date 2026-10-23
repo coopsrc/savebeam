@@ -11,6 +11,7 @@ pub struct SubscriptionEntry {
     pub id: String,
     pub index: u32,
     pub title: String,
+    pub duration_seconds: Option<f64>,
     pub downloaded: bool,
     pub is_new: bool,
     pub available: bool,
@@ -36,6 +37,16 @@ pub struct SeriesSnapshot {
     pub entries: Vec<SubscriptionEntry>,
 }
 
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SubscriptionEntryMetadata {
+    pub id: String,
+    pub index: u32,
+    pub title: Option<String>,
+    pub duration_seconds: Option<f64>,
+    pub error: Option<String>,
+}
+
 #[derive(Clone)]
 pub struct SubscriptionRepository(pub Database);
 
@@ -50,10 +61,11 @@ impl SubscriptionRepository {
             for subscription in &mut subscriptions {
                 let mut entries = connection.prepare("SELECT e.media_id, e.position, e.title, e.downloaded, e.is_new, e.available,
                     (SELECT t.status FROM download_tasks t WHERE t.url = ?2 AND t.expected_media_id = e.media_id ORDER BY t.created_at_unix_ms DESC, t.rowid DESC LIMIT 1)
+                    , e.duration_seconds
                     FROM subscription_entries e WHERE e.subscription_id = ?1 ORDER BY e.position, e.media_id")?;
                 subscription.entries = entries.query_map(params![subscription.id, subscription.url], |row| Ok(SubscriptionEntry {
                     id: row.get(0)?, index: row.get(1)?, title: row.get(2)?, downloaded: row.get(3)?,
-                    is_new: row.get(4)?, available: row.get(5)?, task_status: row.get(6)?,
+                    is_new: row.get(4)?, available: row.get(5)?, task_status: row.get(6)?, duration_seconds: row.get(7)?,
                 }))?.collect::<rusqlite::Result<Vec<_>>>()?;
             }
             Ok(subscriptions)
@@ -95,11 +107,13 @@ impl SubscriptionRepository {
             // A partial scan must not declare unobserved entries deleted.
             if !snapshot.truncated { tx.execute("UPDATE subscription_entries SET available = 0 WHERE subscription_id = ?1", [id])?; }
             for entry in &snapshot.entries {
-                tx.execute("INSERT INTO subscription_entries(subscription_id, media_id, position, title, downloaded, is_new, available)
-                    VALUES (?1, ?2, ?3, ?4, EXISTS(SELECT 1 FROM downloaded_media WHERE source_url = ?5 AND media_id = ?2), ?6, ?7)
-                    ON CONFLICT(subscription_id, media_id) DO UPDATE SET position = excluded.position, title = excluded.title, available = excluded.available,
+                tx.execute("INSERT INTO subscription_entries(subscription_id, media_id, position, title, downloaded, is_new, available, duration_seconds)
+                    VALUES (?1, ?2, ?3, ?4, EXISTS(SELECT 1 FROM downloaded_media WHERE source_url = ?5 AND media_id = ?2), ?6, ?7, ?8)
+                    ON CONFLICT(subscription_id, media_id) DO UPDATE SET position = excluded.position,
+                        title = CASE WHEN trim(excluded.title) IN ('', '未命名视频', '标题待补全') THEN subscription_entries.title ELSE excluded.title END,
+                        duration_seconds = COALESCE(excluded.duration_seconds, subscription_entries.duration_seconds), available = excluded.available,
                         downloaded = MAX(subscription_entries.downloaded, excluded.downloaded)",
-                    params![id, entry.id, entry.index, entry.title, url, !initial, entry.available])?;
+                    params![id, entry.id, entry.index, entry.title, url, !initial, entry.available, entry.duration_seconds])?;
             }
             tx.commit()?;
             Ok(id)
@@ -114,6 +128,27 @@ impl SubscriptionRepository {
                 tx.execute("UPDATE subscription_entries SET downloaded = 1 WHERE media_id = ?2 AND subscription_id IN (SELECT subscription_id FROM subscriptions WHERE url = ?1)", params![url, id])?;
             }
             tx.commit()
+        })
+    }
+
+    /// Only patch the same stable ID at the inspected position. A concurrent list
+    /// check/reorder/unsubscribe must not receive stale metadata or be resurrected.
+    pub fn save_metadata(
+        &self,
+        id: i64,
+        rows: &[SubscriptionEntryMetadata],
+    ) -> Result<Vec<SubscriptionEntryMetadata>, AppError> {
+        self.0.with_connection(|c| {
+            let tx = c.unchecked_transaction()?;
+            let mut result = rows.to_vec();
+            for row in &mut result {
+                if row.error.is_some() { continue; }
+                let changed = tx.execute("UPDATE subscription_entries SET title=COALESCE(?4,title), duration_seconds=COALESCE(?5,duration_seconds)
+                    WHERE subscription_id=?1 AND media_id=?2 AND position=?3 AND available=1", params![id,row.id,row.index,row.title,row.duration_seconds])?;
+                if changed != 1 { row.title=None; row.duration_seconds=None; row.error=Some("条目位置已改变或订阅已移除，请检查列表后重试。".into()); }
+            }
+            tx.commit()?;
+            Ok(result)
         })
     }
 
@@ -145,6 +180,7 @@ mod tests {
                     id: (*id).into(),
                     index: (offset + 1) as u32,
                     title: (*id).into(),
+                    duration_seconds: None,
                     downloaded: false,
                     is_new: false,
                     available: true,
@@ -152,6 +188,64 @@ mod tests {
                 })
                 .collect(),
         }
+    }
+
+    #[test]
+    fn metadata_survives_reopen_and_light_checks_but_never_crosses_reordered_or_removed_entries() {
+        let path = std::env::temp_dir().join(format!(
+            "savebeam-sub-metadata-{}-{}.sqlite3",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        {
+            let repo = SubscriptionRepository(Database::open(&path).unwrap());
+            let url = "https://example.invalid/series";
+            let id = repo.apply(url, &snapshot(&["a", "b"]), 1).unwrap();
+            let row = SubscriptionEntryMetadata {
+                id: "a".into(),
+                index: 1,
+                title: Some("视频名称".into()),
+                duration_seconds: Some(123.5),
+                error: None,
+            };
+            assert!(
+                repo.save_metadata(id, std::slice::from_ref(&row)).unwrap()[0]
+                    .error
+                    .is_none()
+            );
+            let mut flat = snapshot(&["a", "b"]);
+            flat.entries[0].title = "未命名视频".into();
+            repo.apply(url, &flat, 2).unwrap();
+            let reopened = SubscriptionRepository(Database::open(&path).unwrap());
+            let item = reopened.get(id).unwrap();
+            assert_eq!(item.entries[0].title, "视频名称");
+            assert_eq!(item.entries[0].duration_seconds, Some(123.5));
+            assert!(!item.entries[0].downloaded && !item.entries[0].is_new);
+            assert_eq!(item.last_checked_unix_ms, 2);
+            let failed = SubscriptionEntryMetadata {
+                title: Some("不应覆盖".into()),
+                error: Some("fixture failure".into()),
+                ..row.clone()
+            };
+            repo.save_metadata(id, &[failed]).unwrap();
+            assert_eq!(repo.get(id).unwrap().entries[0].title, "视频名称");
+            repo.apply(url, &snapshot(&["b", "a"]), 3).unwrap();
+            assert!(
+                repo.save_metadata(id, std::slice::from_ref(&row)).unwrap()[0]
+                    .error
+                    .is_some()
+            );
+            assert_eq!(repo.get(id).unwrap().entries[1].title, "a");
+            repo.delete(id).unwrap();
+            assert!(repo.save_metadata(id, &[row]).unwrap()[0].error.is_some());
+            assert!(repo.list().unwrap().is_empty());
+        }
+        let _ = std::fs::remove_file(&path);
+        let _ = std::fs::remove_file(path.with_extension("sqlite3-wal"));
+        let _ = std::fs::remove_file(path.with_extension("sqlite3-shm"));
     }
 
     #[test]

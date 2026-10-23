@@ -210,6 +210,36 @@ body {
   margin-top: 14px;
 }
 
+/* Subscription lists use an inset track, not the boxed platform-native track.
+   Inset the whole track (not just the thumb) so both rounded ends remain visible. */
+.subscription-entry-scroll .mantine-ScrollArea-scrollbar[data-orientation="vertical"] {
+  top: 6px;
+  bottom: 6px;
+  width: 10px;
+  padding: 0 2px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+}
+
+.subscription-entry-scroll .mantine-ScrollArea-thumb {
+  border-radius: 999px;
+  background: var(--sb-color-scrollbar-thumb);
+}
+
+.subscription-entry-scroll .mantine-ScrollArea-viewport {
+  overscroll-behavior: contain;
+}
+
+.subscription-entry-content {
+  padding: 6px 8px 6px 2px;
+}
+
+.subscription-entry-content .mantine-Checkbox-label,
+.subscription-entry-content .mantine-Checkbox-description {
+  overflow-wrap: anywhere;
+}
+
 .download-playlist-list .mantine-Checkbox-label,
 .download-playlist-list .mantine-Checkbox-description {
   overflow-wrap: anywhere;

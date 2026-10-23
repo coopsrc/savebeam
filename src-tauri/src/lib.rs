@@ -16,6 +16,7 @@ pub fn run() {
         .manage(services::download_registry::DownloadTaskRegistry::default())
         .manage(infrastructure::database::DatabaseManager::default())
         .manage(commands::subscriptions::SubscriptionOperations::default())
+        .manage(commands::subscriptions::SubscriptionMetadataOperations::default())
         .manage(services::network_connection_test::NetworkConnectionTester::default())
         .manage(services::playlist_size::PlaylistSizeOperations::default())
         .setup(|app| {
@@ -57,6 +58,7 @@ pub fn run() {
             commands::subscriptions::get_subscription_candidates,
             commands::subscriptions::subscribe_series,
             commands::subscriptions::check_subscription,
+            commands::subscriptions::inspect_subscription_entries,
             commands::subscriptions::unsubscribe_series,
             commands::subscriptions::download_subscription_items,
             commands::diagnostics::export_diagnostics,
