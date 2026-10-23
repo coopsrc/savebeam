@@ -790,6 +790,7 @@ mod tests {
 
     fn test_options(url: &str, title: &str, format_id: &str) -> DownloadOptions {
         DownloadOptions {
+            version_parent_task_id: None,
             title: title.to_owned(),
             url: url.to_owned(),
             format_id: format_id.to_owned(),

@@ -126,12 +126,20 @@ pub fn build_download_args(
         "after_move:SB_RESULT:%(filepath)j".into(),
         "--print".into(),
         "after_move:SB_MEDIA:{\"id\":%(id)j,\"path\":%(filepath)j}".into(),
+        "--print".into(),
+        concat!("after_move:SB_SOURCE:{\"id\":%(id)j,\"path\":%(filepath)j,\"source\":{",
+        "\"id\":%(id)j,\"extractor_key\":%(extractor_key|null)j,\"duration\":%(duration|null)j,",
+        "\"modified_timestamp\":%(modified_timestamp|null)j,\"cid\":%(cid|null)j,",
+        "\"formats\":%(formats.:.{format_id,ext,vcodec,acodec,width,height,fps,filesize}|null)j}}").into(),
         "--".into(),
         options.url.clone().into(),
     ];
     let mut args = args;
     if let Some(id) = &options.expected_media_id {
-        if id.is_empty() || id.len() > 512 || options.playlist_item_count != Some(1) {
+        if id.is_empty()
+            || id.len() > 512
+            || options.playlist_item_count.is_some_and(|count| count != 1)
+        {
             return Err(AppError::new(
                 ErrorCode::InvalidPath,
                 "订阅视频 ID 无效。",
@@ -376,6 +384,7 @@ mod tests {
 
     fn options(directory: &std::path::Path) -> DownloadOptions {
         DownloadOptions {
+            version_parent_task_id: None,
             title: "Example".into(),
             url: "https://example.com/watch?v=a&b=c".into(),
             format_id: "bestvideo+bestaudio".into(),

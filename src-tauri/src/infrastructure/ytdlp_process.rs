@@ -44,6 +44,7 @@ pub struct YtDlpProcessEngine {
     playlist_limit: usize,
     network_preferences: NetworkPreferences,
     size_estimate_selector: Option<String>,
+    source_check_single: bool,
 }
 
 impl YtDlpProcessEngine {
@@ -57,6 +58,7 @@ impl YtDlpProcessEngine {
             playlist_limit: 51,
             network_preferences: NetworkPreferences::default(),
             size_estimate_selector: None,
+            source_check_single: false,
         }
     }
 
@@ -81,6 +83,25 @@ impl YtDlpProcessEngine {
                 .join(","),
         );
         self.playlist_limit = 51;
+        Ok(self)
+    }
+
+    /// Internal history operation: one verified task entry, including subscription
+    /// positions beyond the ordinary 50-entry form. Never expands the public selector.
+    pub(crate) fn for_source_check(mut self, index: Option<u32>) -> Result<Self, AppError> {
+        if let Some(index) = index {
+            if !(1..=1000).contains(&index) {
+                return Err(AppError::new(
+                    ErrorCode::InvalidPath,
+                    "历史条目序号无效，请重新解析。",
+                    false,
+                ));
+            }
+            self.size_estimate_selector = Some(index.to_string());
+            self.playlist_limit = 1001;
+        } else {
+            self.source_check_single = true;
+        }
         Ok(self)
     }
 
@@ -138,12 +159,25 @@ impl YtDlpProcessEngine {
                 "--no-flat-playlist",
                 "--yes-playlist",
                 "--playlist-end",
-                "51",
+                &self.playlist_limit.to_string(),
                 "--playlist-items",
                 selector,
                 "--format",
                 "bestvideo+bestaudio/best",
                 "--ignore-errors",
+                "--dump-single-json",
+                "--skip-download",
+                "--ignore-no-formats-error",
+            ]);
+        } else if self.source_check_single {
+            command.args([
+                "--ignore-config",
+                "--no-warnings",
+                "--no-progress",
+                "--no-flat-playlist",
+                "--no-playlist",
+                "--format",
+                "bestvideo+bestaudio/best",
                 "--dump-single-json",
                 "--skip-download",
                 "--ignore-no-formats-error",
@@ -385,6 +419,35 @@ mod tests {
     use crate::services::media_mapper::map_media_info;
 
     use super::{CancellationToken, YtDlpProcessEngine, classify_process_error};
+
+    #[cfg(unix)]
+    #[test]
+    fn history_source_checks_inspect_one_single_or_subscription_entry_without_downloads() {
+        for index in [None, Some(1000)] {
+            let assertions = if index.is_none() {
+                "[ \"$4\" = \"--no-flat-playlist\" ] || exit 11\n[ \"$5\" = \"--no-playlist\" ] || exit 12\n[ \"$9\" = \"--skip-download\" ] || exit 13"
+            } else {
+                "[ \"$4\" = \"--no-flat-playlist\" ] || exit 11\n[ \"$5\" = \"--yes-playlist\" ] || exit 12\n[ \"$7\" = \"1001\" ] || exit 13\n[ \"$9\" = \"1000\" ] || exit 14\n[ \"${14}\" = \"--skip-download\" ] || exit 15"
+            };
+            let exe = write_script(
+                "yt-dlp",
+                &format!(
+                    "{assertions}\nprintf '%s' '{{\"id\":\"v\",\"title\":\"fixture\",\"formats\":[]}}'"
+                ),
+            );
+            let engine = YtDlpProcessEngine::new(&exe, None);
+            assert!(engine.clone().for_source_check(Some(0)).is_err());
+            assert!(engine.clone().for_source_check(Some(1001)).is_err());
+            assert!(engine.clone().for_size_estimate(&[1000]).is_err());
+            let value = engine
+                .for_source_check(index)
+                .unwrap()
+                .inspect("https://example.invalid/v?list=collection")
+                .unwrap();
+            assert_eq!(value["id"], "v");
+            fs::remove_dir_all(exe.parent().unwrap()).unwrap();
+        }
+    }
 
     #[cfg(unix)]
     fn write_script(name: &str, body: &str) -> PathBuf {

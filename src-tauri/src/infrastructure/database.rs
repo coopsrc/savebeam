@@ -10,10 +10,11 @@ use rusqlite::{Connection, TransactionBehavior};
 
 use crate::domain::error::{AppError, ErrorCode};
 
-pub const CURRENT_SCHEMA_VERSION: u32 = 12;
+pub const CURRENT_SCHEMA_VERSION: u32 = 13;
 
 pub mod repositories;
 pub mod subscriptions;
+pub mod versions;
 
 const MIGRATIONS: &[(u32, &str)] = &[(
     1,
@@ -93,6 +94,18 @@ const MIGRATIONS: &[(u32, &str)] = &[(
     "ALTER TABLE download_tasks ADD COLUMN use_proxy INTEGER CHECK (use_proxy IN (0, 1));"
 ) , (12,
     "ALTER TABLE download_tasks ADD COLUMN quality_policy_json TEXT;"
+) , (13,
+    "ALTER TABLE download_tasks ADD COLUMN version_parent_task_id TEXT;
+     CREATE TABLE media_versions (
+       task_id TEXT PRIMARY KEY NOT NULL REFERENCES download_tasks(task_id) ON DELETE CASCADE,
+       root_task_id TEXT NOT NULL,
+       parent_task_id TEXT,
+       version_number INTEGER NOT NULL,
+       completed_at_unix_ms INTEGER NOT NULL,
+       source_json TEXT,
+       files_json TEXT NOT NULL,
+       UNIQUE(root_task_id, version_number)
+     );"
 )];
 
 #[derive(Debug, Clone)]
@@ -246,6 +259,45 @@ mod tests {
 
         assert_eq!(version, CURRENT_SCHEMA_VERSION);
         assert_eq!(table_count, 3);
+    }
+
+    #[test]
+    fn upgrades_v12_without_changing_existing_task_options_or_history() {
+        let mut c = rusqlite::Connection::open_in_memory().unwrap();
+        c.pragma_update(None, "foreign_keys", "ON").unwrap();
+        for (version, sql) in super::MIGRATIONS
+            .iter()
+            .filter(|(version, _)| *version <= 12)
+        {
+            c.execute_batch(sql).unwrap();
+            c.pragma_update(None, "user_version", version).unwrap();
+        }
+        c.execute_batch("INSERT INTO download_tasks(task_id,url,title,format_id,output_directory,status,created_at_unix_ms,updated_at_unix_ms) VALUES ('old','https://example.com/v','title','18','/tmp','completed',1,1); INSERT INTO download_history VALUES('old','[\"/tmp/a.mp4\"]',3,2);").unwrap();
+        migrate(&mut c).unwrap();
+        migrate(&mut c).unwrap();
+        let row = c
+            .query_row(
+                "SELECT format_id, version_parent_task_id FROM download_tasks WHERE task_id='old'",
+                [],
+                |r| Ok((r.get::<_, String>(0)?, r.get::<_, Option<String>>(1)?)),
+            )
+            .unwrap();
+        assert_eq!(row, ("18".into(), None));
+        assert_eq!(
+            c.query_row(
+                "SELECT total_bytes FROM download_history WHERE task_id='old'",
+                [],
+                |r| r.get::<_, i64>(0)
+            )
+            .unwrap(),
+            3
+        );
+        assert_eq!(
+            c.query_row("SELECT COUNT(*) FROM media_versions", [], |r| r
+                .get::<_, i64>(0))
+                .unwrap(),
+            0
+        );
     }
 
     #[test]

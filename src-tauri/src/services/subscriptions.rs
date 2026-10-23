@@ -191,6 +191,7 @@ mod tests {
         std::fs::write(&file, b"fixture").unwrap();
         let path = file.canonicalize().unwrap().to_string_lossy().into_owned();
         let records = vec![CompletedMedia {
+            source: None,
             id: "target".into(),
             path: path.clone(),
         }];

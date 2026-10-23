@@ -53,6 +53,7 @@ pub fn start_download(
     options.cookies_browser = None;
     options.cookie_access_confirmed = false;
     options.expected_media_id = None;
+    options.version_parent_task_id = None;
     options.use_proxy.get_or_insert(false);
     queue_download(
         app,
@@ -378,7 +379,11 @@ pub fn retry_download(
     Ok(task)
 }
 
-fn launch_next_task(app: AppHandle, components: ComponentRegistry, tasks: DownloadTaskRegistry) {
+pub(crate) fn launch_next_task(
+    app: AppHandle,
+    components: ComponentRegistry,
+    tasks: DownloadTaskRegistry,
+) {
     while let Ok(Some((task, options))) = tasks.claim_next() {
         let task_id = task.id.clone();
         let completion_task_id = task_id.clone();
@@ -402,7 +407,7 @@ fn launch_next_task(app: AppHandle, components: ComponentRegistry, tasks: Downlo
     }
 }
 
-fn validate_task_options(options: &DownloadOptions) -> CommandResult<()> {
+pub(crate) fn validate_task_options(options: &DownloadOptions) -> CommandResult<()> {
     if let Some(policy) = &options.quality_policy {
         policy.validate()?;
     }
@@ -581,6 +586,7 @@ fn run_task(
             })?;
         let intermediates = std::mem::take(&mut process_output.intermediate_files);
         let media_items = std::mem::take(&mut process_output.media_items);
+        let source_items = std::mem::take(&mut process_output.source_items);
         if options.expected_media_id.is_some() && process_output.output_paths.is_empty() {
             return Err(AppError::new(
                 ErrorCode::VideoUnavailable,
@@ -599,12 +605,6 @@ fn run_task(
             &result.output_paths,
             options.expected_media_id.as_deref(),
         )?;
-        if options.playlist_item_count.is_some() {
-            crate::infrastructure::database::subscriptions::SubscriptionRepository(
-                app.state::<DatabaseManager>().database()?,
-            )
-            .mark_downloaded(&options.url, &ids)?;
-        }
         if options.keep_intermediate_files {
             crate::services::intermediate_files::organize_retained_streams(
                 &intermediates,
@@ -612,14 +612,55 @@ fn run_task(
                 Path::new(&options.output_directory),
             );
         }
-        Ok(result)
+        let source = if result.output_paths.len() == 1 {
+            source_items
+                .iter()
+                .find(|media| {
+                    Path::new(&media.path).canonicalize().ok().as_deref()
+                        == Some(Path::new(&result.output_paths[0]))
+                })
+                .and_then(|media| {
+                    media
+                        .source
+                        .as_ref()
+                        .and_then(crate::domain::source_version::SourceObservation::from_raw)
+                        .filter(|source| source.media_id == media.id)
+                })
+        } else {
+            None
+        };
+        let files = crate::services::source_versions::hash_files_cancellable(
+            &result.output_paths,
+            Path::new(&options.output_directory),
+            Some(&cancellation),
+        );
+        if cancellation.is_cancelled() {
+            return Err(AppError::new(
+                ErrorCode::Cancelled,
+                "已取消下载结果检查。",
+                false,
+            ));
+        }
+        if options.playlist_item_count.is_some() {
+            crate::infrastructure::database::subscriptions::SubscriptionRepository(
+                app.state::<DatabaseManager>().database()?,
+            )
+            .mark_downloaded(&options.url, &ids)?;
+        }
+        Ok((result, source, files))
     })();
 
     match result {
-        Ok(result) => {
+        Ok((result, source, files)) => {
             if let Some(database) = app.try_state::<DatabaseManager>() {
                 match database.database().and_then(|database| {
-                    HistoryRepository::new(database).insert(&result, unix_ms_now()?)
+                    HistoryRepository::new(database.clone()).insert(&result, unix_ms_now()?)?;
+                    crate::infrastructure::database::versions::VersionRepository(database).save(
+                        &task_id,
+                        source.as_ref(),
+                        &files,
+                        unix_ms_now()?,
+                    )
                 }) {
                     Ok(()) => {}
                     Err(error) => {

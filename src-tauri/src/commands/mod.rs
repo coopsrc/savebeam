@@ -10,3 +10,4 @@ pub mod ipc;
 pub mod media;
 pub mod network;
 pub mod subscriptions;
+pub mod versions;

@@ -86,6 +86,9 @@ pub struct DownloadOptions {
     pub use_proxy: Option<bool>,
     #[serde(default)]
     pub quality_policy: Option<super::playlist_quality::PlaylistQuality>,
+    /// Internal lineage for an explicitly requested, non-overwriting version download.
+    #[serde(default)]
+    pub version_parent_task_id: Option<String>,
     #[serde(default)]
     pub cookies_file_path: Option<String>,
     #[serde(default)]

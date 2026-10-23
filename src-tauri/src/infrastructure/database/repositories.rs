@@ -117,8 +117,8 @@ impl DownloadTaskRepository {
                      conflict_strategy, playlist_item_count, audio_only,
                      write_automatic_subtitles, write_thumbnail, write_info_json, embed_metadata,
                      cookies_file_path, cookies_browser, cookie_access_confirmed, merge_container,
-                     keep_intermediate_files, playlist_items_json, expected_media_id, use_proxy, quality_policy_json
-                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24)",
+                     keep_intermediate_files, playlist_items_json, expected_media_id, use_proxy, quality_policy_json, version_parent_task_id
+                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25)",
                 params![
                     task.id,
                     options.url,
@@ -144,6 +144,7 @@ impl DownloadTaskRepository {
                     options.expected_media_id,
                     options.use_proxy,
                     quality_json,
+                    options.version_parent_task_id,
                 ],
             )
         })?;
@@ -176,7 +177,7 @@ impl DownloadTaskRepository {
                             playlist_item_count, audio_only, write_automatic_subtitles,
                             write_thumbnail, write_info_json, embed_metadata,
                             cookies_file_path, cookies_browser, cookie_access_confirmed, merge_container,
-                            keep_intermediate_files, playlist_items_json, expected_media_id, use_proxy, quality_policy_json
+                            keep_intermediate_files, playlist_items_json, expected_media_id, use_proxy, quality_policy_json, version_parent_task_id
                      FROM download_tasks WHERE task_id = ?1",
                     [task_id],
                     task_from_row,
@@ -211,7 +212,7 @@ impl DownloadTaskRepository {
                         playlist_item_count, audio_only, write_automatic_subtitles,
                         write_thumbnail, write_info_json, embed_metadata,
                         cookies_file_path, cookies_browser, cookie_access_confirmed, merge_container,
-                        keep_intermediate_files, playlist_items_json, expected_media_id, use_proxy, quality_policy_json
+                        keep_intermediate_files, playlist_items_json, expected_media_id, use_proxy, quality_policy_json, version_parent_task_id
                  FROM download_tasks WHERE NOT ?1 OR hidden_from_tasks = 0 ORDER BY created_at_unix_ms DESC",
             )?;
             let rows = statement.query_map([visible_only], task_from_row)?;
@@ -289,7 +290,12 @@ impl HistoryRepository {
     pub fn delete(&self, task_id: &str) -> Result<bool, AppError> {
         self.database
             .with_connection(|connection| {
-                connection.execute("DELETE FROM download_history WHERE task_id = ?1", [task_id])
+                let transaction = connection.unchecked_transaction()?;
+                transaction.execute("DELETE FROM media_versions WHERE task_id = ?1", [task_id])?;
+                let changed = transaction
+                    .execute("DELETE FROM download_history WHERE task_id = ?1", [task_id])?;
+                transaction.commit()?;
+                Ok(changed)
             })
             .map(|changed| changed > 0)
     }
@@ -329,6 +335,7 @@ fn task_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<(DownloadTask, Dow
             created_at_unix_ms: from_sql_integer(created_at)?,
         },
         DownloadOptions {
+            version_parent_task_id: row.get(24)?,
             url: row.get(1)?,
             title: row.get(2)?,
             format_id: row.get(3)?,
@@ -525,6 +532,7 @@ mod tests {
         };
         let options = DownloadOptions {
             title: task.title.clone(),
+            version_parent_task_id: None,
             url: task.url.clone(),
             format_id: task.format_id.clone(),
             output_directory: "/tmp/videos".into(),
@@ -664,6 +672,7 @@ mod tests {
         };
         let options = DownloadOptions {
             title: task.title.clone(),
+            version_parent_task_id: None,
             url: task.url.clone(),
             format_id: task.format_id.clone(),
             output_directory: "/tmp".into(),

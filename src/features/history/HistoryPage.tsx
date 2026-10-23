@@ -17,6 +17,7 @@ import type { DownloadHistoryRecord } from "../../types/domain";
 import { formatBytes } from "../../utils/formatBytes";
 import { useRetainedPageScroll } from "../../layout/useRetainedPageScroll";
 import { useAppStore } from "../../stores/appStore";
+import { MediaVersionsButton } from "./MediaVersionsButton";
 
 export function HistoryPage({ active }: { active: boolean }) {
   const root = useRetainedPageScroll(active);
@@ -183,16 +184,19 @@ export function HistoryPage({ active }: { active: boolean }) {
                       {formatBytes(record.totalBytes)}
                     </Text>
                   </div>
-                  <Button
-                    variant="subtle"
-                    color="red"
-                    leftSection={<IconTrash size={16} />}
-                    loading={busyTask === record.taskId}
-                    disabled={busyTask !== null}
-                    onClick={() => requestDeletion(record)}
-                  >
-                    删除记录
-                  </Button>
+                  <Group gap="xs">
+                    <MediaVersionsButton taskId={record.taskId} active={active} />
+                    <Button
+                      variant="subtle"
+                      color="red"
+                      leftSection={<IconTrash size={16} />}
+                      loading={busyTask === record.taskId}
+                      disabled={busyTask !== null}
+                      onClick={() => requestDeletion(record)}
+                    >
+                      删除记录
+                    </Button>
+                  </Group>
                 </Group>
                 {record.outputPaths.map((path, index) => (
                   <Group key={`${record.taskId}-${index}`} justify="space-between" wrap="nowrap">

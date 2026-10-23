@@ -22,6 +22,7 @@ use crate::{
 };
 
 const MAX_LINE_BYTES: usize = 16 * 1024;
+const MAX_SOURCE_BYTES: usize = 128 * 1024;
 const MAX_STDERR_BYTES: usize = 64 * 1024;
 const PROGRESS_MARKER: &str = "SB_PROGRESS:";
 const RESULT_MARKER: &str = "SB_RESULT:";
@@ -44,12 +45,15 @@ pub struct ProcessOutput {
     pub output_paths: Vec<String>,
     pub intermediate_files: Vec<IntermediateFiles>,
     pub media_items: Vec<CompletedMedia>,
+    pub source_items: Vec<CompletedMedia>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct CompletedMedia {
     pub id: String,
     pub path: String,
+    #[serde(default)]
+    pub source: Option<Value>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -197,7 +201,7 @@ fn start_reader(
                     }
                     line.clear();
                     too_long = false;
-                } else if line.len() < MAX_LINE_BYTES {
+                } else if line.len() < MAX_SOURCE_BYTES {
                     line.push(*byte);
                 } else {
                     too_long = true;
@@ -242,6 +246,21 @@ fn handle_line(
         stderr.push(b'\n');
     }
     let text = String::from_utf8_lossy(&line.bytes);
+    // Source metadata may be larger than progress/identity lines. Never let an
+    // oversized source projection suppress the separate verified-media record.
+    if line.stream == OutputStream::Stdout
+        && output.source_items.len() < 50
+        && let Some(payload) = text.strip_prefix("SB_SOURCE:")
+        && let Ok(item) = serde_json::from_str::<CompletedMedia>(payload.trim())
+        && !item.id.is_empty()
+        && item.id.len() <= 512
+    {
+        output.source_items.push(item);
+        return;
+    }
+    if line.bytes.len() > MAX_LINE_BYTES {
+        return;
+    }
     if line.stream == OutputStream::Stdout
         && output.media_items.len() < 50
         && let Some(payload) = text.strip_prefix("SB_MEDIA:")
@@ -349,6 +368,42 @@ mod tests {
     use crate::{
         domain::download::DownloadTaskStatus, infrastructure::ytdlp_process::CancellationToken,
     };
+
+    #[test]
+    fn oversized_source_projection_never_suppresses_identity_or_unbounds_output() {
+        let source = format!(
+            "SB_SOURCE:{}\n",
+            serde_json::json!({"id":"v","path":"/tmp/file", "source":{"id":"v","ignored":"x".repeat(super::MAX_SOURCE_BYTES)}})
+        );
+        let identity = "SB_MEDIA:{\"id\":\"v\",\"path\":\"/tmp/file\"}\n";
+        let (sender, receiver) = std::sync::mpsc::sync_channel(128);
+        let reader = super::start_reader(
+            std::io::Cursor::new(format!("{source}{identity}").into_bytes()),
+            super::OutputStream::Stdout,
+            sender,
+        );
+        let mut output = super::ProcessOutput::default();
+        for line in receiver {
+            super::handle_line(line, &mut output, &mut Vec::new(), "task", &mut |_| {});
+        }
+        reader.join().unwrap();
+        assert_eq!(output.media_items.len(), 1);
+        assert!(output.source_items.is_empty());
+        let valid = serde_json::json!({"id":"v","path":"/tmp/file", "source":{"id":"v","formats": vec![serde_json::json!({"format_id":"one","vcodec":"avc1.640033"}); 500]}});
+        let bytes = format!("SB_SOURCE:{valid}").into_bytes();
+        assert!(bytes.len() > super::MAX_LINE_BYTES && bytes.len() < super::MAX_SOURCE_BYTES);
+        super::handle_line(
+            super::OutputLine {
+                stream: super::OutputStream::Stdout,
+                bytes,
+            },
+            &mut output,
+            &mut Vec::new(),
+            "task",
+            &mut |_| {},
+        );
+        assert_eq!(output.source_items.len(), 1);
+    }
 
     #[test]
     fn accepts_only_bounded_stdout_media_identity_records() {

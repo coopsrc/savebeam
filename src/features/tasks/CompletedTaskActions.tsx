@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { invokeCommand, IpcError } from "../../ipc/client";
 import type { DownloadHistoryRecord, DownloadTask } from "../../types/domain";
 import { formatBytes } from "../../utils/formatBytes";
+import { MediaVersionsButton } from "../history/MediaVersionsButton";
 
 function actionError(reason: unknown): string {
   // Only Rust-authored user messages, never diagnostic/stderr, are displayed.
@@ -96,6 +97,7 @@ export function CompletedTaskActions({ task }: { task: DownloadTask }) {
         </Text>
       )}
       <Group justify="flex-end" gap="xs">
+        {record && <MediaVersionsButton taskId={task.id} />}
         <Button
           size="xs"
           variant="light"
@@ -136,7 +138,7 @@ export function CompletedTaskActions({ task }: { task: DownloadTask }) {
         </Button>
       </Group>
       <Text size="xs" c="dimmed">
-        重新解析只回填原链接，需手动确认并开始下载；不会直接重下或覆盖文件，尚不支持保留历史版本。
+        重新解析只回填原链接；需要保留旧文件并保存新版本时，请使用“来源与版本”。
       </Text>
     </Stack>
   );

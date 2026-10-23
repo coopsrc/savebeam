@@ -79,6 +79,9 @@ pub fn run() {
             commands::downloads::cancel_download,
             commands::downloads::delete_download_task,
             commands::downloads::retry_download,
+            commands::versions::list_media_versions,
+            commands::versions::check_history_source,
+            commands::versions::redownload_media_version,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application");
