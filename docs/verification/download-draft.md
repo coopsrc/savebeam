@@ -4,7 +4,7 @@
 
 ## 根因与范围
 
-下载页原为路由叶子节点，离开 `/download` 会卸载 `DownloadPage`，其中的 useState、详情/匹配 hooks 和未提交输入随之销毁。现在由 AppShell 保持一个已开始编辑的下载工作区，离开时隐藏而非卸载；不引入全站缓存或新的依赖。后续 SETTINGS-DRAFT-T1 也按需保留一个设置工作区，见 `settings-tabs.md`，其余页面仍沿用普通路由。
+下载页原为路由叶子节点，离开 `/download` 会卸载 `DownloadPage`，其中的 useState、详情/匹配 hooks 和未提交输入随之销毁。现在由 AppShell 保持一个已开始编辑的下载工作区，离开时隐藏而非卸载；不引入通用全站缓存或新的依赖。后续 SETTINGS-DRAFT-T1 和 NAVIGATION-RETENTION-T1 还按需各保留一个设置、历史、订阅工作区，见 `settings-tabs.md` 与 `navigation-retention.md`；任务页仍使用普通路由。
 
 ## 行为边界
 

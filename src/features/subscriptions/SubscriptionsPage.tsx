@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   Alert,
@@ -21,15 +21,24 @@ import { useAppStore } from "../../stores/appStore";
 import type { DownloadOptionDefaults } from "../../types/domain";
 import { DownloadOptionsModal } from "../download/DownloadOptionsModal";
 import { useDownloadOptions } from "../download/useDownloadOptions";
+import { useRetainedPageScroll } from "../../layout/useRetainedPageScroll";
 
 function message(error: unknown) {
   return error instanceof Error ? error.message : "订阅操作失败，请重试。";
 }
 
-export function SubscriptionsPage() {
+export function SubscriptionsPage({ active }: { active: boolean }) {
+  const root = useRetainedPageScroll(active);
   const location = useLocation();
   const navigate = useNavigate();
   const [url, setUrl] = useState(() => new URLSearchParams(location.search).get("url") ?? "");
+  const [prefillEntry, setPrefillEntry] = useState(location.key);
+  const prefill = active ? new URLSearchParams(location.search).get("url") : null;
+  // A fresh explicit source fills the input, never starts checking or clears other series drafts.
+  if (prefill !== null && prefillEntry !== location.key) {
+    setPrefillEntry(location.key);
+    setUrl(prefill);
+  }
   const [subscriptions, setSubscriptions] = useState<SeriesSubscription[]>([]);
   const [candidates, setCandidates] = useState<SeriesCandidate[]>([]);
   const [selected, setSelected] = useState<Record<number, string[]>>({});
@@ -52,6 +61,9 @@ export function SubscriptionsPage() {
   const [editingOptions, setEditingOptions] = useState<number | null>(null);
   const [removing, setRemoving] = useState<SeriesSubscription | null>(null);
   const stopChecks = useRef(false);
+  useLayoutEffect(() => {
+    if (!active) stopChecks.current = true;
+  }, [active]);
   const [checkProgress, setCheckProgress] = useState("");
   const tasks = useAppStore((state) => state.downloadTasks);
 
@@ -84,6 +96,12 @@ export function SubscriptionsPage() {
       .list()
       .then((list) => {
         if (!disposed) setSubscriptions(list);
+      })
+      .catch(() => {});
+    void subscriptionApi
+      .candidates()
+      .then((known) => {
+        if (!disposed) setCandidates(known);
       })
       .catch(() => {});
     return () => {
@@ -123,7 +141,12 @@ export function SubscriptionsPage() {
   }
 
   return (
-    <main className="task-list-page">
+    <main
+      className="task-list-page subscriptions-page"
+      ref={root}
+      hidden={!active}
+      style={active ? undefined : { display: "none" }}
+    >
       <Stack gap="lg">
         <Group justify="space-between">
           <div>
@@ -466,6 +489,7 @@ export function SubscriptionsPage() {
       </Stack>
       {editingOptions !== null && (
         <DownloadOptionsModal
+          opened={active}
           value={optionOverrides[editingOptions] ?? defaultOptions}
           onClose={() => setEditingOptions(null)}
           onApply={(value) =>
@@ -474,7 +498,8 @@ export function SubscriptionsPage() {
         />
       )}
       <Modal
-        opened={!!removing}
+        opened={active && !!removing}
+        returnFocus={active}
         onClose={() => {
           if (!busy) setRemoving(null);
         }}

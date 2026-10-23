@@ -12,6 +12,8 @@ import { invokeCommand } from "../ipc/client";
 import { DownloadPage } from "../features/download/DownloadPage";
 import { resolveDownloadSession } from "../features/download/downloadSession";
 import { SettingsPage } from "../features/settings/SettingsPage";
+import { HistoryPage } from "../features/history/HistoryPage";
+import { SubscriptionsPage } from "../features/subscriptions/SubscriptionsPage";
 
 const routeTitles: Record<string, string> = {
   "/download": "下载",
@@ -32,9 +34,12 @@ export function AppShell() {
   const title = routeTitles[pathname] ?? "下载";
   const downloadVisible = pathname === "/download";
   const settingsVisible = pathname === "/settings";
-  const [settingsVisited, setSettingsVisited] = useState(settingsVisible);
-  // Mount settings only after the first visit, then retain its unsaved session in memory.
-  if (settingsVisible && !settingsVisited) setSettingsVisited(true);
+  const historyVisible = pathname === "/history";
+  const subscriptionsVisible = pathname === "/subscriptions";
+  const retainedRoute = settingsVisible || historyVisible || subscriptionsVisible ? pathname : null;
+  const [visited, setVisited] = useState(() => (retainedRoute ? [retainedRoute] : []));
+  // Each retained page mounts on first visit only; the bounded set never grows beyond three.
+  if (retainedRoute && !visited.includes(retainedRoute)) setVisited([...visited, retainedRoute]);
   const [downloadSession, setDownloadSession] = useState(() =>
     resolveDownloadSession(null, location),
   );
@@ -185,8 +190,12 @@ export function AppShell() {
               }
             />
           )}
-          {settingsVisited && <SettingsPage active={settingsVisible} />}
-          {!downloadVisible && !settingsVisible && <Outlet />}
+          {visited.includes("/settings") && <SettingsPage active={settingsVisible} />}
+          {visited.includes("/history") && <HistoryPage active={historyVisible} />}
+          {visited.includes("/subscriptions") && (
+            <SubscriptionsPage active={subscriptionsVisible} />
+          )}
+          {!downloadVisible && !retainedRoute && <Outlet />}
         </section>
         <footer className="status-bar" aria-label="应用状态">
           <span className="status-indicator" aria-hidden="true" />

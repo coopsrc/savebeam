@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
   Button,
@@ -15,8 +15,11 @@ import { IconExternalLink, IconFolderOpen, IconTrash } from "@tabler/icons-react
 import { invokeCommand, IpcError } from "../../ipc/client";
 import type { DownloadHistoryRecord } from "../../types/domain";
 import { formatBytes } from "../../utils/formatBytes";
+import { useRetainedPageScroll } from "../../layout/useRetainedPageScroll";
+import { useAppStore } from "../../stores/appStore";
 
-export function HistoryPage() {
+export function HistoryPage({ active }: { active: boolean }) {
+  const root = useRetainedPageScroll(active);
   const [query, setQuery] = useState("");
   const [records, setRecords] = useState<DownloadHistoryRecord[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -26,31 +29,49 @@ export function HistoryPage() {
   const [deletionError, setDeletionError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const deleting = pendingDeletion !== null && busyTask === pendingDeletion.taskId;
+  const results = useAppStore((state) => state.downloadResults);
+  const appliedQuery = useRef("");
+  const request = useRef<object | null>(null);
 
-  async function load(search = query) {
-    setError(null);
+  const load = useCallback(async (search: string) => {
+    const revision = {};
+    request.current = revision;
+    appliedQuery.current = search;
     try {
-      setRecords(
-        await invokeCommand<DownloadHistoryRecord[]>("get_download_history", { query: search }),
-      );
+      const items = await invokeCommand<DownloadHistoryRecord[]>("get_download_history", {
+        query: search,
+      });
+      if (revision === request.current) {
+        setRecords(items);
+        setError(null);
+      }
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "无法读取下载历史。");
+      if (revision === request.current)
+        setError(reason instanceof Error ? reason.message : "无法读取下载历史。");
     }
-  }
+  }, []);
 
   useEffect(() => {
-    let mounted = true;
-    invokeCommand<DownloadHistoryRecord[]>("get_download_history", { query: "" })
+    const revision = {};
+    request.current = revision;
+    // Initial read and newly saved results use the submitted filter, never the input draft.
+    void invokeCommand<DownloadHistoryRecord[]>("get_download_history", {
+      query: appliedQuery.current,
+    })
       .then((items) => {
-        if (mounted) setRecords(items);
+        if (revision === request.current) {
+          setRecords(items);
+          setError(null);
+        }
       })
       .catch((reason: unknown) => {
-        if (mounted) setError(reason instanceof Error ? reason.message : "无法读取下载历史。");
+        if (revision === request.current)
+          setError(reason instanceof Error ? reason.message : "无法读取下载历史。");
       });
     return () => {
-      mounted = false;
+      request.current = null;
     };
-  }, []);
+  }, [results]);
 
   async function runAction(
     taskId: string,
@@ -99,7 +120,7 @@ export function HistoryPage() {
             ? "历史记录已删除，仍存在的关联媒体文件已移入系统废纸篓或回收站。"
             : "历史记录已删除，下载文件已保留。",
       );
-      await load();
+      await load(appliedQuery.current);
     } catch (reason) {
       setDeletionError(reason instanceof Error ? reason.message : "删除操作未完成。");
     } finally {
@@ -108,7 +129,12 @@ export function HistoryPage() {
   }
 
   return (
-    <main className="task-list-page">
+    <main
+      className="task-list-page history-page"
+      ref={root}
+      hidden={!active}
+      style={active ? undefined : { display: "none" }}
+    >
       <Stack gap="md">
         <Group justify="space-between" align="end">
           <div>
@@ -125,11 +151,11 @@ export function HistoryPage() {
             value={query}
             onChange={(event) => setQuery(event.currentTarget.value)}
             onKeyDown={(event) => {
-              if (event.key === "Enter") void load();
+              if (event.key === "Enter") void load(query);
             }}
             style={{ flex: 1 }}
           />
-          <Button onClick={() => void load()}>搜索</Button>
+          <Button onClick={() => void load(query)}>搜索</Button>
         </Group>
         {error && (
           <Alert color="red" title="历史操作失败" role="alert">
@@ -201,7 +227,8 @@ export function HistoryPage() {
         )}
       </Stack>
       <Modal
-        opened={pendingDeletion !== null}
+        opened={active && pendingDeletion !== null}
+        returnFocus={active}
         onClose={closeDeletion}
         title="删除下载历史"
         centered
