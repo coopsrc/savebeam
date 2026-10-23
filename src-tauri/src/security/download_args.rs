@@ -117,7 +117,16 @@ pub fn build_download_args(
         "--paths".into(),
         format!("home:{}", options.output_directory).into(),
         "--output".into(),
-        if options.playlist_item_count.is_some() {
+        if let Some(part) = &options.playlist_part {
+            crate::services::playlist_parts::validate(part)?;
+            if options.url != crate::services::playlist_parts::parent_url(&part.parent_id)
+                || options.expected_media_id.as_deref() != Some(&format!("{}_p{}", part.parent_id, part.part_index))
+                || options.playlist_items.as_deref() != Some(&[part.part_index])
+                || options.playlist_item_count != Some(1) {
+                return Err(AppError::new(ErrorCode::InvalidPath, "分 P 下载目标与保存上下文不匹配。", false));
+            }
+            crate::services::playlist_parts::output_template(part)?.into()
+        } else if options.playlist_item_count.is_some() {
             SERIES_OUTPUT_TEMPLATE.into()
         } else {
             SINGLE_OUTPUT_TEMPLATE.into()
@@ -135,6 +144,9 @@ pub fn build_download_args(
         options.url.clone().into(),
     ];
     let mut args = args;
+    if let Some(part) = &options.playlist_part {
+        args.splice(2..2, crate::services::playlist_parts::naming_args(part));
+    }
     if let Some(id) = &options.expected_media_id {
         if id.is_empty()
             || id.len() > 512
@@ -384,6 +396,7 @@ mod tests {
 
     fn options(directory: &std::path::Path) -> DownloadOptions {
         DownloadOptions {
+            playlist_part: None,
             version_parent_task_id: None,
             title: "Example".into(),
             url: "https://example.com/watch?v=a&b=c".into(),

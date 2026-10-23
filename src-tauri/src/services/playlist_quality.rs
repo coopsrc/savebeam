@@ -16,6 +16,10 @@ use crate::domain::{
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct PlaylistDetails {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub part: Option<crate::domain::download::PlaylistPartContext>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub parts: Vec<PlaylistDetails>,
     pub index: u32,
     pub id: Option<String>,
     pub title: Option<String>,
@@ -90,6 +94,8 @@ pub fn map_details(raw: &Value, requested: &[PlaylistSizeRequestItem]) -> Vec<Pl
                 formats.clear();
             }
             PlaylistDetails {
+                part: None,
+                parts: Vec::new(),
                 index: item.index,
                 id: if valid {
                     id.map(str::to_owned)
@@ -404,9 +410,25 @@ pub fn validate_request(
     policy: &PlaylistQuality,
     overrides: &[QualityOverride],
 ) -> Result<(), AppError> {
-    super::playlist_size::validate_indices(
-        &items.iter().map(|item| item.index).collect::<Vec<_>>(),
-    )?;
+    let keys: std::collections::BTreeSet<_> = items.iter().map(|i| i.index).collect();
+    if items.is_empty() || items.len() > 50 || keys.len() != items.len() {
+        return Err(invalid());
+    }
+    for item in items {
+        if !item.parts.is_empty() {
+            return Err(invalid());
+        }
+        if let Some(part) = &item.part {
+            super::playlist_parts::validate(part)?;
+            if item.index != part.parent_index * 1000 + part.part_index
+                || item.id.as_deref() != Some(&format!("{}_p{}", part.parent_id, part.part_index))
+            {
+                return Err(invalid());
+            }
+        } else if !(1..=50).contains(&item.index) {
+            return Err(invalid());
+        }
+    }
     policy.validate()?;
     let mut indices = std::collections::BTreeSet::new();
     for over in overrides {
@@ -473,11 +495,17 @@ pub fn task_options(
             .clone()
             .filter(|title| !title.trim().is_empty())
             .unwrap_or_else(|| format!("第 {} 项", item.index)),
-        url: url.into(),
+        url: item.part.as_ref().map_or_else(
+            || url.into(),
+            |part| super::playlist_parts::parent_url(&part.parent_id),
+        ),
         format_id: choice.format_id?,
         merge_container: choice.merge_container,
         playlist_item_count: Some(1),
-        playlist_items: Some(vec![item.index]),
+        playlist_items: Some(vec![
+            item.part.as_ref().map_or(item.index, |p| p.part_index),
+        ]),
+        playlist_part: item.part.clone(),
         expected_media_id: Some(item.id.clone()?),
         quality_policy: Some(policy.clone()),
         use_proxy: Some(use_proxy),
@@ -494,6 +522,8 @@ mod tests {
 
     fn item(index: u32, height: u32) -> PlaylistDetails {
         PlaylistDetails {
+            part: None,
+            parts: Vec::new(),
             index,
             id: Some(format!("video-{index}")),
             title: Some(format!("课程 {index}")),

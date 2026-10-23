@@ -7,6 +7,7 @@ import type {
 } from "../../types/domain";
 import { invokeCommand } from "../../ipc/client";
 import { optionError } from "./useDownloadOptions";
+import { expandedEntries, expandedOverrides } from "./playlistParts";
 
 export function usePlaylistDetails(
   media: MediaInfo | null,
@@ -63,6 +64,48 @@ export function usePlaylistDetails(
                     formats: [],
                     error: "条目 ID 已变化或未返回，请重新读取。",
                   };
+            for (const part of details[entry.index].parts ?? []) details[part.index] = part;
+          }
+          setState({
+            source: media,
+            details: { ...details },
+            loading: true,
+            done: offset,
+            error: null,
+          });
+          for (const entry of chunk) {
+            const parts = details[entry.index].parts ?? [];
+            for (let p = 0; p < parts.length; p += 5) {
+              if (cancelled || stop.current) break;
+              const batch = parts.slice(p, p + 5);
+              try {
+                const request = invokeCommand<PlaylistDetails[]>("inspect_playlist_parts", {
+                  parts: batch.map((part) => part.part),
+                  useProxy,
+                });
+                pending.current = request;
+                const response = await request;
+                if (cancelled) return;
+                for (const part of batch) {
+                  const rows = response.filter((r) => r.index === part.index && r.id === part.id);
+                  details[part.index] =
+                    rows.length === 1
+                      ? rows[0]
+                      : { ...part, error: "分 P 身份已变化，请重新读取。" };
+                }
+              } catch (reason) {
+                if (cancelled) return;
+                for (const part of batch)
+                  details[part.index] = { ...part, error: optionError(reason) };
+              }
+              setState({
+                source: media,
+                details: { ...details },
+                loading: true,
+                done: offset,
+                error: null,
+              });
+            }
           }
         } catch (reason) {
           if (cancelled) return;
@@ -98,16 +141,18 @@ export function usePlaylistDetails(
     [state.source, state.details, media],
   );
   const input = useMemo(() => {
-    const items = Object.values(details).filter((entry) => entry.id);
+    const items = expandedEntries(media, details)
+      .map((entry) => details[entry.index])
+      .filter((entry) => entry?.id && !entry.parts?.length);
     return {
       items,
       policy,
-      overrides: Object.entries(overrides)
-        .filter(([index]) => items.some((item) => item.index === Number(index)))
-        .map(([index, policy]) => ({ index: Number(index), policy })),
+      overrides: expandedOverrides(expandedEntries(media, details), overrides).filter((over) =>
+        items.some((item) => item.index === over.index),
+      ),
       audioOnly,
     };
-  }, [details, policy, overrides, audioOnly]);
+  }, [details, media, policy, overrides, audioOnly]);
   const [matched, setMatched] = useState<{
     input: typeof input | null;
     rows: PlaylistMatch[];
@@ -129,6 +174,7 @@ export function usePlaylistDetails(
   }, [input]);
   return {
     details,
+    entries: expandedEntries(media, details),
     matches: matched.input === input ? matched.rows : [],
     matching: matched.input !== input && input.items.length > 0,
     matchError: matched.input === input ? matched.error : null,

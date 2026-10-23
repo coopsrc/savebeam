@@ -217,10 +217,14 @@ pub async fn inspect_playlist_entries(
     tauri::async_runtime::spawn_blocking(move || {
         let _guard = guard;
         let cookies = load_cookie_preferences(app.state::<DatabaseManager>().inner())?;
-        let raw = configured_media_engine(&app, Some(use_proxy.unwrap_or(false)))?
+        let engine = configured_media_engine(&app, Some(use_proxy.unwrap_or(false)))?;
+        let raw = engine
+            .clone()
             .for_size_estimate(&indices)?
             .inspect_with_cookies(&url, &cookies)?;
-        Ok(crate::services::playlist_quality::map_details(&raw, &items))
+        let mut rows = crate::services::playlist_quality::map_details(&raw, &items);
+        crate::services::playlist_parts::expand(&engine, &cookies, &url, &raw, &items, &mut rows);
+        Ok(rows)
     })
     .await
     .map_err(|_| AppError::new(ErrorCode::Unknown, "条目信息读取中断，请重试。", true))?
@@ -243,4 +247,22 @@ pub fn match_playlist_quality(
         .iter()
         .map(|item| select(item, effective(item.index, &policy, &overrides), audio_only))
         .collect())
+}
+
+#[tauri::command]
+pub async fn inspect_playlist_parts(
+    app: AppHandle,
+    operations: State<'_, crate::services::playlist_size::PlaylistSizeOperations>,
+    parts: Vec<crate::domain::download::PlaylistPartContext>,
+    use_proxy: Option<bool>,
+) -> CommandResult<Vec<crate::services::playlist_quality::PlaylistDetails>> {
+    let guard = operations.begin()?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let _guard = guard;
+        let cookies = load_cookie_preferences(app.state::<DatabaseManager>().inner())?;
+        let engine = configured_media_engine(&app, Some(use_proxy.unwrap_or(false)))?;
+        crate::services::playlist_parts::inspect_parts(&engine, &cookies, &parts)
+    })
+    .await
+    .map_err(|_| AppError::new(ErrorCode::Unknown, "分 P 格式读取中断，请重试。", true))?
 }

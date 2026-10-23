@@ -19,6 +19,7 @@ pub mod intermediate_files;
 pub mod media_mapper;
 pub mod network_connection_test;
 pub mod network_preferences;
+pub mod playlist_parts;
 pub mod playlist_quality;
 pub mod playlist_size;
 pub mod source_versions;

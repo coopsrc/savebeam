@@ -32,7 +32,7 @@ async function fixture(colorScheme = "light", initialRoute = "settings") {
           return { outputDirectory: "", maxConcurrent: 1, conflictStrategy: "skip" };
         if (command === "get_download_option_defaults")
           return {
-            audioOnly: false,
+            audioOnly: true, // Legacy global value must not expose or enable audio-only defaults.
             subtitleLanguages: [],
             writeAutomaticSubtitles: false,
             writeThumbnail: false,
@@ -107,6 +107,10 @@ async function scrollToBottom(page) {
 
 try {
   const { page, errors } = await fixture();
+  assert.equal(
+    await page.getByRole("checkbox", { name: "仅下载音频（MP3）", exact: true }).count(),
+    0,
+  );
   await page.getByRole("textbox", { name: "默认下载目录", exact: true }).fill("/fixture/draft");
   await page.getByRole("checkbox", { name: "保留中间文件", exact: true }).check();
   const initialCalls = await page.evaluate(() => window.settingsFixture.calls);

@@ -433,6 +433,13 @@ export function SubscriptionsPage({ active }: { active: boolean }) {
                   [ID]/序号-标题 [视频 ID].扩展名”结构；实际格式及大小下载时确定。
                 </Text>
                 <Group justify="flex-end">
+                  <Button
+                    variant="subtle"
+                    disabled={!!busy}
+                    onClick={() => navigate(`/download?url=${encodeURIComponent(item.url)}`)}
+                  >
+                    选择画质与分 P
+                  </Button>
                   <Checkbox
                     label="使用代理"
                     description="仅本次下载，使用设置中保存的自定义代理；不勾选则直连。"

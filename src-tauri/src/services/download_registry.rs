@@ -592,6 +592,7 @@ mod tests {
                     .unwrap()
                     .apply_to(&mut options);
                 // This task-only override must survive too, independently of global defaults.
+                options.audio_only = true;
                 options.write_info_json = false;
                 options.quality_policy = Some(crate::domain::playlist_quality::PlaylistQuality {
                     automatic_recommendations: true,
@@ -790,6 +791,7 @@ mod tests {
 
     fn test_options(url: &str, title: &str, format_id: &str) -> DownloadOptions {
         DownloadOptions {
+            playlist_part: None,
             version_parent_task_id: None,
             title: title.to_owned(),
             url: url.to_owned(),

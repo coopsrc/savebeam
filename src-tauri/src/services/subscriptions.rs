@@ -95,7 +95,13 @@ pub fn map_entry_metadata(
             let candidates: Vec<_> = if let Some(entries) = raw["entries"].as_array() {
                 entries
                     .iter()
-                    .filter(|entry| entry["playlist_index"].as_u64() == Some(u64::from(item.index)))
+                    .enumerate()
+                    .filter(|(offset, entry)| {
+                        crate::services::playlist_parts::at_position(
+                            raw, *offset, entry, item.index,
+                        )
+                    })
+                    .map(|(_, entry)| entry)
                     .collect()
             } else if requested.len() == 1 {
                 vec![raw]
@@ -105,7 +111,8 @@ pub fn map_entry_metadata(
             let entry = (candidates.len() == 1)
                 .then(|| candidates[0])
                 .filter(|entry| {
-                    entry["_type"] != "playlist"
+                    (entry["_type"] != "playlist"
+                        || (item.id.starts_with("BV") && item.id.len() == 12))
                         && entry_id(entry).as_deref() == Some(item.id.as_str())
                         && entry.get("playlist_index").is_none_or(|index| {
                             index.is_null() || index.as_u64() == Some(u64::from(item.index))
@@ -136,7 +143,7 @@ pub fn map_entry_metadata(
         .collect()
 }
 
-fn entry_id(entry: &Value) -> Option<String> {
+pub(crate) fn entry_id(entry: &Value) -> Option<String> {
     // Bilibili multipart flat entries can omit IDs (or expose only the common BV).
     // Its extractor's final ID is BV..._pN; derive it only from a verified public URL shape.
     if let Some(url) = entry["url"]
@@ -223,6 +230,15 @@ mod tests {
             map_entry_metadata(&nested, &snapshot.entries)[0]
                 .error
                 .is_some()
+        );
+        // A verified Bilibili multipart parent has a legitimate title even though
+        // its child streams are selected separately on the download page.
+        let mut parent = snapshot.entries[0].clone();
+        parent.id = "BV1uVy7BCErV".into();
+        let nested = json!({"requested_entries":[72],"entries":[{"_type":"playlist","id":"BV1uVy7BCErV","title":"避震特别篇"}]});
+        assert_eq!(
+            map_entry_metadata(&nested, &[parent])[0].title.as_deref(),
+            Some("避震特别篇")
         );
         let single = json!({"id":"one","title":"single","duration":-1});
         let one = map_entry_metadata(&single, &snapshot.entries[..1]);

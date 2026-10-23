@@ -297,8 +297,12 @@ pub async fn download_subscription_items(
         let active: Vec<_> = DownloadTaskRepository::new(database.database()?)
             .list()?
             .into_iter()
-            .filter(|(task, _)| {
-                task.url == subscription.url
+            .filter(|(task, options)| {
+                (task.url == subscription.url
+                    || options
+                        .playlist_part
+                        .as_ref()
+                        .is_some_and(|p| p.source_url == subscription.url))
                     && matches!(
                         task.status,
                         DownloadTaskStatus::Queued
@@ -310,10 +314,13 @@ pub async fn download_subscription_items(
             })
             .collect();
         if active.iter().any(|(_, options)| {
-            options
-                .expected_media_id
-                .as_ref()
-                .is_none_or(|id| wanted.contains(id))
+            options.expected_media_id.as_ref().is_none_or(|id| {
+                wanted.contains(id)
+                    || options
+                        .playlist_part
+                        .as_ref()
+                        .is_some_and(|p| wanted.contains(&p.parent_id))
+            })
         }) {
             return Err(invalid(
                 "所选系列条目已有进行中的下载，请等待或前往任务页处理。",

@@ -198,6 +198,8 @@ pub fn prepare_version_options(
 ) -> Result<DownloadOptions, AppError> {
     let media = crate::services::media_mapper::map_media_info(item, &options.url)?;
     let details = crate::services::playlist_quality::PlaylistDetails {
+        part: None,
+        parts: Vec::new(),
         index: options
             .playlist_items
             .as_ref()

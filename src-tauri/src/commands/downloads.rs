@@ -54,6 +54,7 @@ pub fn start_download(
     options.cookie_access_confirmed = false;
     options.expected_media_id = None;
     options.version_parent_task_id = None;
+    options.playlist_part = None;
     options.use_proxy.get_or_insert(false);
     queue_download(
         app,
@@ -471,6 +472,16 @@ pub fn start_playlist_download(
     } = request;
     use crate::services::playlist_quality::{effective, task_options, validate_request};
     validate_request(&items, &policy, &overrides)?;
+    if items
+        .iter()
+        .any(|i| i.part.as_ref().is_some_and(|p| p.source_url != url))
+    {
+        return Err(AppError::new(
+            ErrorCode::InvalidUrl,
+            "分 P 不属于当前合集，请重新解析。",
+            false,
+        ));
+    }
     crate::services::download_defaults::validate(&download_options)?;
     if url.len() > 4096 || !(url.starts_with("https://") || url.starts_with("http://")) {
         return Err(AppError::new(
@@ -485,7 +496,11 @@ pub fn start_playlist_download(
     )
     .list()?;
     if active.iter().any(|(task, options)| {
-        task.url == url
+        (task.url == url
+            || options
+                .playlist_part
+                .as_ref()
+                .is_some_and(|p| p.source_url == url))
             && matches!(
                 task.status,
                 DownloadTaskStatus::Queued
@@ -494,10 +509,16 @@ pub fn start_playlist_download(
                     | DownloadTaskStatus::PostProcessing
                     | DownloadTaskStatus::Cancelling
             )
-            && options
-                .expected_media_id
-                .as_ref()
-                .is_none_or(|id| items.iter().any(|item| item.id.as_ref() == Some(id)))
+            && options.expected_media_id.as_ref().is_none_or(|id| {
+                items.iter().any(|item| {
+                    item.id.as_ref() == Some(id)
+                        || item.part.as_ref().is_some_and(|p| &p.parent_id == id)
+                        || options
+                            .playlist_part
+                            .as_ref()
+                            .is_some_and(|p| item.id.as_ref() == Some(&p.parent_id))
+                })
+            })
     }) {
         return Err(AppError::new(
             ErrorCode::InvalidPath,
@@ -590,7 +611,7 @@ fn run_task(
         if options.expected_media_id.is_some() && process_output.output_paths.is_empty() {
             return Err(AppError::new(
                 ErrorCode::VideoUnavailable,
-                "目标条目未匹配；系列顺序可能已变化，请检查订阅更新后重新选择。",
+                "目标条目未匹配；系列顺序可能已变化。如条目包含分 P，请使用“选择画质与分 P”在下载页解析合集并分别勾选。",
                 true,
             ));
         }
@@ -645,7 +666,7 @@ fn run_task(
             crate::infrastructure::database::subscriptions::SubscriptionRepository(
                 app.state::<DatabaseManager>().database()?,
             )
-            .mark_downloaded(&options.url, &ids)?;
+            .mark_task_downloaded(&options, &ids)?;
         }
         Ok((result, source, files))
     })();

@@ -155,7 +155,7 @@ async function fixture(scenario) {
             await new Promise((resolve) => window.setTimeout(resolve, 350));
           state.inspected = true;
           const count =
-            scenario === "retention"
+            scenario === "retention" || scenario.startsWith("multipart")
               ? 17
               : scenario === "stop" || (scenario === "stale" && args.url.endsWith("old"))
                 ? 7
@@ -178,7 +178,7 @@ async function fixture(scenario) {
               truncated: false,
               entries: Array.from({ length: count }, (_, i) => ({
                 index: i + 1,
-                id: `BV${i + 1}`,
+                id: scenario.startsWith("multipart") && i === 12 ? "BV1uVy7BCErV" : `BV${i + 1}`,
                 title: "标题待补全",
                 available: true,
               })),
@@ -195,6 +195,45 @@ async function fixture(scenario) {
             durationSeconds: 100,
             formats: formats(item.index),
             error: null,
+            ...(scenario.startsWith("multipart") && item.index === 13
+              ? {
+                  formats: [],
+                  title: "避震特别篇",
+                  parts: [1, 2].map((p) => ({
+                    index: 13000 + p,
+                    id: `BV1uVy7BCErV_p${p}`,
+                    title: `分 P ${p} 标题待补全`,
+                    durationSeconds: null,
+                    formats: [],
+                    error: null,
+                    part: {
+                      sourceUrl: args.url,
+                      collectionId: "306979414_6546672",
+                      collectionTitle: "系列测试",
+                      parentId: "BV1uVy7BCErV",
+                      parentIndex: 13,
+                      partIndex: p,
+                      partCount: 2,
+                    },
+                  })),
+                }
+              : {}),
+          }));
+        }
+        if (command === "inspect_playlist_parts") {
+          await new Promise((resolve) => window.setTimeout(resolve, 100));
+          if (scenario === "multipart-read-error" && !state.partRetried) {
+            state.partRetried = true;
+            throw { code: "network_failure", message: "分 P 读取失败，请重试", retryable: true };
+          }
+          return args.parts.map((part) => ({
+            index: part.parentIndex * 1000 + part.partIndex,
+            id: `${part.parentId}_p${part.partIndex}`,
+            title: part.partIndex === 1 ? "避震特别篇 p01 解说版" : "避震特别篇 p02 纯享版",
+            durationSeconds: 300 + part.partIndex,
+            formats: formats(part.partIndex),
+            error: null,
+            part,
           }));
         }
         if (command === "match_playlist_quality")
@@ -227,6 +266,8 @@ async function fixture(scenario) {
               policy: row.policy,
               options: request.downloadOptions,
             }));
+          if (scenario === "multipart-partial")
+            state.queued = state.queued.filter((row) => row.index !== 13002);
           return {
             tasks: state.queued.map((row) => ({
               id: `task-${row.index}`,
@@ -238,7 +279,7 @@ async function fixture(scenario) {
             })),
             queuedIndices: state.queued.map((row) => row.index),
             skipped: selected.filter((row) => !row.match.formatId).map((row) => row.item.index),
-            error: null,
+            error: scenario === "multipart-partial" ? "模拟 P2 入队失败" : null,
           };
         }
         if (command.startsWith("plugin:event|")) return 1;
@@ -269,8 +310,60 @@ try {
     "stale",
     "pending",
     "retention",
+    "multipart",
+    "multipart-partial",
+    "multipart-read-error",
   ]) {
     const { page, errors } = await fixture(scenario);
+    if (scenario.startsWith("multipart")) {
+      if (scenario === "multipart-read-error") {
+        await page.getByText("分 P 读取失败，请重试", { exact: false }).first().waitFor();
+        await page.getByRole("button", { name: "重新读取详情", exact: true }).click();
+      }
+      const p1 = page.getByRole("checkbox", { name: /第 13 项 · P1 · 避震特别篇 p01 解说版/ });
+      const p2 = page.getByRole("checkbox", { name: /第 13 项 · P2 · 避震特别篇 p02 纯享版/ });
+      await p1.waitFor();
+      await p2.waitFor();
+      await confirmed(page, 18);
+      assert.equal(await p1.isChecked(), true);
+      assert.equal(await p2.isChecked(), true);
+      await page.getByRole("button", { name: "第 13 项 · P2单独设置", exact: true }).click();
+      const dialog = page.getByRole("dialog", {
+        name: "第 13 项 · P2 · 单独画质设置",
+        exact: true,
+      });
+      await choose(page, dialog, "分辨率", "720p");
+      await dialog.getByRole("button", { name: "应用", exact: true }).click();
+      await p1.uncheck();
+      await page.getByRole("link", { name: "设置", exact: true }).click();
+      await page.getByRole("link", { name: "下载", exact: true }).click();
+      assert.equal(await p1.isChecked(), false);
+      assert.equal(await p2.isChecked(), true);
+      await confirmed(page, 17);
+      await page.screenshot({ path: `/tmp/savebeam-${scenario}.png`, fullPage: true });
+      await page.getByRole("button", { name: "开始下载", exact: true }).click();
+      if (scenario === "multipart-partial") {
+        await page.getByRole("status").filter({ hasText: "已加入 16 项" }).waitFor();
+        await confirmed(page, 1);
+        assert.equal(await p1.isChecked(), false);
+        assert.equal(await p2.isChecked(), true);
+      } else await page.waitForURL(/#\/tasks$/);
+      const request = await page.evaluate(
+        () =>
+          window.qualityFixture.calls.filter((c) => c.command === "start_playlist_download").at(-1)
+            .args.request,
+      );
+      assert.equal(request.items.length, 17);
+      assert.ok(!request.items.some((i) => i.index === 13 || i.index === 13001));
+      assert.equal(request.items.find((i) => i.index === 13002).part.partIndex, 2);
+      assert.equal(request.overrides.find((o) => o.index === 13002).policy.resolutionHeight, 720);
+      assert.deepEqual(errors, []);
+      await page.close();
+      process.stdout.write(
+        `${scenario}: independent P selection, policy, metadata, navigation and partial queue passed\n`,
+      );
+      continue;
+    }
     if (scenario === "pending") {
       await page.getByRole("link", { name: "任务", exact: true }).click();
       await page.waitForFunction(() => window.qualityFixture.inspected);

@@ -131,6 +131,8 @@ export interface PlaylistQuality {
   allowExceed: boolean;
 }
 export interface PlaylistDetails {
+  part?: PlaylistPartContext | null;
+  parts?: PlaylistDetails[];
   index: number;
   id: string | null;
   title: string | null;
@@ -138,6 +140,15 @@ export interface PlaylistDetails {
   formats: MediaFormat[];
   subtitles?: SubtitleTrack[];
   error: string | null;
+}
+export interface PlaylistPartContext {
+  sourceUrl: string;
+  collectionId: string;
+  collectionTitle: string;
+  parentId: string;
+  parentIndex: number;
+  partIndex: number;
+  partCount: number;
 }
 export interface PlaylistMatch {
   index: number;

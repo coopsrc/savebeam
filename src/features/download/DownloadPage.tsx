@@ -26,7 +26,7 @@ import { invokeCommand } from "../../ipc/client";
 import { useAppStore } from "../../stores/appStore";
 import { inspectMedia } from "./mediaApi";
 import { getMediaUrlError, validateMediaUrl } from "./validateMediaUrl";
-import { selectedEntries } from "./outputPreview";
+import { selectedDownloadEntries, entryLabel, expandedOverrides } from "./playlistParts";
 import { DownloadOptionsModal } from "./DownloadOptionsModal";
 import { useDownloadOptions } from "./useDownloadOptions";
 import { estimateOutputBytes } from "./outputEstimate";
@@ -111,6 +111,7 @@ export function DownloadPage({
     setPlaylistItems([]);
     const epoch = ++sizeEpoch.current;
     setQualityOverrides({});
+    setEditingQuality(null);
     setQueuedNotice(null);
 
     const checked = validateMediaUrl(url);
@@ -145,6 +146,7 @@ export function DownloadPage({
     setQualityOverrides({});
     setQueuedNotice(null);
     setUrl(value);
+    setEditingQuality(null);
     setMediaInfo(null);
     setPlaylistConfirmed(false);
     setRequestError(null);
@@ -184,17 +186,17 @@ export function DownloadPage({
             url: mediaInfo.webpageUrl,
             items: chosenEntries.map((entry) => series.details[entry.index]),
             policy: quality,
-            overrides: Object.entries(qualityOverrides)
-              .filter(([index]) => chosenEntries.some((entry) => entry.index === Number(index)))
-              .map(([index, policy]) => ({ index: Number(index), policy })),
+            overrides: expandedOverrides(chosenEntries, qualityOverrides),
             downloadOptions: advancedOptions,
             useProxy,
           },
         });
         result.tasks.forEach(upsertDownloadTask);
         if (result.error || result.skipped.length) {
-          setPlaylistItems((current) =>
-            current.filter((index) => !result.queuedIndices.includes(index)),
+          setPlaylistItems(
+            chosenEntries
+              .map((entry) => entry.index)
+              .filter((index) => !result.queuedIndices.includes(index)),
           );
           setPlaylistConfirmed(false);
           setQueuedNotice(
@@ -224,9 +226,10 @@ export function DownloadPage({
   const automaticSelection = mediaInfo
     ? selectDownload(mediaInfo, selectedVideoId, AUTOMATIC_AUDIO, audioOnly)
     : null;
-  const playlistEntries = mediaInfo?.playlist?.entries ?? [];
+  const playlistEntries = series.entries;
+  const editingEntry = playlistEntries.find((entry) => entry.index === editingQuality);
   const chosenEntries = mediaInfo?.playlist
-    ? selectedEntries(mediaInfo.playlist, playlistItems)
+    ? selectedDownloadEntries(playlistEntries, playlistItems)
     : [];
   const bytes = selection ? estimateOutputBytes(selection, audioOnly) : null;
   const selectedMatches = chosenEntries.map((entry) =>
@@ -573,12 +576,13 @@ export function DownloadPage({
                     <Text size="sm">
                       {mediaInfo.playlist.truncated
                         ? "系列超过安全上限，当前最多展示前 50 项，可勾选其中一部分。"
-                        : `检测到 ${mediaInfo.playlist.totalCount ?? playlistEntries.length} 项，可勾选需要下载的条目。`}
+                        : `检测到 ${mediaInfo.playlist.totalCount ?? playlistEntries.length} 项，分 P 展开后最多展示 50 个可下载文件，可分别勾选。`}
                     </Text>
                     <Group justify="space-between" gap="xs">
                       <Text size="xs" c="dimmed" role="status">
                         {series.loading ? "正在读取标题与格式" : "条目详情"}：{series.done}/
-                        {playlistEntries.filter((entry) => entry.available).length}（不下载媒体）
+                        {mediaInfo.playlist.entries.filter((entry) => entry.available).length}{" "}
+                        个合集条目（分 P 独立读取，不下载媒体）
                       </Text>
                       {series.loading ? (
                         <Button variant="subtle" size="compact-xs" onClick={series.stop}>
@@ -637,9 +641,14 @@ export function DownloadPage({
                         return (
                           <div className="download-playlist-row" key={`${entry.index}-${offset}`}>
                             <Checkbox
-                              label={`第 ${entry.index} 项 · ${details?.title ?? entry.title}`}
+                              label={`${entryLabel(entry)} · ${details?.title ?? entry.title}`}
                               description={
                                 <>
+                                  {entry.part && (
+                                    <Text component="span" display="block" size="xs" c="dimmed">
+                                      {entry.parentTitle} · 共 {entry.part.partCount} 个分 P
+                                    </Text>
+                                  )}
                                   <span>{`视频 ID：${details?.id ?? entry.id ?? "待解析"}`}</span>
                                   <Text
                                     component="span"
@@ -658,14 +667,21 @@ export function DownloadPage({
                                   </Text>
                                 </>
                               }
-                              checked={entry.available && playlistItems.includes(entry.index)}
+                              checked={chosenEntries.some((chosen) => chosen.index === entry.index)}
                               disabled={!entry.available || isStartingDownload}
                               onChange={(event) => {
                                 const checked = event.currentTarget.checked;
                                 changePlaylistItems(
                                   checked
-                                    ? [...playlistItems, entry.index]
-                                    : playlistItems.filter((index) => index !== entry.index),
+                                    ? [
+                                        ...new Set([
+                                          ...chosenEntries.map((e) => e.index),
+                                          entry.index,
+                                        ]),
+                                      ]
+                                    : chosenEntries
+                                        .filter((e) => e.index !== entry.index)
+                                        .map((e) => e.index),
                                 );
                               }}
                             />
@@ -673,7 +689,7 @@ export function DownloadPage({
                               type="button"
                               variant="subtle"
                               size="compact-xs"
-                              aria-label={`第 ${entry.index} 项单独设置`}
+                              aria-label={`${entryLabel(entry)}单独设置`}
                               disabled={!entry.available || isStartingDownload}
                               onClick={() => setEditingQuality(entry.index)}
                             >
@@ -767,10 +783,11 @@ export function DownloadPage({
           }}
         />
       )}
-      {editingQuality !== null && (
+      {editingQuality !== null && editingEntry && (
         <PlaylistQualityModal
           opened={active}
           index={editingQuality}
+          label={entryLabel(editingEntry)}
           value={qualityOverrides[editingQuality] ?? quality}
           audioOnly={audioOnly}
           onClose={() => setEditingQuality(null)}

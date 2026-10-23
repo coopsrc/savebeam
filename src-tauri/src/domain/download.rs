@@ -4,6 +4,19 @@ use serde::{Deserialize, Serialize};
 
 pub const MAX_PLAYLIST_ITEMS: u8 = 50;
 
+/// Immutable naming and identity context for a Bilibili multipart entry inside a collection.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct PlaylistPartContext {
+    pub source_url: String,
+    pub collection_id: String,
+    pub collection_title: String,
+    pub parent_id: String,
+    pub parent_index: u32,
+    pub part_index: u32,
+    pub part_count: u32,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum CookieBrowser {
@@ -52,6 +65,8 @@ impl CookieBrowser {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DownloadOptions {
+    #[serde(default)]
+    pub playlist_part: Option<PlaylistPartContext>,
     pub title: String,
     pub url: String,
     pub format_id: String,

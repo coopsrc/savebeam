@@ -10,7 +10,7 @@ use rusqlite::{Connection, TransactionBehavior};
 
 use crate::domain::error::{AppError, ErrorCode};
 
-pub const CURRENT_SCHEMA_VERSION: u32 = 14;
+pub const CURRENT_SCHEMA_VERSION: u32 = 15;
 
 pub mod repositories;
 pub mod subscriptions;
@@ -108,6 +108,8 @@ const MIGRATIONS: &[(u32, &str)] = &[(
      );"
 ) , (14,
     "ALTER TABLE subscription_entries ADD COLUMN duration_seconds REAL;"
+) , (15,
+    "ALTER TABLE download_tasks ADD COLUMN playlist_part_json TEXT;"
 )];
 
 #[derive(Debug, Clone)]
@@ -450,6 +452,32 @@ mod tests {
                 playlist_items_json: None,
             }
         );
+    }
+
+    #[test]
+    fn upgrades_v14_with_null_part_context_without_rewriting_audio_tasks() {
+        let mut connection = Connection::open_in_memory().unwrap();
+        for (version, sql) in super::MIGRATIONS
+            .iter()
+            .filter(|(version, _)| *version <= 14)
+        {
+            connection.execute_batch(sql).unwrap();
+            connection
+                .pragma_update(None, "user_version", version)
+                .unwrap();
+        }
+        connection.execute("INSERT INTO download_tasks(task_id,url,title,format_id,output_directory,status,created_at_unix_ms,updated_at_unix_ms,audio_only) VALUES ('legacy','https://example.invalid/','Audio','a','/tmp','failed',1,1,1)", []).unwrap();
+        migrate(&mut connection).unwrap();
+        let (audio, part): (bool, Option<String>) = connection
+            .query_row(
+                "SELECT audio_only,playlist_part_json FROM download_tasks WHERE task_id='legacy'",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .unwrap();
+        assert!(audio);
+        assert!(part.is_none());
+        migrate(&mut connection).unwrap();
     }
 
     #[test]

@@ -53,6 +53,7 @@ pub fn run() {
             commands::media::inspect_playlist_entries,
             commands::media::match_playlist_quality,
             commands::downloads::start_playlist_download,
+            commands::media::inspect_playlist_parts,
             commands::media::estimate_playlist_size,
             commands::subscriptions::list_subscriptions,
             commands::subscriptions::get_subscription_candidates,

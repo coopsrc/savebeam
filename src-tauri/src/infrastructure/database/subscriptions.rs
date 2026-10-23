@@ -60,7 +60,12 @@ impl SubscriptionRepository {
             }))?.collect::<rusqlite::Result<Vec<_>>>()?;
             for subscription in &mut subscriptions {
                 let mut entries = connection.prepare("SELECT e.media_id, e.position, e.title, e.downloaded, e.is_new, e.available,
-                    (SELECT t.status FROM download_tasks t WHERE t.url = ?2 AND t.expected_media_id = e.media_id ORDER BY t.created_at_unix_ms DESC, t.rowid DESC LIMIT 1)
+                    (SELECT t.status FROM download_tasks t WHERE
+                        (t.url = ?2 AND t.expected_media_id = e.media_id) OR
+                        (json_extract(t.playlist_part_json, '$.sourceUrl') = ?2 AND json_extract(t.playlist_part_json, '$.parentId') = e.media_id
+                         AND t.status IN ('queued', 'preparing', 'downloading', 'post_processing', 'cancelling', 'failed', 'cancelled'))
+                        ORDER BY CASE WHEN t.status IN ('queued', 'preparing', 'downloading', 'post_processing', 'cancelling') THEN 0 ELSE 1 END,
+                        t.created_at_unix_ms DESC, t.rowid DESC LIMIT 1)
                     , e.duration_seconds
                     FROM subscription_entries e WHERE e.subscription_id = ?1 ORDER BY e.position, e.media_id")?;
                 subscription.entries = entries.query_map(params![subscription.id, subscription.url], |row| Ok(SubscriptionEntry {
@@ -126,6 +131,40 @@ impl SubscriptionRepository {
             for id in ids {
                 tx.execute("INSERT OR IGNORE INTO downloaded_media(source_url, media_id) VALUES (?1, ?2)", params![url, id])?;
                 tx.execute("UPDATE subscription_entries SET downloaded = 1 WHERE media_id = ?2 AND subscription_id IN (SELECT subscription_id FROM subscriptions WHERE url = ?1)", params![url, id])?;
+            }
+            tx.commit()
+        })
+    }
+
+    /// Completing one P must never mark the whole parent video downloaded.
+    pub fn mark_task_downloaded(
+        &self,
+        options: &crate::domain::download::DownloadOptions,
+        ids: &[String],
+    ) -> Result<(), AppError> {
+        let Some(p) = &options.playlist_part else {
+            return self.mark_downloaded(&options.url, ids);
+        };
+        crate::services::playlist_parts::validate(p)?;
+        if ids.len() != 1 || ids[0] != format!("{}_p{}", p.parent_id, p.part_index) {
+            return Err(AppError::new(
+                ErrorCode::VideoUnavailable,
+                "完成文件的分 P 身份不匹配，未登记完成。",
+                false,
+            ));
+        }
+        self.0.with_connection(|c| {
+            let tx = c.unchecked_transaction()?;
+            for id in ids {
+                tx.execute("INSERT OR IGNORE INTO downloaded_media(source_url, media_id) VALUES (?1, ?2)", params![p.source_url, id])?;
+            }
+            let mut complete = true;
+            for i in 1..=p.part_count {
+                complete &= tx.query_row("SELECT EXISTS(SELECT 1 FROM downloaded_media WHERE source_url=?1 AND media_id=?2)", params![p.source_url, format!("{}_p{i}", p.parent_id)], |r| r.get::<_, bool>(0))?;
+            }
+            if complete {
+                tx.execute("INSERT OR IGNORE INTO downloaded_media(source_url, media_id) VALUES (?1, ?2)", params![p.source_url, p.parent_id])?;
+                tx.execute("UPDATE subscription_entries SET downloaded=1 WHERE media_id=?2 AND subscription_id IN (SELECT subscription_id FROM subscriptions WHERE url=?1)", params![p.source_url, p.parent_id])?;
             }
             tx.commit()
         })

@@ -5,6 +5,7 @@ import { PlaylistQualityFields } from "./PlaylistQualityFields";
 
 export function PlaylistQualityModal({
   index,
+  label,
   value,
   audioOnly,
   onApply,
@@ -13,6 +14,7 @@ export function PlaylistQualityModal({
   opened = true,
 }: {
   index: number;
+  label?: string;
   value: PlaylistQuality;
   audioOnly: boolean;
   onApply: (value: PlaylistQuality) => void;
@@ -26,7 +28,7 @@ export function PlaylistQualityModal({
       opened={opened}
       returnFocus={opened}
       onClose={onClose}
-      title={`第 ${index} 项 · 单独画质设置`}
+      title={`${label ?? `第 ${index} 项`} · 单独画质设置`}
       size="lg"
       centered
     >
