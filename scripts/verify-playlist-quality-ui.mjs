@@ -365,17 +365,30 @@ try {
       await page.getByRole("img", { name: "视频封面", exact: true }).waitFor();
       const policy = page.getByRole("region", { name: "共用画质", exact: true });
       await assertColumns();
-      assert.ok((await policy.getByRole("combobox").count()) > 0);
-      assert.equal(
-        await page.getByRole("button", { name: "调整共用画质", exact: true }).count(),
-        0,
-      );
+      assert.equal(await policy.getByRole("combobox").count(), 0);
+      assert.match(await policy.innerText(), /推荐 MP4/);
+      const toggleQuality = policy.getByRole("button", { name: "展开画质设置", exact: true });
+      await toggleQuality.focus();
+      await toggleQuality.press("Enter");
       await choose(page, policy, "分辨率", "720p");
       await page.waitForTimeout(250);
       await assertColumns();
       assert.equal(
         await policy.getByRole("combobox", { name: "分辨率", exact: true }).inputValue(),
         "720p",
+      );
+      await policy.getByRole("button", { name: "收起画质设置", exact: true }).click();
+      await page.waitForTimeout(250);
+      await assertColumns();
+      assert.equal(await policy.getByRole("combobox").count(), 0);
+      assert.match(await policy.innerText(), /视频：720p/);
+      const callsBeforeToggle = await page.evaluate(() => window.qualityFixture.calls.length);
+      await policy.getByRole("button", { name: "展开画质设置", exact: true }).click();
+      await policy.getByRole("button", { name: "收起画质设置", exact: true }).click();
+      await page.waitForTimeout(250);
+      assert.equal(
+        await page.evaluate(() => window.qualityFixture.calls.length),
+        callsBeforeToggle,
       );
       await page.getByRole("button", { name: "取消全选", exact: true }).click();
       const p1 = page.getByRole("checkbox", { name: /^P1 · 避震特别篇 p01 解说版$/ });
@@ -385,6 +398,11 @@ try {
       const dialog = page.getByRole("dialog", { name: "P1 · 单独画质设置", exact: true });
       await choose(page, dialog, "分辨率", "2160p");
       await dialog.getByRole("button", { name: "应用", exact: true }).click();
+      await page
+        .locator(".download-playlist-row")
+        .filter({ has: p1 })
+        .getByText(/3840x2160.*单独策略/)
+        .waitFor();
       const list = page.getByRole("group", { name: "可选分 P", exact: true });
       if (count > 2) {
         await list.evaluate((e) => {
@@ -398,10 +416,8 @@ try {
       assert.equal(await p1.isChecked(), true);
       assert.equal(await p2.isChecked(), false);
       assert.equal(await list.evaluate((e) => e.scrollTop), scroll);
-      assert.equal(
-        await policy.getByRole("combobox", { name: "分辨率", exact: true }).inputValue(),
-        "720p",
-      );
+      assert.equal(await toggleQuality.getAttribute("aria-expanded"), "false");
+      assert.match(await policy.innerText(), /视频：720p/);
       await confirmed(page, 1);
       assert.ok(
         await page.locator(".page-content").evaluate((e) => e.scrollWidth <= e.clientWidth + 1),
@@ -509,6 +525,9 @@ try {
     }
     const policy = page.getByRole("region", { name: "系列画质策略", exact: true });
     await policy.waitFor();
+    assert.equal(await policy.getByRole("combobox").count(), 0);
+    assert.match(await policy.innerText(), /音频：推荐 M4A · 推荐 AAC/);
+    await policy.getByRole("button", { name: "展开画质设置", exact: true }).click();
     for (const [label, preferred] of [
       ["视频格式", "MP4"],
       ["视频编码", "HEVC"],
@@ -683,6 +702,18 @@ try {
       await choose(page, policy, "音频编码", "AAC");
       await choose(page, policy, "音频码率", "≤ 128 kbps");
       await confirmed(page, 2);
+      await policy.getByRole("button", { name: "收起画质设置", exact: true }).click();
+      await page.waitForTimeout(250);
+      assert.equal(await policy.getByRole("combobox").count(), 0);
+      assert.match(await policy.innerText(), /视频：720p · 30 FPS · MP4 · H\.264/);
+      assert.match(await policy.innerText(), /音频：M4A · AAC · ≤ 128 kbps/);
+      assert.equal(
+        await page
+          .getByRole("checkbox", { name: "我确认下载匹配的 2 项", exact: true })
+          .isChecked(),
+        true,
+      );
+      await policy.getByRole("button", { name: "展开画质设置", exact: true }).click();
       const first = page.locator(".download-playlist-row").filter({ hasText: "第 1 项" });
       await first.getByText(/1280x720.*2000 kbps.*128 kbps.*110.0 MB/).waitFor();
       assert.equal(

@@ -37,7 +37,7 @@ import { DownloadEntryList } from "./DownloadEntryList";
 import { DownloadOptionsModal } from "./DownloadOptionsModal";
 import { useDownloadOptions } from "./useDownloadOptions";
 import { estimateOutputBytes } from "./outputEstimate";
-import { PlaylistQualityFields } from "./PlaylistQualityFields";
+import { PlaylistQualityPanel } from "./PlaylistQualityPanel";
 import { DEFAULT_PLAYLIST_QUALITY } from "./playlistQuality";
 import { PlaylistQualityModal } from "./PlaylistQualityModal";
 import { usePlaylistDetails } from "./usePlaylistDetails";
@@ -76,6 +76,7 @@ export function DownloadPage({
   const [isInspecting, setIsInspecting] = useState(false);
   const [isStartingDownload, setIsStartingDownload] = useState(false);
   const [mediaInfo, setMediaInfo] = useState<MediaInfo | null>(null);
+  const [inspectionKey, setInspectionKey] = useState(0);
   const [thumbnailFailed, setThumbnailFailed] = useState(false);
   const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
   const [selectedAudioId, setSelectedAudioId] = useState(AUTOMATIC_AUDIO);
@@ -120,6 +121,7 @@ export function DownloadPage({
     setPlaylistConfirmed(false);
     setPlaylistItems([]);
     const epoch = ++sizeEpoch.current;
+    setInspectionKey(epoch);
     setQualityOverrides({});
     setEditingQuality(null);
     setQueuedNotice(null);
@@ -519,36 +521,18 @@ export function DownloadPage({
                 </Stack>
               </Paper>
               {mediaInfo.playlist && (
-                <Paper
-                  component="section"
-                  aria-label={isMultipart ? "共用画质" : "系列画质策略"}
-                  className="download-quality-panel"
-                  withBorder
-                  radius="md"
-                  p="md"
-                >
-                  <Stack gap="sm">
-                    <Title order={3}>{isMultipart ? "共用画质" : "系列画质策略"}</Title>
-                    <Text size="sm" c="dimmed">
-                      分辨率和 FPS 可选 Best；格式与编码自动推荐，也可手动指定。
-                      {isMultipart
-                        ? "各 P 按自身可用格式匹配，也可单独设置。"
-                        : "少数例外可点右侧“单独设置”。"}
-                    </Text>
-                    <PlaylistQualityFields
-                      value={quality}
-                      audioOnly={audioOnly}
-                      disabled={isStartingDownload}
-                      onChange={(value) => {
-                        setQuality(value);
-                        setPlaylistConfirmed(false);
-                      }}
-                    />
-                    <Text size="xs" c="dimmed">
-                      已单独设置 {Object.keys(qualityOverrides).length} 项；其余跟随统一策略。
-                    </Text>
-                  </Stack>
-                </Paper>
+                <PlaylistQualityPanel
+                  key={inspectionKey}
+                  multipart={isMultipart}
+                  value={quality}
+                  audioOnly={audioOnly}
+                  disabled={isStartingDownload}
+                  overrideCount={Object.keys(qualityOverrides).length}
+                  onChange={(value) => {
+                    setQuality(value);
+                    setPlaylistConfirmed(false);
+                  }}
+                />
               )}
               {mediaInfo.playlist && (
                 <Paper

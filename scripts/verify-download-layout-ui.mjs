@@ -110,6 +110,11 @@ async function assertAlignedPanels(page, width, seriesMode) {
 }
 
 async function assertQualityMenus(page, region, width) {
+  const expand = region.getByRole("button", { name: "展开画质设置", exact: true });
+  if (await expand.count()) {
+    await expand.click();
+    await page.waitForTimeout(250);
+  }
   for (const [label, preferred] of [
     ["视频格式", "MP4"],
     ["视频编码", "HEVC"],
