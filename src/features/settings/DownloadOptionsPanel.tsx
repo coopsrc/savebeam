@@ -47,6 +47,7 @@ export function DownloadOptionsPanel() {
           </Text>
         </div>
         <DownloadOptionFields
+          showAudioOnly={false}
           value={options}
           onChange={(next) => {
             setOptions(next);

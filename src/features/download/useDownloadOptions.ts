@@ -8,7 +8,10 @@ import {
 } from "./downloadOptionDefaults";
 
 export async function loadDownloadOptions(): Promise<DownloadOptionDefaults> {
-  return readDownloadOptions(await invokeCommand("get_download_option_defaults"));
+  return {
+    ...readDownloadOptions(await invokeCommand("get_download_option_defaults")),
+    audioOnly: false,
+  };
 }
 
 export function optionError(error: unknown) {

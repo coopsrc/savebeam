@@ -12,6 +12,7 @@ export function DownloadOptionFields({
   value,
   onChange,
   disabled = false,
+  showAudioOnly = true,
   audioOnlyRequired = false,
   subtitleTracks = [],
   subtitleScope = "preferences",
@@ -19,6 +20,7 @@ export function DownloadOptionFields({
   value: DownloadOptionDefaults;
   onChange: (value: DownloadOptionDefaults) => void;
   disabled?: boolean;
+  showAudioOnly?: boolean;
   audioOnlyRequired?: boolean;
   subtitleTracks?: SubtitleTrack[];
   subtitleScope?: SubtitleScope;
@@ -26,13 +28,15 @@ export function DownloadOptionFields({
   const choices = subtitleChoices(subtitleTracks, value.subtitleLanguages, subtitleScope);
   return (
     <Stack gap="md">
-      <Checkbox
-        label="仅下载音频（MP3）"
-        description="需要 FFmpeg 和 ffprobe 进行音频提取与转换。"
-        checked={value.audioOnly}
-        disabled={disabled || audioOnlyRequired}
-        onChange={(event) => onChange({ ...value, audioOnly: event.currentTarget.checked })}
-      />
+      {showAudioOnly && (
+        <Checkbox
+          label="仅下载音频（MP3）"
+          description="需要 FFmpeg 和 ffprobe 进行音频提取与转换。"
+          checked={value.audioOnly}
+          disabled={disabled || audioOnlyRequired}
+          onChange={(event) => onChange({ ...value, audioOnly: event.currentTarget.checked })}
+        />
+      )}
       <Stack component="section" aria-label="字幕选择" gap="xs">
         <MultiSelect
           label="下载字幕"

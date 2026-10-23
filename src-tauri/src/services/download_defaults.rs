@@ -23,18 +23,21 @@ pub fn validate(value: &DownloadOptionDefaults) -> Result<(), AppError> {
 }
 
 pub fn load(database: Database) -> Result<DownloadOptionDefaults, AppError> {
-    let value = SettingsRepository::new(database)
+    let mut value = SettingsRepository::new(database)
         .get(KEY)?
         .unwrap_or_default();
     validate(&value)?;
+    // Audio-only is a per-download mode, never a global default (including legacy settings).
+    value.audio_only = false;
     Ok(value)
 }
 
 pub fn save(
     database: Database,
-    value: DownloadOptionDefaults,
+    mut value: DownloadOptionDefaults,
 ) -> Result<DownloadOptionDefaults, AppError> {
     validate(&value)?;
+    value.audio_only = false;
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_err(|_| AppError::new(ErrorCode::Unknown, "系统时间不可用。", false))?
@@ -63,7 +66,7 @@ mod tests {
         };
         save(db.clone(), value.clone()).unwrap();
         let mut task = DownloadOptions::default();
-        load(db.clone()).unwrap().apply_to(&mut task);
+        value.apply_to(&mut task); // Explicit per-task choice must survive global changes.
         save(db.clone(), DownloadOptionDefaults::default()).unwrap();
         assert_eq!(DownloadOptionDefaults::from(&task), value);
         let invalid = DownloadOptionDefaults {
@@ -101,7 +104,11 @@ mod tests {
             keep_intermediate_files: true,
         };
         save(Database::open(&path).unwrap(), value.clone()).unwrap();
-        assert_eq!(load(Database::open(&path).unwrap()).unwrap(), value);
+        let expected = DownloadOptionDefaults {
+            audio_only: false,
+            ..value
+        };
+        assert_eq!(load(Database::open(&path).unwrap()).unwrap(), expected);
         let _ = std::fs::remove_file(&path);
         let _ = std::fs::remove_file(path.with_extension("sqlite3-shm"));
         let _ = std::fs::remove_file(path.with_extension("sqlite3-wal"));
@@ -116,5 +123,26 @@ mod tests {
         assert!(load(db.clone()).is_err());
         save(db.clone(), DownloadOptionDefaults::default()).unwrap();
         assert_eq!(load(db).unwrap(), DownloadOptionDefaults::default());
+    }
+
+    #[test]
+    fn legacy_audio_default_is_ignored_without_rewriting_task_options() {
+        let db = Database::open_in_memory().unwrap();
+        let legacy = DownloadOptionDefaults {
+            audio_only: true,
+            write_thumbnail: true,
+            ..Default::default()
+        };
+        SettingsRepository::new(db.clone())
+            .set(KEY, &legacy, 1)
+            .unwrap();
+        let loaded = load(db.clone()).unwrap();
+        assert!(!loaded.audio_only);
+        assert!(loaded.write_thumbnail);
+        assert!(!save(db, legacy.clone()).unwrap().audio_only);
+        let mut task = DownloadOptions::default();
+        legacy.apply_to(&mut task);
+        assert!(task.audio_only);
+        assert!(validate(&legacy).is_ok());
     }
 }
