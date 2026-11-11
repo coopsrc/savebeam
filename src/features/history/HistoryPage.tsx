@@ -19,12 +19,15 @@ import { formatBytes } from "../../utils/formatBytes";
 import { useRetainedPageScroll } from "../../layout/useRetainedPageScroll";
 import { useAppStore } from "../../stores/appStore";
 import { MediaVersionsButton } from "./MediaVersionsButton";
+import { groupRecords } from "../records/groupRecords";
+import { RecordGroup } from "../records/RecordGroup";
 
 export function HistoryPage({ active }: { active: boolean }) {
   useUiLocale();
 
   const root = useRetainedPageScroll(active);
   const [query, setQuery] = useState("");
+  const [appliedFilter, setAppliedFilter] = useState("");
   const [records, setRecords] = useState<DownloadHistoryRecord[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busyTask, setBusyTask] = useState<string | null>(null);
@@ -32,6 +35,7 @@ export function HistoryPage({ active }: { active: boolean }) {
   const [deleteFiles, setDeleteFiles] = useState(false);
   const [deletionError, setDeletionError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const deleting = pendingDeletion !== null && busyTask === pendingDeletion.taskId;
   const results = useAppStore((state) => state.downloadResults);
   const appliedQuery = useRef("");
@@ -47,6 +51,7 @@ export function HistoryPage({ active }: { active: boolean }) {
       });
       if (revision === request.current) {
         setRecords(items);
+        setAppliedFilter(search);
         setError(null);
       }
     } catch (reason) {
@@ -65,6 +70,7 @@ export function HistoryPage({ active }: { active: boolean }) {
       .then((items) => {
         if (revision === request.current) {
           setRecords(items);
+          setAppliedFilter(appliedQuery.current);
           setError(null);
         }
       })
@@ -132,6 +138,64 @@ export function HistoryPage({ active }: { active: boolean }) {
     }
   }
 
+  const renderRecord = (record: DownloadHistoryRecord, visible = active) => (
+    <Paper key={record.taskId} withBorder radius="md" p="md">
+      <Stack gap="sm">
+        <Group justify="space-between" align="start">
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <Text fw={600} style={{ overflowWrap: "anywhere" }}>
+              {record.title}
+            </Text>
+            <Text size="xs" c="dimmed">
+              {new Date(record.completedAtUnixMs).toLocaleString(getUiLocale())} ·{" "}
+              {formatBytes(record.totalBytes)}
+            </Text>
+          </div>
+          <Group gap="xs">
+            <MediaVersionsButton taskId={record.taskId} active={visible} />
+            <Button
+              variant="subtle"
+              color="red"
+              leftSection={<IconTrash size={16} />}
+              loading={busyTask === record.taskId}
+              disabled={busyTask !== null}
+              onClick={() => requestDeletion(record)}
+            >
+              {t("删除记录")}
+            </Button>
+          </Group>
+        </Group>
+        {record.outputPaths.map((path, index) => (
+          <Group key={`${record.taskId}-${index}`} justify="space-between" wrap="nowrap">
+            <Text size="sm" truncate title={path} style={{ minWidth: 0, flex: 1 }}>
+              {path}
+            </Text>
+            <Group gap="xs" wrap="nowrap">
+              <Button
+                size="xs"
+                variant="light"
+                leftSection={<IconExternalLink size={14} />}
+                loading={busyTask === record.taskId}
+                onClick={() => void runAction(record.taskId, "open_history_file", index)}
+              >
+                {t("打开文件")}
+              </Button>
+              <Button
+                size="xs"
+                variant="light"
+                leftSection={<IconFolderOpen size={14} />}
+                loading={busyTask === record.taskId}
+                onClick={() => void runAction(record.taskId, "open_history_folder", index)}
+              >
+                {t("打开目录")}
+              </Button>
+            </Group>
+          </Group>
+        ))}
+      </Stack>
+    </Paper>
+  );
+
   return (
     <main
       className="task-list-page history-page"
@@ -178,61 +242,34 @@ export function HistoryPage({ active }: { active: boolean }) {
             <Text c="dimmed">{t("暂无下载历史。")}</Text>
           </Paper>
         ) : (
-          records.map((record) => (
-            <Paper key={record.taskId} withBorder radius="md" p="md">
-              <Stack gap="sm">
-                <Group justify="space-between" align="start">
-                  <div>
-                    <Text fw={600}>{record.title}</Text>
-                    <Text size="xs" c="dimmed">
-                      {new Date(record.completedAtUnixMs).toLocaleString(getUiLocale())} ·{" "}
-                      {formatBytes(record.totalBytes)}
-                    </Text>
-                  </div>
-                  <Group gap="xs">
-                    <MediaVersionsButton taskId={record.taskId} active={active} />
-                    <Button
-                      variant="subtle"
-                      color="red"
-                      leftSection={<IconTrash size={16} />}
-                      loading={busyTask === record.taskId}
-                      disabled={busyTask !== null}
-                      onClick={() => requestDeletion(record)}
-                    >
-                      {t("删除记录")}
-                    </Button>
-                  </Group>
-                </Group>
-                {record.outputPaths.map((path, index) => (
-                  <Group key={`${record.taskId}-${index}`} justify="space-between" wrap="nowrap">
-                    <Text size="sm" truncate title={path}>
-                      {path}
-                    </Text>
-                    <Group gap="xs" wrap="nowrap">
-                      <Button
-                        size="xs"
-                        variant="light"
-                        leftSection={<IconExternalLink size={14} />}
-                        loading={busyTask === record.taskId}
-                        onClick={() => void runAction(record.taskId, "open_history_file", index)}
-                      >
-                        {t("打开文件")}
-                      </Button>
-                      <Button
-                        size="xs"
-                        variant="light"
-                        leftSection={<IconFolderOpen size={14} />}
-                        loading={busyTask === record.taskId}
-                        onClick={() => void runAction(record.taskId, "open_history_folder", index)}
-                      >
-                        {t("打开目录")}
-                      </Button>
-                    </Group>
-                  </Group>
-                ))}
-              </Stack>
-            </Paper>
-          ))
+          groupRecords(
+            records,
+            (r) => r.taskId,
+            (r) => r.completedAtUnixMs,
+          ).map((group) => {
+            if (!group.context) return renderRecord(group.items[0]);
+            const bytes = group.items.reduce((sum, r) => sum + r.totalBytes, 0);
+            return (
+              <RecordGroup
+                key={group.key}
+                context={group.context}
+                expanded={!!expanded[group.key]}
+                active={active}
+                onToggle={() => setExpanded((v) => ({ ...v, [group.key]: !v[group.key] }))}
+                summary={
+                  <Text size="sm" c="dimmed">
+                    {appliedFilter.trim()
+                      ? t("当前结果 {0} 条记录", [group.items.length])
+                      : t("共 {0} 条记录", [group.items.length])}{" "}
+                    · {new Date(group.timestamp).toLocaleString(getUiLocale())}
+                    {Number.isSafeInteger(bytes) ? ` · ${formatBytes(bytes)}` : ""}
+                  </Text>
+                }
+              >
+                {group.items.map((record) => renderRecord(record, active && !!expanded[group.key]))}
+              </RecordGroup>
+            );
+          })
         )}
       </Stack>
       <Modal

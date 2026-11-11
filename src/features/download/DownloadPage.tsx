@@ -201,6 +201,10 @@ export function DownloadPage({
         const result = await invokeCommand<QueuedPlaylistTasks>("start_playlist_download", {
           request: {
             url: mediaInfo.webpageUrl,
+            group: {
+              title: mediaInfo.playlist.title,
+              kind: isMultipart ? "multipart" : "collection",
+            },
             items: chosenEntries.map((entry) => taskDetails(series.details[entry.index])),
             policy: quality,
             overrides: expandedOverrides(chosenEntries, qualityOverrides),

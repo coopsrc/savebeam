@@ -183,12 +183,22 @@ export type DownloadTaskStatus =
   | "cancelled";
 
 export interface DownloadTask {
+  group?: DownloadGroup | null;
   id: string;
   url: string;
   title: string;
   formatId: string;
   status: DownloadTaskStatus;
   createdAtUnixMs: number;
+}
+
+export interface DownloadGroup {
+  key: string;
+  title: string;
+  sourceUrl: string;
+  kind: "collection" | "multipart";
+  itemIndex: number | null;
+  partIndex: number | null;
 }
 
 export interface DownloadOptions {
@@ -273,6 +283,7 @@ export interface DownloadResult {
 }
 
 export interface DownloadHistoryRecord {
+  group?: DownloadGroup | null;
   taskId: string;
   title: string;
   outputPaths: string[];

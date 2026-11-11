@@ -17,7 +17,13 @@ function actionError(reason: unknown): string {
       : t("操作失败，请重试。");
 }
 
-export function CompletedTaskActions({ task }: { task: DownloadTask }) {
+export function CompletedTaskActions({
+  task,
+  active = true,
+}: {
+  task: DownloadTask;
+  active?: boolean;
+}) {
   useUiLocale();
 
   const navigate = useNavigate();
@@ -101,7 +107,7 @@ export function CompletedTaskActions({ task }: { task: DownloadTask }) {
         </Text>
       )}
       <Group justify="flex-end" gap="xs">
-        {record && <MediaVersionsButton taskId={task.id} />}
+        {record && <MediaVersionsButton taskId={task.id} active={active} />}
         <Button
           size="xs"
           variant="light"

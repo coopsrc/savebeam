@@ -15,6 +15,7 @@ import { resolveDownloadSession } from "../features/download/downloadSession";
 import { SettingsPage } from "../features/settings/SettingsPage";
 import { HistoryPage } from "../features/history/HistoryPage";
 import { SubscriptionsPage } from "../features/subscriptions/SubscriptionsPage";
+import { TaskListPage } from "../features/tasks/TaskListPage";
 
 const routeTitles: Record<string, string> = {
   get "/download"() {
@@ -49,9 +50,11 @@ export function AppShell() {
   const settingsVisible = pathname === "/settings";
   const historyVisible = pathname === "/history";
   const subscriptionsVisible = pathname === "/subscriptions";
-  const retainedRoute = settingsVisible || historyVisible || subscriptionsVisible ? pathname : null;
+  const tasksVisible = pathname === "/tasks";
+  const retainedRoute =
+    settingsVisible || historyVisible || subscriptionsVisible || tasksVisible ? pathname : null;
   const [visited, setVisited] = useState(() => (retainedRoute ? [retainedRoute] : []));
-  // Each retained page mounts on first visit only; the bounded set never grows beyond three.
+  // Each retained page mounts on first visit only; at most four page instances are retained.
   if (retainedRoute && !visited.includes(retainedRoute)) setVisited([...visited, retainedRoute]);
   const [downloadSession, setDownloadSession] = useState(() =>
     resolveDownloadSession(null, location),
@@ -204,6 +207,7 @@ export function AppShell() {
             />
           )}
           {visited.includes("/settings") && <SettingsPage active={settingsVisible} />}
+          {visited.includes("/tasks") && <TaskListPage active={tasksVisible} />}
           {visited.includes("/history") && <HistoryPage active={historyVisible} />}
           {visited.includes("/subscriptions") && (
             <SubscriptionsPage active={subscriptionsVisible} />

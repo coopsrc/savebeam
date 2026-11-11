@@ -1,5 +1,15 @@
 /** English UI catalogue. Keys are Chinese source messages; parameters are literal values. */
 export const english: Record<string, string> = {
+  "分组：{0}": "Group: {0}",
+  系列合集: "Playlist collection",
+  "收起分组：{0}": "Collapse group: {0}",
+  "展开分组：{0}": "Expand group: {0}",
+  "共 {0} 条 · 完成 {1} · 进行中 {2} · 失败 {3} · 已取消 {4}":
+    "{0} items · {1} completed · {2} active · {3} failed · {4} cancelled",
+  "分组完成进度：{0}": "Group completion: {0}",
+  "已完成 {0}/{1} 条": "{0}/{1} items completed",
+  "当前结果 {0} 条记录": "{0} records in current results",
+  "共 {0} 条记录": "{0} records",
   "条目不可用、原始序号或视频 ID 已变化，请重新解析列表。":
     "Item unavailable, or its position or video ID changed. Analyze the playlist again.",
   "格式过多或格式 ID 重复，无法安全固定下载格式。":

@@ -4,6 +4,32 @@ use serde::{Deserialize, Serialize};
 
 pub const MAX_PLAYLIST_ITEMS: u8 = 50;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DownloadGroupKind {
+    Collection,
+    Multipart,
+}
+
+/// Display-only collection identity. Never used as an execution selector or filesystem path.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct DownloadGroup {
+    pub key: String,
+    pub title: String,
+    pub source_url: String,
+    pub kind: DownloadGroupKind,
+    pub item_index: Option<u32>,
+    pub part_index: Option<u32>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct DownloadGroupHint {
+    pub title: String,
+    pub kind: DownloadGroupKind,
+}
+
 /// Immutable naming and identity context for a Bilibili multipart entry inside a collection.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -65,6 +91,8 @@ impl CookieBrowser {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DownloadOptions {
+    #[serde(default)]
+    pub group: Option<DownloadGroup>,
     #[serde(default)]
     pub playlist_part: Option<PlaylistPartContext>,
     pub title: String,
@@ -182,6 +210,8 @@ pub enum DownloadTaskStatus {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DownloadTask {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub group: Option<DownloadGroup>,
     pub id: String,
     pub url: String,
     pub title: String,
@@ -214,6 +244,8 @@ pub struct DownloadResult {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DownloadHistoryRecord {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub group: Option<DownloadGroup>,
     pub task_id: String,
     pub title: String,
     pub output_paths: Vec<String>,

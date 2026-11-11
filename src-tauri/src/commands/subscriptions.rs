@@ -331,7 +331,15 @@ pub async fn download_subscription_items(
             error: None,
         };
         for entry in chosen {
+            let mut group = crate::services::download_groups::make(
+                &subscription.url,
+                None,
+                Some(entry.index),
+                None,
+            )?;
+            group.title = current.title.clone();
             let mut options = DownloadOptions {
+                group: Some(group),
                 title: format!(
                     "{} · {}",
                     current.title,

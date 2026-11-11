@@ -55,6 +55,7 @@ pub fn start_download(
     options.expected_media_id = None;
     options.version_parent_task_id = None;
     options.playlist_part = None;
+    options.group = None;
     options.use_proxy.get_or_insert(false);
     queue_download(
         app,
@@ -409,6 +410,24 @@ pub(crate) fn launch_next_task(
 }
 
 pub(crate) fn validate_task_options(options: &DownloadOptions) -> CommandResult<()> {
+    if let Some(group) = &options.group {
+        let recomputed = crate::services::download_groups::make(
+            &group.source_url,
+            Some(&crate::domain::download::DownloadGroupHint {
+                title: group.title.clone(),
+                kind: group.kind,
+            }),
+            group.item_index,
+            group.part_index,
+        )?;
+        if recomputed.key != group.key {
+            return Err(AppError::new(
+                ErrorCode::InvalidUrl,
+                "合集分组信息无效，请重新解析。",
+                false,
+            ));
+        }
+    }
     if let Some(policy) = &options.quality_policy {
         policy.validate()?;
     }
@@ -446,6 +465,8 @@ pub struct QueuedPlaylistTasks {
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct PlaylistDownloadRequest {
+    #[serde(default)]
+    group: Option<crate::domain::download::DownloadGroupHint>,
     url: String,
     items: Vec<crate::services::playlist_quality::PlaylistDetails>,
     policy: crate::domain::playlist_quality::PlaylistQuality,
@@ -463,6 +484,7 @@ pub fn start_playlist_download(
     database: State<'_, DatabaseManager>,
 ) -> CommandResult<QueuedPlaylistTasks> {
     let PlaylistDownloadRequest {
+        group,
         url,
         items,
         policy,
@@ -491,6 +513,7 @@ pub fn start_playlist_download(
         ));
     }
     load_task_network_preferences(database.database()?, Some(use_proxy))?;
+    let group = crate::services::download_groups::make(&url, group.as_ref(), None, None)?;
     let active = crate::infrastructure::database::repositories::DownloadTaskRepository::new(
         database.database()?,
     )
@@ -534,10 +557,16 @@ pub fn start_playlist_download(
     };
     for item in items {
         let quality = effective(item.index, &policy, &overrides);
-        let Some(options) = task_options(&url, &item, quality, &download_options, use_proxy) else {
+        let Some(mut options) = task_options(&url, &item, quality, &download_options, use_proxy)
+        else {
             result.skipped.push(item.index);
             continue;
         };
+        options.group = Some(crate::domain::download::DownloadGroup {
+            item_index: Some(item.part.as_ref().map_or(item.index, |p| p.parent_index)),
+            part_index: item.part.as_ref().map(|p| p.part_index),
+            ..group.clone()
+        });
         match queue_download(
             app.clone(),
             options,

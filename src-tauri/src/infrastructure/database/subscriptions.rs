@@ -360,6 +360,7 @@ mod tests {
         let url = "https://example.com/list";
         let id = repo.apply(url, &snapshot(&["a"]), 100).unwrap();
         let task = DownloadTask {
+            group: None,
             id: "test-task".into(),
             url: url.into(),
             title: "A".into(),

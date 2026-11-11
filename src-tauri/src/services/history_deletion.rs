@@ -180,6 +180,7 @@ mod tests {
             DownloadTaskRepository::new(database.clone())
                 .insert(
                     &DownloadTask {
+                        group: None,
                         id: "history-1".into(),
                         title: options.title.clone(),
                         url: options.url.clone(),

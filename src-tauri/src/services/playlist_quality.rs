@@ -515,6 +515,7 @@ pub fn task_options(
         ..Default::default()
     };
     advanced.apply_to(&mut options);
+    options.group = super::download_groups::infer(&options);
     Some(options)
 }
 

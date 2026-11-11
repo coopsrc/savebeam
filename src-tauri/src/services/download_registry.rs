@@ -90,13 +90,15 @@ impl DownloadTaskRegistry {
         Ok(())
     }
 
-    pub fn create(&self, options: DownloadOptions) -> Result<DownloadTask, AppError> {
+    pub fn create(&self, mut options: DownloadOptions) -> Result<DownloadTask, AppError> {
+        options.group = super::download_groups::infer(&options);
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map_err(|_| AppError::new(ErrorCode::Unknown, "系统时间不可用。", false))?
             .as_millis() as u64;
         let sequence = NEXT_TASK_ID.fetch_add(1, Ordering::Relaxed);
         let task = DownloadTask {
+            group: options.group.clone(),
             id: format!("{timestamp}-{sequence}"),
             url: options.url.clone(),
             title: options.title.clone(),
@@ -791,6 +793,7 @@ mod tests {
 
     fn test_options(url: &str, title: &str, format_id: &str) -> DownloadOptions {
         DownloadOptions {
+            group: None,
             playlist_part: None,
             version_parent_task_id: None,
             title: title.to_owned(),

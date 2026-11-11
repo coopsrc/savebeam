@@ -6,7 +6,13 @@ import { invokeCommand, IpcError } from "../../ipc/client";
 import { useAppStore } from "../../stores/appStore";
 import type { DownloadTask } from "../../types/domain";
 
-export function DeleteTaskButton({ task }: { task: DownloadTask }) {
+export function DeleteTaskButton({
+  task,
+  active = true,
+}: {
+  task: DownloadTask;
+  active?: boolean;
+}) {
   useUiLocale();
 
   const [opened, setOpened] = useState(false);
@@ -50,7 +56,8 @@ export function DeleteTaskButton({ task }: { task: DownloadTask }) {
         {t("删除任务")}
       </Button>
       <Modal
-        opened={opened}
+        opened={active && opened}
+        returnFocus={active}
         onClose={() => {
           if (!busy) setOpened(false);
         }}

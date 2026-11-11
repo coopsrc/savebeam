@@ -220,6 +220,11 @@ body {
   margin-top: 14px;
 }
 
+.record-group-list {
+  max-height: min(60vh, 560px);
+  min-width: 0;
+}
+
 /* Subscription lists use an inset track, not the boxed platform-native track.
    Inset the whole track (not just the thumb) so both rounded ends remain visible. */
 .subscription-entry-scroll .mantine-ScrollArea-scrollbar[data-orientation="vertical"] {

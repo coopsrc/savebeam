@@ -10,7 +10,7 @@ use rusqlite::{Connection, TransactionBehavior};
 
 use crate::domain::error::{AppError, ErrorCode};
 
-pub const CURRENT_SCHEMA_VERSION: u32 = 15;
+pub const CURRENT_SCHEMA_VERSION: u32 = 16;
 
 pub mod repositories;
 pub mod subscriptions;
@@ -110,6 +110,9 @@ const MIGRATIONS: &[(u32, &str)] = &[(
     "ALTER TABLE subscription_entries ADD COLUMN duration_seconds REAL;"
 ) , (15,
     "ALTER TABLE download_tasks ADD COLUMN playlist_part_json TEXT;"
+), (
+    16,
+    "ALTER TABLE download_tasks ADD COLUMN group_json TEXT;"
 )];
 
 #[derive(Debug, Clone)]
@@ -263,6 +266,28 @@ mod tests {
 
         assert_eq!(version, CURRENT_SCHEMA_VERSION);
         assert_eq!(table_count, 3);
+    }
+
+    #[test]
+    fn upgrades_v15_without_rewriting_tasks_or_guessing_groups() {
+        let mut c = Connection::open_in_memory().unwrap();
+        for (version, sql) in super::MIGRATIONS.iter().filter(|(v, _)| *v <= 15) {
+            c.execute_batch(sql).unwrap();
+            c.pragma_update(None, "user_version", version).unwrap();
+        }
+        c.execute_batch("INSERT INTO download_tasks(task_id,url,title,format_id,output_directory,subtitle_languages_json,status,created_at_unix_ms,updated_at_unix_ms) VALUES('old','https://example.com/video','Original','v+a','/fixture','[]','completed',1,1); INSERT INTO download_history VALUES('old','[\"/fixture/file.mp4\"]',5,2);").unwrap();
+        migrate(&mut c).unwrap();
+        migrate(&mut c).unwrap();
+        let row=c.query_row("SELECT title,format_id,group_json,output_paths_json FROM download_tasks JOIN download_history USING(task_id)",[],|r|Ok((r.get::<_,String>(0)?,r.get::<_,String>(1)?,r.get::<_,Option<String>>(2)?,r.get::<_,String>(3)?))).unwrap();
+        assert_eq!(
+            row,
+            (
+                "Original".into(),
+                "v+a".into(),
+                None,
+                "[\"/fixture/file.mp4\"]".into()
+            )
+        );
     }
 
     #[test]
