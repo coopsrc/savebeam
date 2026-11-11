@@ -410,6 +410,17 @@ pub(crate) fn launch_next_task(
 }
 
 pub(crate) fn validate_task_options(options: &DownloadOptions) -> CommandResult<()> {
+    if options
+        .thumbnail_data_url
+        .as_deref()
+        .is_some_and(|s| !crate::infrastructure::database::artwork::valid(s))
+    {
+        return Err(AppError::new(
+            ErrorCode::InvalidPath,
+            "封面数据无效，请重新解析。",
+            false,
+        ));
+    }
     if let Some(group) = &options.group {
         let recomputed = crate::services::download_groups::make(
             &group.source_url,
@@ -466,6 +477,8 @@ pub struct QueuedPlaylistTasks {
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct PlaylistDownloadRequest {
     #[serde(default)]
+    thumbnail_data_url: Option<String>,
+    #[serde(default)]
     group: Option<crate::domain::download::DownloadGroupHint>,
     url: String,
     items: Vec<crate::services::playlist_quality::PlaylistDetails>,
@@ -484,6 +497,7 @@ pub fn start_playlist_download(
     database: State<'_, DatabaseManager>,
 ) -> CommandResult<QueuedPlaylistTasks> {
     let PlaylistDownloadRequest {
+        thumbnail_data_url,
         group,
         url,
         items,
@@ -567,6 +581,7 @@ pub fn start_playlist_download(
             part_index: item.part.as_ref().map(|p| p.part_index),
             ..group.clone()
         });
+        options.thumbnail_data_url = thumbnail_data_url.clone();
         match queue_download(
             app.clone(),
             options,
@@ -702,9 +717,20 @@ fn run_task(
 
     match result {
         Ok((result, source, files)) => {
+            // A completed task leaves Tasks only after its history has been durably saved.
+            let saved_history = app
+                .state::<DatabaseManager>()
+                .database()
+                .and_then(|database| {
+                    HistoryRepository::new(database).insert(&result, unix_ms_now()?)
+                });
+            if let Err(error) = saved_history {
+                let _ = transition_and_emit(&app, &tasks, &task_id, DownloadTaskStatus::Failed);
+                let _ = app.emit(DOWNLOAD_ERROR_EVENT, EventPayload::new(error));
+                return;
+            }
             if let Some(database) = app.try_state::<DatabaseManager>() {
                 match database.database().and_then(|database| {
-                    HistoryRepository::new(database.clone()).insert(&result, unix_ms_now()?)?;
                     crate::infrastructure::database::versions::VersionRepository(database).save(
                         &task_id,
                         source.as_ref(),
@@ -819,7 +845,7 @@ fn transition_and_emit(
         .inspect(|task| emit_task(app, task))
 }
 
-fn emit_task(app: &AppHandle, task: &DownloadTask) {
+pub(crate) fn emit_task(app: &AppHandle, task: &DownloadTask) {
     let _ = app.emit(
         DOWNLOAD_STATE_CHANGED_EVENT,
         EventPayload::new(task.clone()),

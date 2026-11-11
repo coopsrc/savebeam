@@ -10,8 +10,9 @@ use rusqlite::{Connection, TransactionBehavior};
 
 use crate::domain::error::{AppError, ErrorCode};
 
-pub const CURRENT_SCHEMA_VERSION: u32 = 16;
+pub const CURRENT_SCHEMA_VERSION: u32 = 17;
 
+pub mod artwork;
 pub mod repositories;
 pub mod subscriptions;
 pub mod versions;
@@ -113,6 +114,9 @@ const MIGRATIONS: &[(u32, &str)] = &[(
 ), (
     16,
     "ALTER TABLE download_tasks ADD COLUMN group_json TEXT;"
+), (17,
+    "CREATE TABLE record_artwork (artwork_id TEXT PRIMARY KEY NOT NULL, data_url TEXT NOT NULL, last_used INTEGER NOT NULL);
+     CREATE TABLE task_artwork (task_id TEXT PRIMARY KEY NOT NULL REFERENCES download_tasks(task_id), artwork_id TEXT NOT NULL REFERENCES record_artwork(artwork_id));"
 )];
 
 #[derive(Debug, Clone)]

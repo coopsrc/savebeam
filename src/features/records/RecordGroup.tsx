@@ -1,8 +1,11 @@
 import { useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { Badge, Button, Group, Paper, Stack, Text } from "@mantine/core";
+import { Badge, Button, Group } from "@mantine/core";
 import { IconChevronDown, IconChevronUp } from "@tabler/icons-react";
 import { t, useUiLocale } from "../../i18n/translate";
 import type { DownloadGroup } from "../../types/domain";
+import { useNavigate } from "react-router-dom";
+import { RecordCard } from "./RecordCard";
+import { DeleteGroupButton } from "./DeleteGroupButton";
 
 export function RecordGroup({
   context,
@@ -11,6 +14,9 @@ export function RecordGroup({
   summary,
   children,
   active = true,
+  taskId,
+  history = false,
+  onDeleted,
 }: {
   context: DownloadGroup;
   expanded: boolean;
@@ -18,9 +24,13 @@ export function RecordGroup({
   summary: ReactNode;
   children: ReactNode;
   active?: boolean;
+  taskId: string;
+  history?: boolean;
+  onDeleted?: (error?: string) => void;
 }) {
   useUiLocale();
   const id = useId();
+  const navigate = useNavigate();
   const [visited, setVisited] = useState(expanded);
   const viewport = useRef<HTMLDivElement>(null);
   const scrollTop = useRef(0);
@@ -28,57 +38,68 @@ export function RecordGroup({
     if (active && expanded && viewport.current) viewport.current.scrollTop = scrollTop.current;
   }, [active, expanded]);
   return (
-    <Paper
-      component="section"
-      aria-label={t("分组：{0}", [context.title])}
-      withBorder
-      radius="md"
-      p="md"
+    <RecordCard
+      label={t("分组：{0}", [context.title])}
+      title={context.title}
+      taskId={taskId}
+      active={active}
       className="record-group"
-    >
-      <Stack gap="sm">
-        <Group justify="space-between" align="start" wrap="nowrap">
-          <Stack gap={4} style={{ minWidth: 0, flex: 1 }}>
-            <Text fw={650} style={{ overflowWrap: "anywhere" }}>
-              {context.title}
-            </Text>
-            <Badge variant="light" size="sm">
-              {context.kind === "multipart" ? t("多 P 视频") : t("系列合集")}
-            </Badge>
-          </Stack>
+      metadata={summary}
+      badge={
+        <Badge variant="light" size="sm">
+          {context.kind === "multipart" ? t("多 P 视频") : t("系列合集")}
+        </Badge>
+      }
+      actions={
+        <>
           <Button
-            type="button"
-            size="compact-sm"
-            variant="subtle"
-            aria-label={
-              expanded ? t("收起分组：{0}", [context.title]) : t("展开分组：{0}", [context.title])
-            }
-            aria-expanded={expanded}
-            aria-controls={id}
-            rightSection={expanded ? <IconChevronUp size={16} /> : <IconChevronDown size={16} />}
-            onClick={() => {
-              setVisited(true);
-              onToggle();
-            }}
+            size="xs"
+            variant="light"
+            onClick={() => navigate(`/download?url=${encodeURIComponent(context.sourceUrl)}`)}
           >
-            {expanded ? t("收起") : t("展开")}
+            {t("选择视频")}
           </Button>
-        </Group>
-        {summary}
-        <div
-          ref={viewport}
-          id={id}
-          hidden={!expanded}
-          inert={!expanded || !active}
-          className="download-playlist-list record-group-list"
-          onScroll={(event) => {
-            if (active && expanded && event.currentTarget.getClientRects().length)
-              scrollTop.current = event.currentTarget.scrollTop;
+          <DeleteGroupButton
+            context={context}
+            history={history}
+            active={active}
+            onDeleted={onDeleted}
+          />
+        </>
+      }
+    >
+      <Group justify="flex-end">
+        <Button
+          type="button"
+          size="compact-sm"
+          variant="subtle"
+          aria-label={
+            expanded ? t("收起分组：{0}", [context.title]) : t("展开分组：{0}", [context.title])
+          }
+          aria-expanded={expanded}
+          aria-controls={id}
+          rightSection={expanded ? <IconChevronUp size={16} /> : <IconChevronDown size={16} />}
+          onClick={() => {
+            setVisited(true);
+            onToggle();
           }}
         >
-          {(visited || expanded) && children}
-        </div>
-      </Stack>
-    </Paper>
+          {expanded ? t("收起") : t("展开")}
+        </Button>
+      </Group>
+      <div
+        ref={viewport}
+        id={id}
+        hidden={!expanded}
+        inert={!expanded || !active}
+        className="download-playlist-list record-group-list"
+        onScroll={(event) => {
+          if (active && expanded && event.currentTarget.getClientRects().length)
+            scrollTop.current = event.currentTarget.scrollTop;
+        }}
+      >
+        {(visited || expanded) && children}
+      </div>
+    </RecordCard>
   );
 }

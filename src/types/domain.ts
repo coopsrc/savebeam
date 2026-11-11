@@ -202,6 +202,7 @@ export interface DownloadGroup {
 }
 
 export interface DownloadOptions {
+  thumbnailDataUrl?: string | null;
   title: string;
   url: string;
   formatId: string;

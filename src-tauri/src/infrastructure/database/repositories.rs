@@ -110,7 +110,8 @@ impl DownloadTaskRepository {
                     .with_diagnostic(error.to_string())
             })?;
         self.database.with_connection(|connection| {
-            connection.execute(
+            let transaction = connection.unchecked_transaction()?;
+            transaction.execute(
                 "INSERT INTO download_tasks(
                      task_id, url, title, format_id, output_directory,
                      subtitle_languages_json, status, created_at_unix_ms, updated_at_unix_ms,
@@ -148,7 +149,9 @@ impl DownloadTaskRepository {
                     options.playlist_part.as_ref().map(serde_json::to_string).transpose().map_err(|_| rusqlite::Error::InvalidQuery)?,
                     options.group.as_ref().map(serde_json::to_string).transpose().map_err(|_| rusqlite::Error::InvalidQuery)?,
                 ],
-            )
+            )?;
+            super::artwork::save(&transaction, &task.id, options)?;
+            transaction.commit()
         })?;
         Ok(())
     }
@@ -372,6 +375,7 @@ fn task_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<(DownloadTask, Dow
             created_at_unix_ms: from_sql_integer(created_at)?,
         },
         DownloadOptions {
+            thumbnail_data_url: None,
             group,
             playlist_part: row
                 .get::<_, Option<String>>(25)?
@@ -574,6 +578,7 @@ mod tests {
             created_at_unix_ms: 100,
         };
         let options = DownloadOptions {
+            thumbnail_data_url: None,
             group: None,
             playlist_part: None,
             title: task.title.clone(),
@@ -718,6 +723,7 @@ mod tests {
             created_at_unix_ms: 100,
         };
         let options = DownloadOptions {
+            thumbnail_data_url: None,
             group: None,
             playlist_part: None,
             title: task.title.clone(),

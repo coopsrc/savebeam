@@ -86,3 +86,12 @@ export function taskGroupSummary(tasks: DownloadTask[]) {
     percent: tasks.length ? (counts.completed / tasks.length) * 100 : 0,
   };
 }
+
+/** Keep completed siblings only for aggregate progress while work remains in the group. */
+export function taskRecordGroups(tasks: DownloadTask[]) {
+  return groupRecords(
+    tasks,
+    (t) => t.id,
+    (t) => t.createdAtUnixMs,
+  ).filter((group) => group.items.some((task) => task.status !== "completed"));
+}

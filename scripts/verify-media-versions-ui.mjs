@@ -130,6 +130,11 @@ try {
     );
     const route = scenario === "task-entry" ? "/tasks" : "/history";
     await page.goto(`${base}#${route}`);
+    if (scenario === "task-entry") {
+      // Successful downloads now live only in History.
+      await page.getByText("暂无未完成任务", { exact: true }).waitFor();
+      await page.getByRole("link", { name: "历史", exact: true }).click();
+    }
     await page.getByRole("button", { name: "来源与版本", exact: true }).click();
     const dialog = page.getByRole("dialog", { name: "来源与历史版本", exact: true });
     await dialog.waitFor();
@@ -185,7 +190,7 @@ try {
         });
         await page.getByRole("heading", { name: "任务", exact: true, level: 1 }).waitFor();
         await dialog.waitFor({ state: "hidden" });
-        await page.getByRole("button", { name: "来源与版本", exact: true }).waitFor();
+        await page.getByText("暂无未完成任务", { exact: true }).waitFor();
         await page.evaluate(() => {
           window.location.hash = "/history";
         });
@@ -202,7 +207,7 @@ try {
           assert.equal(await download.isDisabled(), true);
         } else {
           await dialog.getByRole("status").filter({ hasText: "新版本已加入任务列表" }).waitFor();
-          assert.equal(new URL(page.url()).hash, `#${route}`);
+          assert.equal(new URL(page.url()).hash, "#/history");
           assert.deepEqual(
             await page.evaluate(() =>
               window.fixture.calls

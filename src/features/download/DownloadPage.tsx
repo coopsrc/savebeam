@@ -185,6 +185,8 @@ export function DownloadPage({
     // Router transitions may update the URL before this page's active prop commits.
     const originLocation = window.location.href;
     const options: DownloadOptions = {
+      thumbnailDataUrl:
+        mediaInfo.thumbnailDataUrl ?? series.details[1]?.preview?.thumbnailDataUrl ?? null,
       title: mediaInfo.title,
       url: mediaInfo.webpageUrl,
       formatId: selection.formatId,
@@ -200,6 +202,7 @@ export function DownloadPage({
       if (mediaInfo.playlist) {
         const result = await invokeCommand<QueuedPlaylistTasks>("start_playlist_download", {
           request: {
+            thumbnailDataUrl: options.thumbnailDataUrl,
             url: mediaInfo.webpageUrl,
             group: {
               title: mediaInfo.playlist.title,

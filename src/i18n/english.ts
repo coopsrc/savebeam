@@ -1,5 +1,27 @@
 /** English UI catalogue. Keys are Chinese source messages; parameters are literal values. */
 export const english: Record<string, string> = {
+  暂无未完成任务: "No unfinished tasks",
+  "下载完成的内容可在历史中查看；失败或取消的任务可在这里重试。":
+    "Completed downloads are in History. Failed or cancelled tasks can be retried here.",
+  选择视频: "Select videos",
+  读取封面: "Load cover",
+  刷新封面: "Refresh cover",
+  "来源未提供可用封面。": "The source did not provide an available cover.",
+  "封面读取失败。": "Could not load the cover.",
+  删除整组: "Delete group",
+  确认删除整组: "Confirm group deletion",
+  "无法读取删除范围。": "Could not read the deletion scope.",
+  "整组删除未完成。": "Group deletion did not finish.",
+  "已删除 {0} 条；其余记录未删除，可重试。":
+    "Deleted {0} records. The remaining records were kept; you can retry.",
+  "本次确认范围：{0} 条记录。": "Confirmed scope: {0} records.",
+  "删除该组全部历史记录（含历史版本），包括当前搜索未显示的记录；确认后新增的记录不在本次范围内。":
+    "Delete all history in this group, including versions and records outside the current search. Records added after this confirmation are excluded.",
+  "取消并移除该组未完成任务；已完成的历史、下载文件及订阅状态均保留。确认后新增的任务不在本次范围内。":
+    "Cancel and remove unfinished tasks in this group. Completed history, files and subscription status are kept. Tasks added after this confirmation are excluded.",
+  "仅处理记录关联的媒体文件，不删除目录或其他附属文件。部分失败时保留未删除记录以便重试。":
+    "Only linked media files are processed. Folders and sidecars are kept. Records that fail deletion remain available to retry.",
+  "整组历史记录已删除。": "Group history deleted.",
   "分组：{0}": "Group: {0}",
   系列合集: "Playlist collection",
   "收起分组：{0}": "Collapse group: {0}",

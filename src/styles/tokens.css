@@ -225,6 +225,32 @@ body {
   min-width: 0;
 }
 
+.record-cover {
+  position: relative;
+  width: 128px;
+  height: 72px;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 6px;
+  background: var(--sb-color-canvas);
+  color: var(--sb-color-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.record-cover .record-cover-refresh {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  z-index: 1;
+}
+.record-cover .record-cover-error {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  font-size: 10px;
+}
+
 /* Subscription lists use an inset track, not the boxed platform-native track.
    Inset the whole track (not just the thumb) so both rounded ends remain visible. */
 .subscription-entry-scroll .mantine-ScrollArea-scrollbar[data-orientation="vertical"] {

@@ -21,6 +21,7 @@ import { useAppStore } from "../../stores/appStore";
 import { MediaVersionsButton } from "./MediaVersionsButton";
 import { groupRecords } from "../records/groupRecords";
 import { RecordGroup } from "../records/RecordGroup";
+import { RecordCard } from "../records/RecordCard";
 
 export function HistoryPage({ active }: { active: boolean }) {
   useUiLocale();
@@ -38,6 +39,13 @@ export function HistoryPage({ active }: { active: boolean }) {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const deleting = pendingDeletion !== null && busyTask === pendingDeletion.taskId;
   const results = useAppStore((state) => state.downloadResults);
+  const completedRevision = useAppStore((state) =>
+    state.downloadTasks
+      .filter((task) => task.status === "completed")
+      .map((task) => task.id)
+      .sort()
+      .join(","),
+  );
   const appliedQuery = useRef("");
   const request = useRef<object | null>(null);
 
@@ -81,7 +89,7 @@ export function HistoryPage({ active }: { active: boolean }) {
     return () => {
       request.current = null;
     };
-  }, [results]);
+  }, [results, completedRevision]);
 
   async function runAction(
     taskId: string,
@@ -139,61 +147,61 @@ export function HistoryPage({ active }: { active: boolean }) {
   }
 
   const renderRecord = (record: DownloadHistoryRecord, visible = active) => (
-    <Paper key={record.taskId} withBorder radius="md" p="md">
-      <Stack gap="sm">
-        <Group justify="space-between" align="start">
-          <div style={{ minWidth: 0, flex: 1 }}>
-            <Text fw={600} style={{ overflowWrap: "anywhere" }}>
-              {record.title}
-            </Text>
-            <Text size="xs" c="dimmed">
-              {new Date(record.completedAtUnixMs).toLocaleString(getUiLocale())} ·{" "}
-              {formatBytes(record.totalBytes)}
-            </Text>
-          </div>
-          <Group gap="xs">
-            <MediaVersionsButton taskId={record.taskId} active={visible} />
+    <RecordCard
+      key={record.taskId}
+      title={record.title}
+      taskId={record.taskId}
+      active={visible}
+      metadata={
+        <Text size="xs" c="dimmed">
+          {new Date(record.completedAtUnixMs).toLocaleString(getUiLocale())} ·{" "}
+          {formatBytes(record.totalBytes)}
+        </Text>
+      }
+      actions={
+        <>
+          <MediaVersionsButton taskId={record.taskId} active={visible} />
+          <Button
+            variant="subtle"
+            color="red"
+            leftSection={<IconTrash size={16} />}
+            loading={busyTask === record.taskId}
+            disabled={busyTask !== null}
+            onClick={() => requestDeletion(record)}
+          >
+            {t("删除记录")}
+          </Button>
+        </>
+      }
+    >
+      {record.outputPaths.map((path, index) => (
+        <Group key={`${record.taskId}-${index}`} justify="space-between" wrap="nowrap">
+          <Text size="sm" truncate title={path} style={{ minWidth: 0, flex: 1 }}>
+            {path}
+          </Text>
+          <Group gap="xs" wrap="nowrap">
             <Button
-              variant="subtle"
-              color="red"
-              leftSection={<IconTrash size={16} />}
+              size="xs"
+              variant="light"
+              leftSection={<IconExternalLink size={14} />}
               loading={busyTask === record.taskId}
-              disabled={busyTask !== null}
-              onClick={() => requestDeletion(record)}
+              onClick={() => void runAction(record.taskId, "open_history_file", index)}
             >
-              {t("删除记录")}
+              {t("打开文件")}
+            </Button>
+            <Button
+              size="xs"
+              variant="light"
+              leftSection={<IconFolderOpen size={14} />}
+              loading={busyTask === record.taskId}
+              onClick={() => void runAction(record.taskId, "open_history_folder", index)}
+            >
+              {t("打开目录")}
             </Button>
           </Group>
         </Group>
-        {record.outputPaths.map((path, index) => (
-          <Group key={`${record.taskId}-${index}`} justify="space-between" wrap="nowrap">
-            <Text size="sm" truncate title={path} style={{ minWidth: 0, flex: 1 }}>
-              {path}
-            </Text>
-            <Group gap="xs" wrap="nowrap">
-              <Button
-                size="xs"
-                variant="light"
-                leftSection={<IconExternalLink size={14} />}
-                loading={busyTask === record.taskId}
-                onClick={() => void runAction(record.taskId, "open_history_file", index)}
-              >
-                {t("打开文件")}
-              </Button>
-              <Button
-                size="xs"
-                variant="light"
-                leftSection={<IconFolderOpen size={14} />}
-                loading={busyTask === record.taskId}
-                onClick={() => void runAction(record.taskId, "open_history_folder", index)}
-              >
-                {t("打开目录")}
-              </Button>
-            </Group>
-          </Group>
-        ))}
-      </Stack>
-    </Paper>
+      ))}
+    </RecordCard>
   );
 
   return (
@@ -253,6 +261,14 @@ export function HistoryPage({ active }: { active: boolean }) {
               <RecordGroup
                 key={group.key}
                 context={group.context}
+                taskId={group.items[0].taskId}
+                history
+                onDeleted={(failure) =>
+                  void load(appliedQuery.current).then(() => {
+                    if (failure) setError(failure);
+                    else setNotice(t("整组历史记录已删除。"));
+                  })
+                }
                 expanded={!!expanded[group.key]}
                 active={active}
                 onToggle={() => setExpanded((v) => ({ ...v, [group.key]: !v[group.key] }))}

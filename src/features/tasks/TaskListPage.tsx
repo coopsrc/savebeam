@@ -6,7 +6,7 @@ import { getLocalizedErrorMessage } from "../../i18n/errorMessages";
 import { useAppStore } from "../../stores/appStore";
 import { useRetainedPageScroll } from "../../layout/useRetainedPageScroll";
 import { EmptyState } from "../../components/states/AppStates";
-import { groupRecords, taskGroupSummary } from "../records/groupRecords";
+import { taskRecordGroups, taskGroupSummary } from "../records/groupRecords";
 import { RecordGroup } from "../records/RecordGroup";
 import { TaskCard } from "./TaskCard";
 
@@ -17,6 +17,7 @@ export function TaskListPage({ active }: { active: boolean }) {
   const error = useAppStore((s) => s.lastDownloadError);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const navigate = useNavigate();
+  const groups = taskRecordGroups(tasks);
   return (
     <main
       className="task-list-page"
@@ -38,19 +39,15 @@ export function TaskListPage({ active }: { active: boolean }) {
               : getLocalizedErrorMessage(error, getUiLocale())}
           </Alert>
         )}
-        {!tasks.length ? (
+        {!groups.length ? (
           <EmptyState
-            title={t("还没有下载任务")}
-            description={t("解析视频信息并开始下载后，任务进度会显示在这里。")}
+            title={t("暂无未完成任务")}
+            description={t("下载完成的内容可在历史中查看；失败或取消的任务可在这里重试。")}
             actionLabel={t("添加视频链接")}
             onAction={() => navigate("/download")}
           />
         ) : (
-          groupRecords(
-            tasks,
-            (t) => t.id,
-            (t) => t.createdAtUnixMs,
-          ).map((group) => {
+          groups.map((group) => {
             if (!group.context)
               return <TaskCard key={group.key} task={group.items[0]} active={active} />;
             const summary = taskGroupSummary(group.items);
@@ -58,6 +55,7 @@ export function TaskListPage({ active }: { active: boolean }) {
               <RecordGroup
                 key={group.key}
                 context={group.context}
+                taskId={group.items[0].id}
                 expanded={!!expanded[group.key]}
                 onToggle={() => setExpanded((v) => ({ ...v, [group.key]: !v[group.key] }))}
                 active={active}
@@ -97,9 +95,11 @@ export function TaskListPage({ active }: { active: boolean }) {
                   </Stack>
                 }
               >
-                {group.items.map((task) => (
-                  <TaskCard key={task.id} task={task} active={active && !!expanded[group.key]} />
-                ))}
+                {group.items
+                  .filter((task) => task.status !== "completed")
+                  .map((task) => (
+                    <TaskCard key={task.id} task={task} active={active && !!expanded[group.key]} />
+                  ))}
               </RecordGroup>
             );
           })

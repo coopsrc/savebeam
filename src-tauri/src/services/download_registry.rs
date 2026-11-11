@@ -110,6 +110,8 @@ impl DownloadTaskRegistry {
         if let Some(repository) = &state.repository {
             repository.insert(&task, &options)?;
         }
+        // Artwork is local display data, not a repeated per-worker execution snapshot.
+        options.thumbnail_data_url = None;
         state.options.insert(task.id.clone(), options);
         state.tasks.insert(task.id.clone(), task.clone());
         state
@@ -793,6 +795,7 @@ mod tests {
 
     fn test_options(url: &str, title: &str, format_id: &str) -> DownloadOptions {
         DownloadOptions {
+            thumbnail_data_url: None,
             group: None,
             playlist_part: None,
             version_parent_task_id: None,

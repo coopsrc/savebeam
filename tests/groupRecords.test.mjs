@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { groupRecords, taskGroupSummary } from "../src/features/records/groupRecords.ts";
+import {
+  groupRecords,
+  taskGroupSummary,
+  taskRecordGroups,
+} from "../src/features/records/groupRecords.ts";
 const context = (key, title, index, part = null) => ({
   key,
   title,
@@ -60,4 +64,21 @@ test("known parent titles beat legacy URL placeholders and summaries never hide 
   assert.equal(value.percent, 25);
   assert.equal(value.status, "active");
   assert.equal(taskGroupSummary([row("a", null, 1, "failed")]).status, "failed");
+});
+
+test("completed groups leave Tasks and return with new work, while History remains intact", () => {
+  const completed = [row("a", context("series", "合集", 1)), row("single", null)];
+  assert.equal(taskRecordGroups(completed).length, 0);
+  const queued = row("new", context("series", "合集", 2), 10, "queued");
+  const mixed = taskRecordGroups([...completed, queued]);
+  assert.equal(mixed.length, 1);
+  assert.deepEqual(
+    mixed[0].items.map((t) => t.id),
+    ["a", "new"],
+  );
+  assert.equal(taskGroupSummary(mixed[0].items).percent, 50);
+  assert.equal(group(completed).length, 2);
+  assert.equal(taskRecordGroups([...completed, { ...queued, status: "completed" }]).length, 0);
+  for (const status of ["failed", "cancelled"])
+    assert.equal(taskRecordGroups([{ ...queued, status }]).length, 1);
 });

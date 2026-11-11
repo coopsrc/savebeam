@@ -9,5 +9,6 @@ pub mod downloads;
 pub mod ipc;
 pub mod media;
 pub mod network;
+pub mod records;
 pub mod subscriptions;
 pub mod versions;

@@ -91,6 +91,9 @@ impl CookieBrowser {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DownloadOptions {
+    /// A bounded raster preview cached separately from task snapshots and execution arguments.
+    #[serde(default)]
+    pub thumbnail_data_url: Option<String>,
     #[serde(default)]
     pub group: Option<DownloadGroup>,
     #[serde(default)]

@@ -23,6 +23,7 @@ pub mod network_preferences;
 pub mod playlist_parts;
 pub mod playlist_quality;
 pub mod playlist_size;
+pub mod record_deletion;
 pub mod source_versions;
 pub mod subscriptions;
 pub mod thumbnail_preview;
