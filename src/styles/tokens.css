@@ -304,6 +304,8 @@ body {
   .download-workbench--series .download-series-panel {
     /* Equal-height columns, without letting long lists enlarge the media card. */
     contain: size;
+    position: relative;
+    overflow: hidden;
     align-self: stretch;
     display: flex;
     flex-direction: column;
@@ -311,8 +313,13 @@ body {
   }
 
   .download-workbench--series .download-series-content {
-    flex: 1;
+    /* A stretched, size-contained grid item does not give nested flex boxes a
+       definite height in WebKit after resizing. Anchor the content to the panel
+       instead, so the list always has a bounded remaining scroll viewport. */
+    position: absolute;
+    inset: var(--mantine-spacing-md);
     min-height: 0;
+    overflow: hidden;
   }
 
   .download-workbench--series .download-series-content > * {
@@ -320,7 +327,7 @@ body {
   }
 
   .download-workbench--series .download-playlist-list {
-    flex: 1;
+    flex: 1 1 0px;
     min-height: 0;
     max-height: none;
   }
