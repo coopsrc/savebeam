@@ -181,6 +181,7 @@ mod tests {
                 .insert(
                     &DownloadTask {
                         group: None,
+                        batch_id: None,
                         id: "history-1".into(),
                         title: options.title.clone(),
                         url: options.url.clone(),

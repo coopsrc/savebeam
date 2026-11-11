@@ -56,6 +56,7 @@ pub fn start_download(
     options.version_parent_task_id = None;
     options.playlist_part = None;
     options.group = None;
+    options.batch_id = None;
     options.use_proxy.get_or_insert(false);
     queue_download(
         app,
@@ -92,6 +93,9 @@ pub(crate) fn queue_download(
     tasks.set_max_concurrent(preferences.max_concurrent)?;
     validate_task_options(&options)?;
     load_task_network_preferences(database.database()?, options.use_proxy)?;
+    options
+        .batch_id
+        .get_or_insert_with(crate::services::download_groups::new_batch_id);
     let task = tasks.create(options.clone())?;
     tasks.enqueue(&task.id)?;
     launch_next_task(app.clone(), components.clone(), tasks.clone());
@@ -569,6 +573,7 @@ pub fn start_playlist_download(
         skipped: Vec::new(),
         error: None,
     };
+    let batch_id = crate::services::download_groups::new_batch_id();
     for item in items {
         let quality = effective(item.index, &policy, &overrides);
         let Some(mut options) = task_options(&url, &item, quality, &download_options, use_proxy)
@@ -582,6 +587,7 @@ pub fn start_playlist_download(
             ..group.clone()
         });
         options.thumbnail_data_url = thumbnail_data_url.clone();
+        options.batch_id = Some(batch_id.clone());
         match queue_download(
             app.clone(),
             options,

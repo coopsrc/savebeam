@@ -84,6 +84,9 @@ pub fn run() {
             commands::records::get_record_group_members,
             commands::records::delete_record_group,
             commands::records::get_record_thumbnail,
+            commands::records::get_history_file_presence,
+            commands::records::get_record_group_file_presence,
+            commands::records::redownload_missing_history,
             commands::downloads::retry_download,
             commands::versions::list_media_versions,
             commands::versions::check_history_source,
@@ -97,7 +100,7 @@ pub fn run() {
             && let Some(tasks) =
                 handle.try_state::<services::download_registry::DownloadTaskRegistry>()
         {
-            let _ = tasks.cancel_all();
+            let _ = tasks.prepare_for_exit();
         }
     });
 }

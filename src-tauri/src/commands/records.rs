@@ -18,6 +18,94 @@ use crate::{
 use tauri::{AppHandle, Emitter, Manager, State};
 
 #[tauri::command]
+pub async fn get_history_file_presence(
+    task_id: String,
+    database: State<'_, DatabaseManager>,
+) -> CommandResult<crate::services::task_recovery::FilePresence> {
+    let db = database.database()?;
+    tauri::async_runtime::spawn_blocking(move || {
+        crate::services::task_recovery::files(&db, &task_id)
+    })
+    .await
+    .map_err(|_| AppError::new(ErrorCode::Unknown, "文件状态检查未完成。", true))?
+}
+
+#[tauri::command]
+pub async fn get_record_group_file_presence(
+    group_key: String,
+    database: State<'_, DatabaseManager>,
+) -> CommandResult<crate::services::task_recovery::FilePresence> {
+    let db = database.database()?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut total = crate::services::task_recovery::FilePresence {
+            state: "present".into(),
+            missing_count: 0,
+            total_count: 0,
+        };
+        for record in HistoryRepository::new(db.clone())
+            .list()?
+            .into_iter()
+            .filter(|r| r.group.as_ref().is_some_and(|g| g.key == group_key))
+        {
+            let item = crate::services::task_recovery::files(&db, &record.task_id)?;
+            total.missing_count += item.missing_count;
+            total.total_count += item.total_count;
+            if item.state == "unavailable" {
+                total.state = "unavailable".into();
+            }
+        }
+        if total.missing_count > 0 && total.state == "present" {
+            total.state = "missing".into();
+        }
+        Ok(total)
+    })
+    .await
+    .map_err(|_| AppError::new(ErrorCode::Unknown, "文件状态检查未完成。", true))?
+}
+
+#[tauri::command]
+pub async fn redownload_missing_history(
+    app: AppHandle,
+    task_id: String,
+    database: State<'_, DatabaseManager>,
+) -> CommandResult<crate::domain::download::DownloadTask> {
+    let db = database.database()?;
+    let presence = crate::services::task_recovery::files(&db, &task_id)?;
+    if presence.state == "present" {
+        return Err(AppError::new(
+            ErrorCode::InvalidPath,
+            "文件仍存在，请使用来源与版本操作。",
+            false,
+        ));
+    }
+    let (_, options) = crate::services::source_versions::history_options(&db, &task_id)?;
+    let active = DownloadTaskRepository::new(db).list_visible()?;
+    if active.iter().any(|(t, o)| {
+        matches!(
+            t.status,
+            DownloadTaskStatus::Queued
+                | DownloadTaskStatus::Preparing
+                | DownloadTaskStatus::Downloading
+                | DownloadTaskStatus::PostProcessing
+                | DownloadTaskStatus::Cancelling
+        ) && (o.version_parent_task_id.as_deref() == Some(task_id.as_str())
+            || (o.url == options.url && o.playlist_items == options.playlist_items))
+    }) {
+        return Err(AppError::new(
+            ErrorCode::InvalidPath,
+            "此条目已有进行中的下载，请等待完成。",
+            false,
+        ));
+    }
+    super::versions::redownload_media_version(
+        app,
+        task_id,
+        Some(options.use_proxy.unwrap_or(false)),
+    )
+    .await
+}
+
+#[tauri::command]
 pub fn get_record_group_members(
     group_key: String,
     history: bool,

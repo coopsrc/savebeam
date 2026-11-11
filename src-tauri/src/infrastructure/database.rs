@@ -10,7 +10,7 @@ use rusqlite::{Connection, TransactionBehavior};
 
 use crate::domain::error::{AppError, ErrorCode};
 
-pub const CURRENT_SCHEMA_VERSION: u32 = 18;
+pub const CURRENT_SCHEMA_VERSION: u32 = 19;
 
 pub mod artwork;
 pub mod repositories;
@@ -119,6 +119,8 @@ const MIGRATIONS: &[(u32, &str)] = &[(
      CREATE TABLE task_artwork (task_id TEXT PRIMARY KEY NOT NULL REFERENCES download_tasks(task_id), artwork_id TEXT NOT NULL REFERENCES record_artwork(artwork_id));"
 ), (18,
     "ALTER TABLE record_artwork ADD COLUMN last_used INTEGER NOT NULL DEFAULT 0;"
+), (19,
+    "ALTER TABLE download_tasks ADD COLUMN batch_id TEXT;"
 )];
 
 #[derive(Debug, Clone)]
@@ -290,7 +292,7 @@ mod tests {
             assert_eq!(
                 c.pragma_query_value(None, "user_version", |r| r.get::<_, u32>(0))
                     .unwrap(),
-                18
+                CURRENT_SCHEMA_VERSION
             );
             assert_eq!(
                 c.query_row("SELECT last_used FROM record_artwork", [], |r| r

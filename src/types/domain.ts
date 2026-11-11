@@ -183,6 +183,7 @@ export type DownloadTaskStatus =
   | "cancelled";
 
 export interface DownloadTask {
+  batchId?: string | null;
   group?: DownloadGroup | null;
   id: string;
   url: string;

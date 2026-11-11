@@ -118,8 +118,8 @@ impl DownloadTaskRepository {
                      conflict_strategy, playlist_item_count, audio_only,
                      write_automatic_subtitles, write_thumbnail, write_info_json, embed_metadata,
                      cookies_file_path, cookies_browser, cookie_access_confirmed, merge_container,
-                     keep_intermediate_files, playlist_items_json, expected_media_id, use_proxy, quality_policy_json, version_parent_task_id, playlist_part_json, group_json
-                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27)",
+                     keep_intermediate_files, playlist_items_json, expected_media_id, use_proxy, quality_policy_json, version_parent_task_id, playlist_part_json, group_json, batch_id
+                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28)",
                 params![
                     task.id,
                     options.url,
@@ -148,6 +148,7 @@ impl DownloadTaskRepository {
                     options.version_parent_task_id,
                     options.playlist_part.as_ref().map(serde_json::to_string).transpose().map_err(|_| rusqlite::Error::InvalidQuery)?,
                     options.group.as_ref().map(serde_json::to_string).transpose().map_err(|_| rusqlite::Error::InvalidQuery)?,
+                    options.batch_id,
                 ],
             )?;
             super::artwork::save(&transaction, &task.id, options)?;
@@ -173,6 +174,20 @@ impl DownloadTaskRepository {
             .map(|changed| changed > 0)
     }
 
+    pub fn assign_recovery_batch(&self, task_id: &str, batch: &str) -> Result<String, AppError> {
+        self.database.with_connection(|c| {
+            c.execute(
+                "UPDATE download_tasks SET batch_id=?2 WHERE task_id=?1 AND batch_id IS NULL",
+                params![task_id, batch],
+            )?;
+            c.query_row(
+                "SELECT batch_id FROM download_tasks WHERE task_id=?1",
+                [task_id],
+                |r| r.get(0),
+            )
+        })
+    }
+
     pub fn get(&self, task_id: &str) -> Result<Option<(DownloadTask, DownloadOptions)>, AppError> {
         self.database.with_connection(|connection| {
             connection
@@ -182,7 +197,7 @@ impl DownloadTaskRepository {
                             playlist_item_count, audio_only, write_automatic_subtitles,
                             write_thumbnail, write_info_json, embed_metadata,
                             cookies_file_path, cookies_browser, cookie_access_confirmed, merge_container,
-                            keep_intermediate_files, playlist_items_json, expected_media_id, use_proxy, quality_policy_json, version_parent_task_id, playlist_part_json, group_json
+                            keep_intermediate_files, playlist_items_json, expected_media_id, use_proxy, quality_policy_json, version_parent_task_id, playlist_part_json, group_json, batch_id
                      FROM download_tasks WHERE task_id = ?1",
                     [task_id],
                     task_from_row,
@@ -217,8 +232,8 @@ impl DownloadTaskRepository {
                         playlist_item_count, audio_only, write_automatic_subtitles,
                         write_thumbnail, write_info_json, embed_metadata,
                         cookies_file_path, cookies_browser, cookie_access_confirmed, merge_container,
-                        keep_intermediate_files, playlist_items_json, expected_media_id, use_proxy, quality_policy_json, version_parent_task_id, playlist_part_json, group_json
-                 FROM download_tasks WHERE NOT ?1 OR hidden_from_tasks = 0 ORDER BY created_at_unix_ms DESC",
+                        keep_intermediate_files, playlist_items_json, expected_media_id, use_proxy, quality_policy_json, version_parent_task_id, playlist_part_json, group_json, batch_id
+                 FROM download_tasks WHERE NOT ?1 OR hidden_from_tasks = 0 ORDER BY created_at_unix_ms DESC, rowid DESC",
             )?;
             let rows = statement.query_map([visible_only], task_from_row)?;
             rows.collect()
@@ -284,7 +299,7 @@ impl HistoryRepository {
                 "SELECT h.task_id, t.title, h.output_paths_json, h.total_bytes, h.completed_at_unix_ms, t.group_json, t.playlist_part_json, t.url, t.playlist_items_json, t.playlist_item_count
                  FROM download_history h
                  JOIN download_tasks t ON t.task_id = h.task_id
-                 WHERE ?1 = '%%' OR t.title LIKE ?1 OR h.output_paths_json LIKE ?1 OR json_extract(t.group_json, '$.title') LIKE ?1 OR json_extract(t.playlist_part_json, '$.collectionTitle') LIKE ?1
+                 WHERE t.status = 'completed' AND (?1 = '%%' OR t.title LIKE ?1 OR h.output_paths_json LIKE ?1 OR json_extract(t.group_json, '$.title') LIKE ?1 OR json_extract(t.playlist_part_json, '$.collectionTitle') LIKE ?1)
                  ORDER BY h.completed_at_unix_ms DESC",
             )?;
             let rows = statement.query_map([pattern], history_from_row)?;
@@ -366,6 +381,7 @@ fn task_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<(DownloadTask, Dow
     });
     Ok((
         DownloadTask {
+            batch_id: row.get(27)?,
             group: group.clone(),
             id: row.get(0)?,
             url: row.get(1)?,
@@ -375,6 +391,7 @@ fn task_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<(DownloadTask, Dow
             created_at_unix_ms: from_sql_integer(created_at)?,
         },
         DownloadOptions {
+            batch_id: row.get(27)?,
             thumbnail_data_url: None,
             group,
             playlist_part: row
@@ -570,6 +587,7 @@ mod tests {
         let (_, tasks, _) = repositories();
         let task = crate::domain::download::DownloadTask {
             group: None,
+            batch_id: None,
             id: "task-1".into(),
             url: "https://example.com/watch/1".into(),
             title: "Example".into(),
@@ -580,6 +598,7 @@ mod tests {
         let options = DownloadOptions {
             thumbnail_data_url: None,
             group: None,
+            batch_id: None,
             playlist_part: None,
             title: task.title.clone(),
             version_parent_task_id: None,
@@ -668,6 +687,7 @@ mod tests {
             ] {
                 let task = crate::domain::download::DownloadTask {
                     group: None,
+                    batch_id: None,
                     id: id.into(),
                     title: id.into(),
                     url: "https://example.invalid/video".into(),
@@ -715,6 +735,7 @@ mod tests {
         let (_, tasks, history) = repositories();
         let task = crate::domain::download::DownloadTask {
             group: None,
+            batch_id: None,
             id: "task-history".into(),
             url: "https://example.com/watch/1".into(),
             title: "Example".into(),
@@ -725,6 +746,7 @@ mod tests {
         let options = DownloadOptions {
             thumbnail_data_url: None,
             group: None,
+            batch_id: None,
             playlist_part: None,
             title: task.title.clone(),
             version_parent_task_id: None,

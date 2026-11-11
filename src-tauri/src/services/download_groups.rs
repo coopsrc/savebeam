@@ -4,6 +4,20 @@ use crate::domain::{
     error::{AppError, ErrorCode},
 };
 
+/// A display progress scope, separate from the stable collection identity and file naming.
+pub fn new_batch_id() -> String {
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static NEXT: AtomicU64 = AtomicU64::new(1);
+    let time = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |t| t.as_millis());
+    format!(
+        "{time}-{}-{}",
+        std::process::id(),
+        NEXT.fetch_add(1, Ordering::Relaxed)
+    )
+}
+
 pub fn make(
     source: &str,
     hint: Option<&DownloadGroupHint>,
@@ -269,6 +283,7 @@ mod tests {
                 )
                 .unwrap();
                 let task = DownloadTask {
+                    batch_id: Some(format!("round-{n}")),
                     id: n.to_string(),
                     url: url.into(),
                     title: format!("视频{n}"),
@@ -281,6 +296,7 @@ mod tests {
                     .insert(
                         &task,
                         &DownloadOptions {
+                            batch_id: task.batch_id.clone(),
                             url: url.into(),
                             title: task.title.clone(),
                             group: Some(group),
@@ -317,6 +333,9 @@ mod tests {
             assert_eq!(history.search("视频17").unwrap().len(), 1);
             assert_eq!(tasks.list_visible().unwrap().len(), 1);
             assert_eq!(tasks.get("17").unwrap().unwrap().0.group, rows[0].group);
+            let (task, options) = tasks.get("17").unwrap().unwrap();
+            assert_eq!(task.batch_id.as_deref(), Some("round-17"));
+            assert_eq!(task.batch_id, options.batch_id);
             history.delete("1").unwrap();
             assert_eq!(history.list().unwrap().len(), 1);
             assert!(tasks.get("1").unwrap().is_some());

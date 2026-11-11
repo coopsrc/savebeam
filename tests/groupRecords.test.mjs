@@ -67,18 +67,67 @@ test("known parent titles beat legacy URL placeholders and summaries never hide 
 });
 
 test("completed groups leave Tasks and return with new work, while History remains intact", () => {
-  const completed = [row("a", context("series", "合集", 1)), row("single", null)];
+  const completed = [
+    { ...row("a", context("series", "合集", 1)), batchId: "previous" },
+    row("single", null),
+  ];
   assert.equal(taskRecordGroups(completed).length, 0);
-  const queued = row("new", context("series", "合集", 2), 10, "queued");
+  const queued = { ...row("new", context("series", "合集", 2), 10, "queued"), batchId: "current" };
   const mixed = taskRecordGroups([...completed, queued]);
   assert.equal(mixed.length, 1);
   assert.deepEqual(
     mixed[0].items.map((t) => t.id),
-    ["a", "new"],
+    ["new"],
   );
-  assert.equal(taskGroupSummary(mixed[0].items).percent, 50);
+  assert.equal(taskGroupSummary(mixed[0].items).percent, 0);
   assert.equal(group(completed).length, 2);
   assert.equal(taskRecordGroups([...completed, { ...queued, status: "completed" }]).length, 0);
   for (const status of ["failed", "cancelled"])
     assert.equal(taskRecordGroups([{ ...queued, status }]).length, 1);
+});
+
+test("only completed siblings of unfinished rounds count, including legacy rows and simultaneous rounds", () => {
+  const make = (id, batchId, status, index = 1) => ({
+    ...row(id, context("a", "同一合集", index), 1, status),
+    batchId,
+  });
+  const old = Array.from({ length: 10 }, (_, i) =>
+    make("old" + i, i < 5 ? null : "archived", "completed", i + 1),
+  );
+  const live = Array.from({ length: 18 }, (_, i) => make("live" + i, "current", "queued", i + 1));
+  let groups = taskRecordGroups([...old, ...live]);
+  assert.equal(groups[0].items.length, 18);
+  assert.equal(taskGroupSummary(groups[0].items).counts.completed, 0);
+  live[0] = { ...live[0], status: "completed" };
+  groups = taskRecordGroups([...old, ...live]);
+  assert.equal(groups[0].items.length, 18);
+  assert.equal(taskGroupSummary(groups[0].items).percent, 100 / 18);
+  const additional = make("subscription-update", "another", "queued", 19);
+  assert.equal(taskRecordGroups([...old, ...live, additional])[0].items.length, 19);
+  const done = live.map((t) => ({ ...t, status: "completed" }));
+  assert.deepEqual(
+    taskRecordGroups([...old, ...done, additional])[0].items.map((t) => t.id),
+    ["subscription-update"],
+  );
+  assert.equal(
+    groupRecords(
+      [...old, ...done],
+      (t) => t.id,
+      (t) => t.createdAtUnixMs,
+    )[0].items.length,
+    28,
+  );
+  const otherDone = {
+    ...make("other-done", "current", "completed"),
+    group: context("other", "另一合集", 1),
+  };
+  const otherQueued = {
+    ...make("other-queued", "other-round", "queued"),
+    group: context("other", "另一合集", 2),
+  };
+  const separate = taskRecordGroups([...live, otherDone, otherQueued]);
+  assert.deepEqual(
+    separate.find((g) => g.context.key === "other").items.map((t) => t.id),
+    ["other-queued"],
+  );
 });

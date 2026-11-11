@@ -177,6 +177,7 @@ pub async fn redownload_media_version(
             .to_string_lossy()
             .into_owned();
         let tasks = app.state::<DownloadTaskRegistry>();
+        options.batch_id = Some(crate::services::download_groups::new_batch_id());
         let task = tasks.create(options)?;
         tasks.enqueue(&task.id)?;
         launch_next_task(

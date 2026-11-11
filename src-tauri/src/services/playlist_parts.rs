@@ -349,6 +349,7 @@ mod tests {
         )
         .unwrap();
         options.output_directory = dir.to_string_lossy().into();
+        options.batch_id = Some(crate::services::download_groups::new_batch_id());
         assert_eq!(options.playlist_items, Some(vec![2]));
         assert_eq!(options.url, parent_url("BV1uVy7BCErV"));
         let id;
@@ -435,6 +436,17 @@ mod tests {
         repo.mark_task_downloaded(&options, &[format!("{}_p2", p.parent_id)])
             .unwrap();
         repo.apply(&p.source_url, &snapshot, 3).unwrap();
+        assert!(repo.get(id).unwrap().entries[0].downloaded);
+        // A missing P clears its own and the parent's completion, but leaves
+        // the other P recorded so restoring only this P completes the parent.
+        options.playlist_part = Some(context(1));
+        options.expected_media_id = Some(format!("{}_p1", p.parent_id));
+        repo.unmark_task_downloaded(&options).unwrap();
+        repo.apply(&p.source_url, &snapshot, 4).unwrap();
+        assert!(!repo.get(id).unwrap().entries[0].downloaded);
+        repo.mark_task_downloaded(&options, &[format!("{}_p1", p.parent_id)])
+            .unwrap();
+        repo.apply(&p.source_url, &snapshot, 5).unwrap();
         assert!(repo.get(id).unwrap().entries[0].downloaded);
     }
 

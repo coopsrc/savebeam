@@ -34,6 +34,7 @@ struct RegistryState {
     active_task_ids: HashSet<String>,
     max_concurrent: usize,
     repository: Option<DownloadTaskRepository>,
+    shutting_down: bool,
 }
 
 impl Default for RegistryState {
@@ -46,6 +47,7 @@ impl Default for RegistryState {
             active_task_ids: HashSet::new(),
             max_concurrent: 1,
             repository: None,
+            shutting_down: false,
         }
     }
 }
@@ -60,24 +62,14 @@ impl Default for DownloadTaskRegistry {
 
 impl DownloadTaskRegistry {
     /// Attach durable storage and recover tasks left by the previous process.
-    /// Active tasks are not resumed automatically: yt-dlp partial files remain available,
-    /// and the user can explicitly retry after reviewing the interrupted task.
+    /// Recover unfinished work from local files; archived rounds remain manual.
     pub fn initialize_from_database(&self, database: Database) -> Result<(), AppError> {
-        let repository = DownloadTaskRepository::new(database);
-        let records = repository.list_visible()?;
+        let repository = DownloadTaskRepository::new(database.clone());
+        let mut records = repository.list_visible()?;
+        super::task_recovery::recover(&database, &mut records)?;
         let mut state = self.lock()?;
         state.repository = Some(repository.clone());
-        for (mut task, options) in records.into_iter().rev() {
-            if matches!(
-                task.status,
-                DownloadTaskStatus::Preparing
-                    | DownloadTaskStatus::Downloading
-                    | DownloadTaskStatus::PostProcessing
-                    | DownloadTaskStatus::Cancelling
-            ) {
-                task.status = DownloadTaskStatus::Failed;
-                repository.update_status(&task.id, task.status, now_unix_ms()?)?;
-            }
+        for (task, options) in records.into_iter().rev() {
             if task.status == DownloadTaskStatus::Queued {
                 state.pending.push_back(task.id.clone());
             }
@@ -98,6 +90,7 @@ impl DownloadTaskRegistry {
             .as_millis() as u64;
         let sequence = NEXT_TASK_ID.fetch_add(1, Ordering::Relaxed);
         let task = DownloadTask {
+            batch_id: options.batch_id.clone(),
             group: options.group.clone(),
             id: format!("{timestamp}-{sequence}"),
             url: options.url.clone(),
@@ -126,6 +119,12 @@ impl DownloadTaskRegistry {
         next_status: DownloadTaskStatus,
     ) -> Result<DownloadTask, AppError> {
         let mut state = self.lock()?;
+        // Process cancellation during application exit is not a user cancellation.
+        // Keep the durable unfinished state for the next startup. A successful
+        // completion may still commit after its verified history was saved.
+        if state.shutting_down && next_status != DownloadTaskStatus::Completed {
+            return Err(AppError::new(ErrorCode::Cancelled, "应用正在退出。", false));
+        }
         let repository = state.repository.clone();
         let task = state
             .tasks
@@ -301,7 +300,7 @@ impl DownloadTaskRegistry {
 
     pub fn claim_next(&self) -> Result<Option<(DownloadTask, DownloadOptions)>, AppError> {
         let mut state = self.lock()?;
-        if state.active_task_ids.len() >= state.max_concurrent {
+        if state.shutting_down || state.active_task_ids.len() >= state.max_concurrent {
             return Ok(None);
         }
         while let Some(task_id) = state.pending.pop_front() {
@@ -336,31 +335,14 @@ impl DownloadTaskRegistry {
         Ok(())
     }
 
-    pub fn cancel_all(&self) -> Result<Vec<DownloadTask>, AppError> {
+    pub fn prepare_for_exit(&self) -> Result<(), AppError> {
         let mut state = self.lock()?;
-        let mut changed = Vec::new();
-        let repository = state.repository.clone();
-        for task in state.tasks.values_mut() {
-            match task.status {
-                DownloadTaskStatus::Queued => task.status = DownloadTaskStatus::Cancelled,
-                DownloadTaskStatus::Preparing
-                | DownloadTaskStatus::Downloading
-                | DownloadTaskStatus::PostProcessing => {
-                    task.status = DownloadTaskStatus::Cancelling;
-                }
-                _ => continue,
-            }
-            changed.push(task.clone());
-        }
-        if let Some(repository) = repository {
-            for task in &changed {
-                repository.update_status(&task.id, task.status, now_unix_ms()?)?;
-            }
-        }
+        state.shutting_down = true;
+        state.pending.clear();
         for token in state.cancellations.values() {
             token.cancel();
         }
-        Ok(changed)
+        Ok(())
     }
 
     fn lock(&self) -> Result<std::sync::MutexGuard<'_, RegistryState>, AppError> {
@@ -503,7 +485,55 @@ mod tests {
     }
 
     #[test]
-    fn restart_recovers_queued_tasks_and_marks_interrupted_tasks_retryable() {
+    fn exit_stops_workers_without_cancelling_saved_work_and_user_cancellation_stays_manual() {
+        use crate::infrastructure::database::{Database, repositories::DownloadTaskRepository};
+        use DownloadTaskStatus::*;
+        let db = Database::open_in_memory().unwrap();
+        let registry = DownloadTaskRegistry::default();
+        registry.initialize_from_database(db.clone()).unwrap();
+        let queued = registry
+            .create(test_options("https://example.com/1", "Queued", "18"))
+            .unwrap();
+        let running = registry
+            .create(test_options("https://example.com/2", "Running", "18"))
+            .unwrap();
+        let cancelled = registry
+            .create(test_options("https://example.com/3", "Cancelled", "18"))
+            .unwrap();
+        registry.enqueue(&queued.id).unwrap();
+        registry.transition(&running.id, Preparing).unwrap();
+        registry.transition(&running.id, Downloading).unwrap();
+        registry.cancel(&cancelled.id).unwrap();
+        registry.prepare_for_exit().unwrap();
+        assert!(
+            registry
+                .cancellation_token(&running.id)
+                .unwrap()
+                .is_cancelled()
+        );
+        assert!(registry.claim_next().unwrap().is_none());
+        // Late worker callbacks must not turn shutdown into a saved cancellation/failure.
+        assert!(registry.transition(&running.id, Cancelling).is_err());
+        assert!(registry.transition(&running.id, Cancelled).is_err());
+        assert!(registry.transition(&running.id, Failed).is_err());
+        assert_eq!(
+            DownloadTaskRepository::new(db.clone())
+                .get(&running.id)
+                .unwrap()
+                .unwrap()
+                .0
+                .status,
+            Downloading
+        );
+        let restarted = DownloadTaskRegistry::default();
+        restarted.initialize_from_database(db).unwrap();
+        assert_eq!(restarted.task(&queued.id).unwrap().status, Queued);
+        assert_eq!(restarted.task(&running.id).unwrap().status, Queued);
+        assert_eq!(restarted.task(&cancelled.id).unwrap().status, Cancelled);
+    }
+
+    #[test]
+    fn restart_recovers_queued_and_interrupted_tasks_with_saved_options() {
         use crate::{domain::download::DownloadTaskStatus, infrastructure::database::Database};
 
         let database = Database::open_in_memory().unwrap();
@@ -536,13 +566,15 @@ mod tests {
             .find(|task| task.id == interrupted.id)
             .unwrap();
         assert_eq!(recovered_queued.status, DownloadTaskStatus::Queued);
-        assert_eq!(recovered_interrupted.status, DownloadTaskStatus::Failed);
+        assert_eq!(recovered_interrupted.status, DownloadTaskStatus::Queued);
         let (claimed, options) = second_process.claim_next().unwrap().unwrap();
         assert_eq!(claimed.id, queued.id);
         assert!(options.keep_intermediate_files);
         assert_eq!(options.playlist_items, Some(vec![1, 3]));
         assert_eq!(options.use_proxy, Some(false));
-        let (_, options) = second_process.retry(&interrupted.id).unwrap();
+        second_process.finish(&claimed.id).unwrap();
+        let (next, options) = second_process.claim_next().unwrap().unwrap();
+        assert_eq!(next.id, interrupted.id);
         assert!(options.keep_intermediate_files);
         assert_eq!(options.playlist_items, Some(vec![2, 5]));
         assert_eq!(options.use_proxy, Some(true));
@@ -643,10 +675,7 @@ mod tests {
         let repository = DownloadTaskRepository::new(db.clone());
         for (id, status, expected) in &records {
             assert_eq!(repository.get(id).unwrap().unwrap().1, *expected);
-            if matches!(
-                status,
-                DownloadTaskStatus::Preparing | DownloadTaskStatus::Cancelled
-            ) {
+            if matches!(status, DownloadTaskStatus::Cancelled) {
                 assert_eq!(registry.retry(id).unwrap().1, *expected);
             }
             let args =
@@ -797,6 +826,7 @@ mod tests {
         DownloadOptions {
             thumbnail_data_url: None,
             group: None,
+            batch_id: Some(super::super::download_groups::new_batch_id()),
             playlist_part: None,
             version_parent_task_id: None,
             title: title.to_owned(),

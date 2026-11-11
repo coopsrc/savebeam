@@ -398,6 +398,7 @@ mod tests {
         DownloadOptions {
             thumbnail_data_url: None,
             group: None,
+            batch_id: None,
             playlist_part: None,
             version_parent_task_id: None,
             title: "Example".into(),

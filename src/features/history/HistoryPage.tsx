@@ -22,6 +22,7 @@ import { MediaVersionsButton } from "./MediaVersionsButton";
 import { groupRecords } from "../records/groupRecords";
 import { RecordGroup } from "../records/RecordGroup";
 import { RecordCard } from "../records/RecordCard";
+import { HistoryFilePresence } from "./HistoryFilePresence";
 
 export function HistoryPage({ active }: { active: boolean }) {
   useUiLocale();
@@ -37,6 +38,7 @@ export function HistoryPage({ active }: { active: boolean }) {
   const [deletionError, setDeletionError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [fileRevision, setFileRevision] = useState(0);
   const deleting = pendingDeletion !== null && busyTask === pendingDeletion.taskId;
   const results = useAppStore((state) => state.downloadResults);
   const completedRevision = useAppStore((state) =>
@@ -46,6 +48,7 @@ export function HistoryPage({ active }: { active: boolean }) {
       .sort()
       .join(","),
   );
+  const fileStatusRevision = `${fileRevision}:${completedRevision}`;
   const appliedQuery = useRef("");
   const request = useRef<object | null>(null);
 
@@ -174,6 +177,7 @@ export function HistoryPage({ active }: { active: boolean }) {
         </>
       }
     >
+      <HistoryFilePresence taskId={record.taskId} active={visible} revision={fileStatusRevision} />
       {record.outputPaths.map((path, index) => (
         <Group key={`${record.taskId}-${index}`} justify="space-between" wrap="nowrap">
           <Text size="sm" truncate title={path} style={{ minWidth: 0, flex: 1 }}>
@@ -221,6 +225,9 @@ export function HistoryPage({ active }: { active: boolean }) {
               )}
             </Text>
           </div>
+          <Button size="xs" variant="light" onClick={() => setFileRevision((v) => v + 1)}>
+            {t("刷新文件状态")}
+          </Button>
         </Group>
         <Group align="end">
           <TextInput
@@ -273,13 +280,21 @@ export function HistoryPage({ active }: { active: boolean }) {
                 active={active}
                 onToggle={() => setExpanded((v) => ({ ...v, [group.key]: !v[group.key] }))}
                 summary={
-                  <Text size="sm" c="dimmed">
-                    {appliedFilter.trim()
-                      ? t("当前结果 {0} 条记录", [group.items.length])
-                      : t("共 {0} 条记录", [group.items.length])}{" "}
-                    · {new Date(group.timestamp).toLocaleString(getUiLocale())}
-                    {Number.isSafeInteger(bytes) ? ` · ${formatBytes(bytes)}` : ""}
-                  </Text>
+                  <Stack gap={6}>
+                    <Text size="sm" c="dimmed">
+                      {appliedFilter.trim()
+                        ? t("当前结果 {0} 条记录", [group.items.length])
+                        : t("共 {0} 条记录", [group.items.length])}{" "}
+                      · {new Date(group.timestamp).toLocaleString(getUiLocale())}
+                      {Number.isSafeInteger(bytes) ? ` · ${formatBytes(bytes)}` : ""}
+                    </Text>
+                    <HistoryFilePresence
+                      taskId={group.items[0].taskId}
+                      groupKey={group.context.key}
+                      active={active}
+                      revision={fileStatusRevision}
+                    />
+                  </Stack>
                 }
               >
                 {group.items.map((record) => renderRecord(record, active && !!expanded[group.key]))}

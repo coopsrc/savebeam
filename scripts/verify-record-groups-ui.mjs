@@ -32,6 +32,7 @@ try {
         id,
         title,
         status,
+        batchId: "first-round",
         group: context,
         createdAtUnixMs: time,
         url: "https://example.invalid/" + id,
@@ -42,6 +43,19 @@ try {
       const tasks = [
         a1,
         a2,
+        {
+          ...task(
+            "old-hidden-history",
+            "已删除文件的旧任务",
+            "completed",
+            group("A", "修复合集", 9),
+          ),
+          batchId: "archived-round",
+        },
+        {
+          ...task("old-legacy", "旧版已完成任务", "completed", group("A", "修复合集", 10)),
+          batchId: null,
+        },
         task("b1", "其他视频", "completed", group("B", "其他合集", 1)),
         task("single", "普通单视频", "queued", null),
         ...Array.from({ length: 20 }, (_, i) =>
@@ -59,7 +73,7 @@ try {
       const history = [
         record(a1),
         record({ ...a1, id: "a1-old", title: "历史版本" }),
-        record(tasks[2]),
+        record(tasks.find((t) => t.id === "b1")),
       ];
       const f = (window.fixture = {
         tasks,
@@ -70,6 +84,7 @@ try {
         counter: 0,
         partial: false,
         coverError: false,
+        missingFile: false,
       });
       window.__TAURI_EVENT_PLUGIN_INTERNALS__ = { unregisterListener() {} };
       window.__TAURI_INTERNALS__ = {
@@ -113,6 +128,24 @@ try {
             ctx.fillStyle = "#66b9dd";
             ctx.fillRect(12, 36, 104, 20);
             return canvas.toDataURL("image/png");
+          }
+          if (command === "get_history_file_presence")
+            return {
+              state: args.taskId === "b1" && f.missingFile ? "missing" : "present",
+              missingCount: args.taskId === "b1" && f.missingFile ? 1 : 0,
+              totalCount: 1,
+            };
+          if (command === "get_record_group_file_presence")
+            return {
+              state: args.groupKey === "B" && f.missingFile ? "missing" : "present",
+              missingCount: args.groupKey === "B" && f.missingFile ? 1 : 0,
+              totalCount: 1,
+            };
+          if (command === "redownload_missing_history") {
+            const copy = task("b1-copy", "手动重下", "queued", group("B", "其他合集", 1), 100);
+            copy.batchId = "manual-new-round";
+            f.tasks.push(copy);
+            return copy;
           }
           if (command === "get_record_group_members")
             return (args.history ? f.history : f.tasks.filter((t) => t.status !== "completed"))
@@ -158,6 +191,7 @@ try {
       };
       window.addWork = () => {
         const t = task("a3", "更新子视频", "queued", group("A", "修复合集", 3), 99);
+        t.batchId = "new-round";
         f.tasks.push(t);
         emit("download://state-changed", t);
       };
@@ -173,7 +207,11 @@ try {
     assert.equal(await tasksRoot.getByText("其他合集", { exact: true }).count(), 0);
     assert.equal(await tasksRoot.getByText("已完成子视频", { exact: true }).count(), 0);
     await a.locator(".record-cover img").waitFor();
-    assert.equal(await a.getByRole("progressbar").getAttribute("aria-valuenow"), "50");
+    const currentProgress = a.getByRole("progressbar", {
+      name: en ? "Group completion: 修复合集" : "分组完成进度：修复合集",
+      exact: true,
+    });
+    assert.equal(await currentProgress.getAttribute("aria-valuenow"), "50");
     const toggle = (g, title, open) =>
       g.getByRole("button", {
         name: en
@@ -210,6 +248,7 @@ try {
     await route("任务", "Tasks").click();
     await page.evaluate(() => window.addWork());
     await a.waitFor({ state: "visible" });
+    assert.equal(await currentProgress.getAttribute("aria-valuenow"), "0");
     await route("历史", "History").click();
     await historyA.waitFor({ state: "visible" });
     await route("任务", "Tasks").click();
@@ -297,6 +336,41 @@ try {
       .click();
     await other.getByRole("alert").waitFor();
     assert.equal(await other.locator(".record-cover img").count(), 1);
+    assert.equal(
+      await other
+        .getByText(en ? "Files deleted (1/1)" : "文件已删除（1/1）", { exact: true })
+        .count(),
+      0,
+    );
+    await page.evaluate(() => (window.fixture.missingFile = true));
+    await historyRoot
+      .getByRole("button", { name: en ? "Refresh file status" : "刷新文件状态", exact: true })
+      .click();
+    await other
+      .getByText(en ? "Files deleted (1/1)" : "文件已删除（1/1）", { exact: true })
+      .waitFor();
+    assert.equal(
+      await page.evaluate(
+        () => window.fixture.calls.filter((c) => c.command === "redownload_missing_history").length,
+      ),
+      0,
+    );
+    await toggle(other, "其他合集", true).click();
+    await other
+      .getByRole("button", { name: en ? "Download again" : "重新下载", exact: true })
+      .click();
+    await other
+      .getByRole("button", { name: en ? "Added to Tasks" : "已加入任务列表", exact: true })
+      .waitFor();
+    assert.deepEqual(
+      await page.evaluate(
+        () =>
+          window.fixture.calls.filter((c) => c.command === "redownload_missing_history").at(-1)
+            .args,
+      ),
+      { taskId: "b1" },
+    );
+    await page.screenshot({ path: `/tmp/savebeam-missing-history-${locale}.png` });
     assert.deepEqual(errors, []);
     await page.close();
     process.stdout.write(

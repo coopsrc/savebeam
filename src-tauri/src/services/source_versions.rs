@@ -276,6 +276,7 @@ mod tests {
                 .insert(
                     &DownloadTask {
                         group: None,
+                        batch_id: None,
                         id: id.into(),
                         title: options.title.clone(),
                         url: options.url.clone(),
@@ -476,6 +477,7 @@ mod tests {
         .unwrap();
         let registry = crate::services::download_registry::DownloadTaskRegistry::default();
         registry.initialize_from_database(db).unwrap();
+        options.batch_id = Some(crate::services::download_groups::new_batch_id());
         let task = registry.create(options.clone()).unwrap();
         let reopened = crate::services::download_registry::DownloadTaskRegistry::default();
         reopened.initialize_from_database(f.database()).unwrap();

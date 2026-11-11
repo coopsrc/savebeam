@@ -51,6 +51,30 @@ pub struct SubscriptionEntryMetadata {
 pub struct SubscriptionRepository(pub Database);
 
 impl SubscriptionRepository {
+    pub fn unmark_task_downloaded(
+        &self,
+        options: &crate::domain::download::DownloadOptions,
+    ) -> Result<(), AppError> {
+        let Some(id) = &options.expected_media_id else {
+            return Ok(());
+        };
+        let source = options
+            .playlist_part
+            .as_ref()
+            .map_or(options.url.as_str(), |p| p.source_url.as_str());
+        let mut ids = vec![id.as_str()];
+        if let Some(part) = &options.playlist_part {
+            ids.push(&part.parent_id);
+        }
+        self.0.with_connection(|c|{
+            let tx=c.unchecked_transaction()?;
+            for id in ids {
+                tx.execute("DELETE FROM downloaded_media WHERE source_url=?1 AND media_id=?2",params![source,id])?;
+                tx.execute("UPDATE subscription_entries SET downloaded=0 WHERE media_id=?2 AND subscription_id IN (SELECT subscription_id FROM subscriptions WHERE url=?1)",params![source,id])?;
+            }
+            tx.commit()
+        })
+    }
     pub fn list(&self) -> Result<Vec<Subscription>, AppError> {
         self.0.with_connection(|connection| {
             let mut statement = connection.prepare("SELECT subscription_id, url, source_id, title, last_checked_unix_ms, truncated FROM subscriptions ORDER BY subscription_id DESC")?;
@@ -361,6 +385,7 @@ mod tests {
         let id = repo.apply(url, &snapshot(&["a"]), 100).unwrap();
         let task = DownloadTask {
             group: None,
+            batch_id: None,
             id: "test-task".into(),
             url: url.into(),
             title: "A".into(),

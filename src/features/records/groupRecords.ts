@@ -87,11 +87,24 @@ export function taskGroupSummary(tasks: DownloadTask[]) {
   };
 }
 
-/** Keep completed siblings only for aggregate progress while work remains in the group. */
+/** Archived rounds never count toward new work, even if history or files were deleted.
+ * Legacy tasks without a batch identity contribute only unfinished work. */
 export function taskRecordGroups(tasks: DownloadTask[]) {
   return groupRecords(
     tasks,
     (t) => t.id,
     (t) => t.createdAtUnixMs,
-  ).filter((group) => group.items.some((task) => task.status !== "completed"));
+  )
+    .map((group) => {
+      const activeBatches = new Set(
+        group.items.filter((t) => t.status !== "completed" && t.batchId).map((t) => t.batchId),
+      );
+      return {
+        ...group,
+        items: group.items.filter(
+          (t) => t.status !== "completed" || (t.batchId && activeBatches.has(t.batchId)),
+        ),
+      };
+    })
+    .filter((group) => group.items.length > 0);
 }

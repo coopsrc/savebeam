@@ -1,5 +1,15 @@
 /** English UI catalogue. Keys are Chinese source messages; parameters are literal values. */
 export const english: Record<string, string> = {
+  刷新文件状态: "Refresh file status",
+  重新下载: "Download again",
+  "重新下载会新建版本，旧记录保留。":
+    "Downloading again creates a new version and keeps this record.",
+  "文件已删除（{0}/{1}）": "Files deleted ({0}/{1})",
+  文件不可用或无法访问: "Files unavailable or inaccessible",
+  已加入任务列表: "Added to Tasks",
+  "重新下载未完成。": "Redownload did not finish.",
+  "本轮 {0} 条 · 完成 {1} · 进行中 {2} · 失败 {3} · 已取消 {4}":
+    "Current work: {0} items · {1} completed · {2} active · {3} failed · {4} cancelled",
   暂无未完成任务: "No unfinished tasks",
   "下载完成的内容可在历史中查看；失败或取消的任务可在这里重试。":
     "Completed downloads are in History. Failed or cancelled tasks can be retried here.",

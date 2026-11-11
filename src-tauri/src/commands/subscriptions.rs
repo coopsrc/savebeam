@@ -330,6 +330,7 @@ pub async fn download_subscription_items(
             tasks: Vec::new(),
             error: None,
         };
+        let batch_id = crate::services::download_groups::new_batch_id();
         for entry in chosen {
             let mut group = crate::services::download_groups::make(
                 &subscription.url,
@@ -339,6 +340,7 @@ pub async fn download_subscription_items(
             )?;
             group.title = current.title.clone();
             let mut options = DownloadOptions {
+                batch_id: Some(batch_id.clone()),
                 group: Some(group),
                 title: format!(
                     "{} · {}",
