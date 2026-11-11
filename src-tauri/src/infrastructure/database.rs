@@ -10,7 +10,7 @@ use rusqlite::{Connection, TransactionBehavior};
 
 use crate::domain::error::{AppError, ErrorCode};
 
-pub const CURRENT_SCHEMA_VERSION: u32 = 17;
+pub const CURRENT_SCHEMA_VERSION: u32 = 18;
 
 pub mod artwork;
 pub mod repositories;
@@ -115,8 +115,10 @@ const MIGRATIONS: &[(u32, &str)] = &[(
     16,
     "ALTER TABLE download_tasks ADD COLUMN group_json TEXT;"
 ), (17,
-    "CREATE TABLE record_artwork (artwork_id TEXT PRIMARY KEY NOT NULL, data_url TEXT NOT NULL, last_used INTEGER NOT NULL);
+    "CREATE TABLE record_artwork (artwork_id TEXT PRIMARY KEY NOT NULL, data_url TEXT NOT NULL);
      CREATE TABLE task_artwork (task_id TEXT PRIMARY KEY NOT NULL REFERENCES download_tasks(task_id), artwork_id TEXT NOT NULL REFERENCES record_artwork(artwork_id));"
+), (18,
+    "ALTER TABLE record_artwork ADD COLUMN last_used INTEGER NOT NULL DEFAULT 0;"
 )];
 
 #[derive(Debug, Clone)]
@@ -230,7 +232,20 @@ fn migrate(connection: &mut Connection) -> rusqlite::Result<()> {
         .filter(|(version, _)| *version > current_version)
     {
         let transaction = connection.transaction_with_behavior(TransactionBehavior::Immediate)?;
-        transaction.execute_batch(sql)?;
+        // Development v17 databases exist both with and without last_used. Never
+        // rewrite an applied migration or require users to discard their records.
+        let already_has_cache_clock = *version == 18 && {
+            let mut statement = transaction.prepare("PRAGMA table_info(record_artwork)")?;
+            let names = statement.query_map([], |row| row.get::<_, String>(1))?;
+            let mut found = false;
+            for name in names {
+                found |= name? == "last_used";
+            }
+            found
+        };
+        if !already_has_cache_clock {
+            transaction.execute_batch(sql)?;
+        }
         transaction.pragma_update(None, "user_version", version)?;
         transaction.commit()?;
     }
@@ -251,6 +266,53 @@ mod tests {
     use rusqlite::Connection;
 
     use super::{CURRENT_SCHEMA_VERSION, Database, DatabaseManager, migrate};
+
+    #[test]
+    fn upgrades_both_v17_artwork_shapes_without_losing_records() {
+        for has_clock in [false, true] {
+            let mut c = Connection::open_in_memory().unwrap();
+            for (version, sql) in super::MIGRATIONS.iter().filter(|(v, _)| *v <= 17) {
+                c.execute_batch(sql).unwrap();
+                c.pragma_update(None, "user_version", version).unwrap();
+            }
+            c.execute_batch("INSERT INTO download_tasks(task_id,url,title,format_id,output_directory,status,created_at_unix_ms,updated_at_unix_ms) VALUES('saved','https://example.com','Saved title','v+a','/fixture','completed',1,1);
+                INSERT INTO download_history VALUES('saved','[\"/fixture/video.mp4\"]',10,2);
+                INSERT INTO record_artwork VALUES('image','data:image/png;base64,iVBORw0KGgo=');
+                INSERT INTO task_artwork VALUES('saved','image');").unwrap();
+            if has_clock {
+                c.execute_batch(
+                    "ALTER TABLE record_artwork ADD COLUMN last_used INTEGER NOT NULL DEFAULT 123;",
+                )
+                .unwrap();
+            }
+            migrate(&mut c).unwrap();
+            migrate(&mut c).unwrap();
+            assert_eq!(
+                c.pragma_query_value(None, "user_version", |r| r.get::<_, u32>(0))
+                    .unwrap(),
+                18
+            );
+            assert_eq!(
+                c.query_row("SELECT last_used FROM record_artwork", [], |r| r
+                    .get::<_, i64>(0))
+                    .unwrap(),
+                if has_clock { 123 } else { 0 }
+            );
+            assert_eq!(
+                c.query_row("SELECT output_paths_json FROM download_history", [], |r| {
+                    r.get::<_, String>(0)
+                })
+                .unwrap(),
+                "[\"/fixture/video.mp4\"]"
+            );
+            assert_eq!(
+                c.query_row("SELECT artwork_id FROM task_artwork", [], |r| r
+                    .get::<_, String>(0))
+                    .unwrap(),
+                "image"
+            );
+        }
+    }
 
     #[test]
     fn creates_schema_with_all_initial_tables_and_version() {
