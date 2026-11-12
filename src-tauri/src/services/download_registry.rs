@@ -90,6 +90,7 @@ impl DownloadTaskRegistry {
             .as_millis() as u64;
         let sequence = NEXT_TASK_ID.fetch_add(1, Ordering::Relaxed);
         let task = DownloadTask {
+            format_details: options.format_details.clone(),
             batch_id: options.batch_id.clone(),
             group: options.group.clone(),
             id: format!("{timestamp}-{sequence}"),
@@ -567,6 +568,11 @@ mod tests {
             .unwrap();
         assert_eq!(recovered_queued.status, DownloadTaskStatus::Queued);
         assert_eq!(recovered_interrupted.status, DownloadTaskStatus::Queued);
+        assert_eq!(recovered_queued.format_details, queued.format_details);
+        assert_eq!(
+            recovered_interrupted.format_details,
+            interrupted.format_details
+        );
         let (claimed, options) = second_process.claim_next().unwrap().unwrap();
         assert_eq!(claimed.id, queued.id);
         assert!(options.keep_intermediate_files);
@@ -824,6 +830,16 @@ mod tests {
 
     fn test_options(url: &str, title: &str, format_id: &str) -> DownloadOptions {
         DownloadOptions {
+            format_details: Some(crate::domain::task_format::TaskFormat {
+                output_extension: Some("mp4".into()),
+                resolution: Some("1920x1080".into()),
+                fps: Some(29.97),
+                video_codec: Some("hvc1".into()),
+                audio_codec: Some("mp4a.40.2".into()),
+                audio_bitrate_kbps: Some(128.0),
+                audio_extension: Some("m4a".into()),
+                ..Default::default()
+            }),
             thumbnail_data_url: None,
             group: None,
             batch_id: Some(super::super::download_groups::new_batch_id()),

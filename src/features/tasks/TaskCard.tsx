@@ -7,6 +7,7 @@ import type { DownloadTask } from "../../types/domain";
 import { formatBytes } from "../../utils/formatBytes";
 import { DeleteTaskButton } from "./DeleteTaskButton";
 import { RecordCard } from "../records/RecordCard";
+import { taskFormatLines } from "./taskFormat";
 
 function formatDuration(seconds: number) {
   const rounded = Math.max(0, Math.round(seconds));
@@ -60,10 +61,13 @@ export function TaskCard({ task, active }: { task: DownloadTask; active: boolean
       taskId={task.id}
       active={active}
       metadata={
-        <Text size="xs" c="dimmed">
-          {t("格式：")}
-          {task.formatId}
-        </Text>
+        <Stack gap={2} title={t("格式 ID：{0}", [task.formatId])}>
+          {taskFormatLines(task).map((line, index) => (
+            <Text key={index} size="sm" c="dimmed">
+              {line}
+            </Text>
+          ))}
+        </Stack>
       }
       badge={
         <Badge

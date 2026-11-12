@@ -414,6 +414,13 @@ pub(crate) fn launch_next_task(
 }
 
 pub(crate) fn validate_task_options(options: &DownloadOptions) -> CommandResult<()> {
+    if options.format_details.as_ref().is_some_and(|f| !f.valid()) {
+        return Err(AppError::new(
+            ErrorCode::InvalidPath,
+            "音视频参数无效，请重新解析。",
+            false,
+        ));
+    }
     if options
         .thumbnail_data_url
         .as_deref()

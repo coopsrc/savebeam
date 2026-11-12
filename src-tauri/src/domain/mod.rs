@@ -12,3 +12,4 @@ pub mod media;
 pub mod network;
 pub mod playlist_quality;
 pub mod source_version;
+pub mod task_format;

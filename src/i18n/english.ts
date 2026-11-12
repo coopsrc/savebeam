@@ -1,5 +1,13 @@
 /** English UI catalogue. Keys are Chinese source messages; parameters are literal values. */
 export const english: Record<string, string> = {
+  "自动选择音视频，下载时确定": "Video and audio selected automatically at download time",
+  "自动选择音频，下载时确定": "Audio selected automatically at download time",
+  此旧任务未保存音视频参数: "Audio and video details were not saved for this older task",
+  "视频：{0}": "Video: {0}",
+  "音频：{0}": "Audio: {0}",
+  "源音频：{0}": "Source audio: {0}",
+  "输出：{0}": "Output: {0}",
+  "格式 ID：{0}": "Format ID: {0}",
   刷新文件状态: "Refresh file status",
   重新下载: "Download again",
   "重新下载会新建版本，旧记录保留。":

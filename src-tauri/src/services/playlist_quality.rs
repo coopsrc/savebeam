@@ -492,7 +492,14 @@ pub fn task_options(
     use_proxy: bool,
 ) -> Option<crate::domain::download::DownloadOptions> {
     let choice = select(item, policy, advanced.audio_only);
+    let selector = choice.format_id?;
     let mut options = crate::domain::download::DownloadOptions {
+        format_details: super::task_format::capture(
+            &item.formats,
+            &selector,
+            choice.merge_container,
+            advanced.audio_only,
+        ),
         title: item
             .title
             .clone()
@@ -502,7 +509,7 @@ pub fn task_options(
             || url.into(),
             |part| super::playlist_parts::parent_url(&part.parent_id),
         ),
-        format_id: choice.format_id?,
+        format_id: selector,
         merge_container: choice.merge_container,
         playlist_item_count: Some(1),
         playlist_items: Some(vec![
@@ -684,6 +691,9 @@ mod tests {
         policy.max_height = Some(2160);
         advanced.keep_intermediate_files = false;
         assert_eq!(options.format_id, "lower+a128");
+        let snapshot = options.format_details.as_ref().unwrap();
+        assert_eq!(snapshot.audio_bitrate_kbps, Some(128.0));
+        assert_eq!(snapshot.output_extension.as_deref(), Some("mp4"));
         assert_eq!(options.playlist_items, Some(vec![3]));
         assert_eq!(options.expected_media_id.as_deref(), Some("video-3"));
         assert_eq!(options.quality_policy.unwrap().max_height, Some(1080));

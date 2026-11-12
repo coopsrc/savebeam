@@ -38,6 +38,7 @@ import { DownloadEntryList } from "./DownloadEntryList";
 import { DownloadOptionsModal } from "./DownloadOptionsModal";
 import { useDownloadOptions } from "./useDownloadOptions";
 import { estimateOutputBytes } from "./outputEstimate";
+import { selectedFormatDetails } from "../tasks/taskFormat";
 import { PlaylistQualityPanel } from "./PlaylistQualityPanel";
 import { DEFAULT_PLAYLIST_QUALITY } from "./playlistQuality";
 import { PlaylistQualityModal } from "./PlaylistQualityModal";
@@ -185,6 +186,7 @@ export function DownloadPage({
     // Router transitions may update the URL before this page's active prop commits.
     const originLocation = window.location.href;
     const options: DownloadOptions = {
+      formatDetails: selectedFormatDetails(selection, advancedOptions.audioOnly),
       thumbnailDataUrl:
         mediaInfo.thumbnailDataUrl ?? series.details[1]?.preview?.thumbnailDataUrl ?? null,
       title: mediaInfo.title,

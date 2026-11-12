@@ -26,5 +26,6 @@ pub mod playlist_size;
 pub mod record_deletion;
 pub mod source_versions;
 pub mod subscriptions;
+pub mod task_format;
 pub mod task_recovery;
 pub mod thumbnail_preview;

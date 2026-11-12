@@ -384,6 +384,7 @@ mod tests {
         let url = "https://example.com/list";
         let id = repo.apply(url, &snapshot(&["a"]), 100).unwrap();
         let task = DownloadTask {
+            format_details: None,
             group: None,
             batch_id: None,
             id: "test-task".into(),

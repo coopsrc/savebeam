@@ -167,6 +167,7 @@ mod tests {
                 };
                 repo.insert(
                     &DownloadTask {
+                        format_details: options.format_details.clone(),
                         batch_id: None,
                         id: id.into(),
                         url: options.url.clone(),

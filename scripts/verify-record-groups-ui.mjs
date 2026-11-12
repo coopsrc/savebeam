@@ -37,6 +37,17 @@ try {
         createdAtUnixMs: time,
         url: "https://example.invalid/" + id,
         formatId: "v+a",
+        formatDetails: {
+          outputExtension: "mp4",
+          audioOnly: false,
+          resolution: "1920x1080",
+          fps: 29.97,
+          videoCodec: "hvc1.1.6",
+          videoBitrateKbps: 1266.4,
+          audioCodec: "mp4a.40.2",
+          audioBitrateKbps: 128.1,
+          audioExtension: "m4a",
+        },
       });
       const a1 = task("a1", "已完成子视频", "completed", group("A", "修复合集", 1));
       const a2 = task("a2", "下载中子视频", "downloading", group("A", "修复合集", 2));
@@ -221,6 +232,14 @@ try {
       });
     await toggle(a, "修复合集", true).click();
     await a.getByText("下载中子视频", { exact: true }).waitFor();
+    await a
+      .getByText((en ? "Video: " : "视频：") + "1920×1080 · 29.97 FPS · HEVC · 1266 kbps · MP4", {
+        exact: true,
+      })
+      .waitFor();
+    await a
+      .getByText((en ? "Audio: " : "音频：") + "AAC · 128 kbps · M4A", { exact: true })
+      .waitFor();
     assert.equal(await a.getByText("已完成子视频", { exact: true }).count(), 0);
     await page.screenshot({ path: `/tmp/savebeam-active-cards-${locale}.png` });
     await page.evaluate(() => window.finish("a2"));

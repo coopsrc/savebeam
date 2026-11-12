@@ -10,7 +10,7 @@ use rusqlite::{Connection, TransactionBehavior};
 
 use crate::domain::error::{AppError, ErrorCode};
 
-pub const CURRENT_SCHEMA_VERSION: u32 = 19;
+pub const CURRENT_SCHEMA_VERSION: u32 = 20;
 
 pub mod artwork;
 pub mod repositories;
@@ -121,6 +121,8 @@ const MIGRATIONS: &[(u32, &str)] = &[(
     "ALTER TABLE record_artwork ADD COLUMN last_used INTEGER NOT NULL DEFAULT 0;"
 ), (19,
     "ALTER TABLE download_tasks ADD COLUMN batch_id TEXT;"
+), (20,
+    "ALTER TABLE download_tasks ADD COLUMN format_details_json TEXT;"
 )];
 
 #[derive(Debug, Clone)]

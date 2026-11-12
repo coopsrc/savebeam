@@ -88,9 +88,11 @@ impl CookieBrowser {
     }
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Debug, Clone, Default, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DownloadOptions {
+    #[serde(default)]
+    pub format_details: Option<super::task_format::TaskFormat>,
     #[serde(default)]
     pub batch_id: Option<String>,
     /// A bounded raster preview cached separately from task snapshots and execution arguments.
@@ -212,9 +214,11 @@ pub enum DownloadTaskStatus {
     Cancelled,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DownloadTask {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub format_details: Option<super::task_format::TaskFormat>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub batch_id: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

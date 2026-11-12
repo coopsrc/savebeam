@@ -190,6 +190,7 @@ mod tests {
         DownloadTaskRepository::new(db.clone())
             .insert(
                 &DownloadTask {
+                    format_details: options.format_details.clone(),
                     batch_id: options.batch_id.clone(),
                     group: Some(group),
                     id: id.into(),

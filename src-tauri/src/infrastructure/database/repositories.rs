@@ -118,8 +118,8 @@ impl DownloadTaskRepository {
                      conflict_strategy, playlist_item_count, audio_only,
                      write_automatic_subtitles, write_thumbnail, write_info_json, embed_metadata,
                      cookies_file_path, cookies_browser, cookie_access_confirmed, merge_container,
-                     keep_intermediate_files, playlist_items_json, expected_media_id, use_proxy, quality_policy_json, version_parent_task_id, playlist_part_json, group_json, batch_id
-                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28)",
+                     keep_intermediate_files, playlist_items_json, expected_media_id, use_proxy, quality_policy_json, version_parent_task_id, playlist_part_json, group_json, batch_id, format_details_json
+                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28, ?29)",
                 params![
                     task.id,
                     options.url,
@@ -149,6 +149,7 @@ impl DownloadTaskRepository {
                     options.playlist_part.as_ref().map(serde_json::to_string).transpose().map_err(|_| rusqlite::Error::InvalidQuery)?,
                     options.group.as_ref().map(serde_json::to_string).transpose().map_err(|_| rusqlite::Error::InvalidQuery)?,
                     options.batch_id,
+                    options.format_details.as_ref().map(serde_json::to_string).transpose().map_err(|_| rusqlite::Error::InvalidQuery)?,
                 ],
             )?;
             super::artwork::save(&transaction, &task.id, options)?;
@@ -197,7 +198,7 @@ impl DownloadTaskRepository {
                             playlist_item_count, audio_only, write_automatic_subtitles,
                             write_thumbnail, write_info_json, embed_metadata,
                             cookies_file_path, cookies_browser, cookie_access_confirmed, merge_container,
-                            keep_intermediate_files, playlist_items_json, expected_media_id, use_proxy, quality_policy_json, version_parent_task_id, playlist_part_json, group_json, batch_id
+                            keep_intermediate_files, playlist_items_json, expected_media_id, use_proxy, quality_policy_json, version_parent_task_id, playlist_part_json, group_json, batch_id, format_details_json
                      FROM download_tasks WHERE task_id = ?1",
                     [task_id],
                     task_from_row,
@@ -232,7 +233,7 @@ impl DownloadTaskRepository {
                         playlist_item_count, audio_only, write_automatic_subtitles,
                         write_thumbnail, write_info_json, embed_metadata,
                         cookies_file_path, cookies_browser, cookie_access_confirmed, merge_container,
-                        keep_intermediate_files, playlist_items_json, expected_media_id, use_proxy, quality_policy_json, version_parent_task_id, playlist_part_json, group_json, batch_id
+                        keep_intermediate_files, playlist_items_json, expected_media_id, use_proxy, quality_policy_json, version_parent_task_id, playlist_part_json, group_json, batch_id, format_details_json
                  FROM download_tasks WHERE NOT ?1 OR hidden_from_tasks = 0 ORDER BY created_at_unix_ms DESC, rowid DESC",
             )?;
             let rows = statement.query_map([visible_only], task_from_row)?;
@@ -362,6 +363,10 @@ fn task_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<(DownloadTask, Dow
         )
     })?;
     let created_at: i64 = row.get(8)?;
+    let format_details: Option<crate::domain::task_format::TaskFormat> = row
+        .get::<_, Option<String>>(28)?
+        .map(|json| serde_json::from_str(&json).map_err(|_| rusqlite::Error::InvalidQuery))
+        .transpose()?;
     let group = crate::services::download_groups::infer(&DownloadOptions {
         group: row
             .get::<_, Option<String>>(26)?
@@ -381,6 +386,7 @@ fn task_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<(DownloadTask, Dow
     });
     Ok((
         DownloadTask {
+            format_details: format_details.clone(),
             batch_id: row.get(27)?,
             group: group.clone(),
             id: row.get(0)?,
@@ -391,6 +397,7 @@ fn task_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<(DownloadTask, Dow
             created_at_unix_ms: from_sql_integer(created_at)?,
         },
         DownloadOptions {
+            format_details,
             batch_id: row.get(27)?,
             thumbnail_data_url: None,
             group,
@@ -586,6 +593,7 @@ mod tests {
     fn task_repository_round_trips_options_and_updates_state() {
         let (_, tasks, _) = repositories();
         let task = crate::domain::download::DownloadTask {
+            format_details: None,
             group: None,
             batch_id: None,
             id: "task-1".into(),
@@ -596,6 +604,7 @@ mod tests {
             created_at_unix_ms: 100,
         };
         let options = DownloadOptions {
+            format_details: task.format_details.clone(),
             thumbnail_data_url: None,
             group: None,
             batch_id: None,
@@ -686,6 +695,7 @@ mod tests {
                 ("legacy", None),
             ] {
                 let task = crate::domain::download::DownloadTask {
+                    format_details: None,
                     group: None,
                     batch_id: None,
                     id: id.into(),
@@ -734,6 +744,7 @@ mod tests {
     fn deleting_history_does_not_touch_download_files_or_task_record() {
         let (_, tasks, history) = repositories();
         let task = crate::domain::download::DownloadTask {
+            format_details: None,
             group: None,
             batch_id: None,
             id: "task-history".into(),
@@ -744,6 +755,7 @@ mod tests {
             created_at_unix_ms: 100,
         };
         let options = DownloadOptions {
+            format_details: task.format_details.clone(),
             thumbnail_data_url: None,
             group: None,
             batch_id: None,

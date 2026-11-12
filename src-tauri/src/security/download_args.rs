@@ -396,6 +396,7 @@ mod tests {
 
     fn options(directory: &std::path::Path) -> DownloadOptions {
         DownloadOptions {
+            format_details: None,
             thumbnail_data_url: None,
             group: None,
             batch_id: None,

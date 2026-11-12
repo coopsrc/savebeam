@@ -283,6 +283,7 @@ mod tests {
                 )
                 .unwrap();
                 let task = DownloadTask {
+                    format_details: None,
                     batch_id: Some(format!("round-{n}")),
                     id: n.to_string(),
                     url: url.into(),

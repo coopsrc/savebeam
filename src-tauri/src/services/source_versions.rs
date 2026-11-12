@@ -226,6 +226,12 @@ pub fn prepare_version_options(
         .format_id
         .ok_or_else(|| invalid("当前来源无匹配格式，请重新解析并调整画质。"))?;
     options.merge_container = matched.merge_container;
+    options.format_details = super::task_format::capture(
+        &details.formats,
+        &options.format_id,
+        options.merge_container,
+        options.audio_only,
+    );
     options.title = title;
     options.expected_media_id = Some(current.media_id.clone());
     options.quality_policy = Some(policy);
@@ -275,6 +281,7 @@ mod tests {
             DownloadTaskRepository::new(db.clone())
                 .insert(
                     &DownloadTask {
+                        format_details: options.format_details.clone(),
                         group: None,
                         batch_id: None,
                         id: id.into(),
@@ -434,6 +441,11 @@ mod tests {
         let f = Fixture::new();
         let db = f.database();
         let mut original = f.options();
+        original.format_details = Some(crate::domain::task_format::TaskFormat {
+            resolution: Some("1280x720".into()),
+            video_codec: Some("avc1".into()),
+            ..Default::default()
+        });
         original.subtitle_languages = vec!["en".into()];
         original.write_info_json = true;
         original.keep_intermediate_files = true;
@@ -456,6 +468,17 @@ mod tests {
         )
         .unwrap();
         assert_eq!(options.format_id, "new-video+new-audio");
+        assert_eq!(options.format_details.as_ref().unwrap().fps, Some(30.0));
+        assert_eq!(
+            options
+                .format_details
+                .as_ref()
+                .unwrap()
+                .video_codec
+                .as_deref(),
+            Some("hvc1")
+        );
+        assert_ne!(options.format_details, original.format_details);
         assert_eq!(options.conflict_strategy, DownloadConflictStrategy::Skip);
         assert_eq!(options.subtitle_languages, original.subtitle_languages);
         assert!(

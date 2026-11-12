@@ -183,6 +183,7 @@ export type DownloadTaskStatus =
   | "cancelled";
 
 export interface DownloadTask {
+  formatDetails?: TaskFormat | null;
   batchId?: string | null;
   group?: DownloadGroup | null;
   id: string;
@@ -191,6 +192,18 @@ export interface DownloadTask {
   formatId: string;
   status: DownloadTaskStatus;
   createdAtUnixMs: number;
+}
+
+export interface TaskFormat {
+  outputExtension: string | null;
+  audioOnly: boolean;
+  resolution: string | null;
+  fps: number | null;
+  videoCodec: string | null;
+  videoBitrateKbps: number | null;
+  audioCodec: string | null;
+  audioBitrateKbps: number | null;
+  audioExtension: string | null;
 }
 
 export interface DownloadGroup {
@@ -203,6 +216,7 @@ export interface DownloadGroup {
 }
 
 export interface DownloadOptions {
+  formatDetails?: TaskFormat | null;
   thumbnailDataUrl?: string | null;
   title: string;
   url: string;
