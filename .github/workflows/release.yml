@@ -50,12 +50,23 @@ jobs:
         run: |
           rustup toolchain install stable --profile minimal --component rustfmt --component clippy
           rustup target add '${{ matrix.target }}'
+      - name: Cache Rust compilation
+        uses: Swatinem/rust-cache@e9d7b9f1e587218970671bac74e5511ed9506e6a # v2
+        with:
+          workspaces: src-tauri
+          cache-on-failure: true
       - name: Install locked dependencies and run checks
         shell: bash
         run: |
           pnpm install --frozen-lockfile
           pnpm check
-          if [[ '${{ matrix.platform }}' == darwin ]]; then python3 scripts/generate-notices.py; else python scripts/generate-notices.py; fi
+          if [[ '${{ matrix.platform }}' == darwin ]]; then
+            python3 scripts/test_generate_notices.py
+            python3 scripts/generate-notices.py
+          else
+            python scripts/test_generate_notices.py
+            python scripts/generate-notices.py
+          fi
           git diff --exit-code -- docs/releases/THIRD_PARTY_NOTICES.txt
       - name: Import macOS release signing credentials
         if: matrix.platform == 'darwin' && inputs.signing_mode == 'signed'

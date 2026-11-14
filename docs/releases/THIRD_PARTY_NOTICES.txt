@@ -1762,9 +1762,15 @@ License texts: 3d5b63706380c8c7
 npm: cookie 1.1.1 | MIT
 Source archive: https://registry.npmjs.org/cookie/-/cookie-1.1.1.tgz
 License texts: b970cfe4a7f34ca7
+npm: csstype 3.2.3 | MIT
+Source archive: https://registry.npmjs.org/csstype/-/csstype-3.2.3.tgz
+License texts: 6a972b33787e1430
 npm: detect-node-es 1.1.0 | MIT
 Source archive: https://registry.npmjs.org/detect-node-es/-/detect-node-es-1.1.0.tgz
 License texts: 5dd2a43c0ed685c4
+npm: get-nonce 1.0.1 | MIT
+Source archive: https://registry.npmjs.org/get-nonce/-/get-nonce-1.0.1.tgz
+License texts: a05c505267a8736e
 npm: react 19.3.1 | MIT
 Source archive: https://registry.npmjs.org/react/-/react-19.3.1.tgz
 License texts: cf9b17822d1fcd4f
@@ -1791,6 +1797,9 @@ License texts: 9bd42e9ab2f84a39
 npm: react-style-singleton 2.2.3 | MIT
 Source archive: https://registry.npmjs.org/react-style-singleton/-/react-style-singleton-2.2.3.tgz
 License texts: 07dfb46d2e36d998
+npm: scheduler 0.28.0 | MIT
+Source archive: https://registry.npmjs.org/scheduler/-/scheduler-0.28.0.tgz
+License texts: cf9b17822d1fcd4f
 npm: set-cookie-parser 2.7.2 | MIT
 Source archive: https://registry.npmjs.org/set-cookie-parser/-/set-cookie-parser-2.7.2.tgz
 License texts: 1798ebfcb7e5db70
@@ -8379,6 +8388,29 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
 ========================================================================
+License text 6a972b33787e1430
+========================================================================
+Copyright (c) 2017-2018 Fredrik Nicol
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+========================================================================
 License text 6ac8711fb340c62c
 ========================================================================
 The MIT License (MIT)
@@ -12670,6 +12702,31 @@ License text 9dde4a6ad4966063
 ========================================================================
 Copyright (c) 2013-2014 The Rust Project Developers.
 Copyright (c) 2015-2020 The rust-hex Developers
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+========================================================================
+License text a05c505267a8736e
+========================================================================
+MIT License
+
+Copyright (c) 2020 Anton Korzunov
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

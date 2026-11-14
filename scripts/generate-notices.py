@@ -12,25 +12,58 @@ def command(args):
     return json.loads(subprocess.check_output(args, cwd=ROOT, text=True))
 
 
+def npm_packages(root):
+    """Follow installed manifests, including peers, independently of pnpm list deduplication."""
+    root = root.resolve()
+    seen_paths = set()
+    packages = {}
+
+    def resolve(name, directory):
+        cursor = directory
+        while cursor.is_relative_to(root):
+            manifest = cursor / "node_modules" / name / "package.json"
+            if manifest.is_file():
+                return manifest.parent.resolve()
+            if cursor == root:
+                break
+            cursor = cursor.parent
+        return None
+
+    def visit(name, directory, required):
+        package = resolve(name, directory)
+        if package is None:
+            if required:
+                raise ValueError(f"Missing installed production dependency: {name}")
+            return
+        if package in seen_paths:
+            return
+        seen_paths.add(package)
+        manifest = json.loads((package / "package.json").read_text())
+        if manifest["name"] != name:
+            raise ValueError(f"Unexpected package identity for {name}")
+        license_name = manifest.get("license") or "metadata unavailable"
+        if isinstance(license_name, dict):
+            license_name = license_name.get("type", "metadata unavailable")
+        packages[(name, manifest["version"])] = (
+            "npm", name, manifest["version"], license_name, [package], None
+        )
+        optional = manifest.get("optionalDependencies", {})
+        for dependency in manifest.get("dependencies", {}):
+            visit(dependency, package, dependency not in optional)
+        for dependency in optional:
+            visit(dependency, package, False)
+        for dependency in manifest.get("peerDependencies", {}):
+            visit(dependency, package, False)
+
+    manifest = json.loads((root / "package.json").read_text())
+    for name in manifest.get("dependencies", {}):
+        visit(name, root, True)
+    return list(packages.values())
+
+
 def main():
-    npm = command(["pnpm", "list", "--prod", "--depth", "Infinity", "--json"])
     cargo = command(["cargo", "metadata", "--manifest-path", "src-tauri/Cargo.toml", "--locked", "--format-version", "1"])
-    packages = []
-    seen=set()
-    def visit(node):
-        for name,row in node.get("dependencies",{}).items():
-            path=Path(row["path"])
-            if path in seen:
-                continue
-            seen.add(path)
-            manifest=json.loads((path/"package.json").read_text())
-            license_name=manifest.get("license") or "metadata unavailable"
-            if isinstance(license_name,dict):
-                license_name=license_name.get("type","metadata unavailable")
-            packages.append(("npm",name,row["version"],license_name,[path],None))
-            visit(row)
-    for project in npm:
-        visit(project)
+    packages = npm_packages(ROOT)
     for row in cargo["packages"]:
         if row["name"] == "savebeam":
             continue
