@@ -1,6 +1,25 @@
 # Component catalog: local release preparation
 
-Updated: 2026-10-21
+Updated: 2026-11-14
+
+## Current review (2026-11-14)
+
+The candidate now pins yt-dlp **2026.10.26**, Deno **2.9.8**, and FFmpeg-Builds **9.0.2-57-gd838f9f9ae / autobuild-2026-11-13-12-43**, replacing every floating `latest` asset URL. Sizes/hashes were refreshed from the fixed upstream GitHub Release assets. Only the two macOS arm64 yt-dlp/Deno packages have had their actual downloaded bytes compared to those hashes; other targets remain metadata-only candidates. macOS FFmpeg stays system/custom by design.
+
+Real native macOS arm64 tests passed: official binary SHA-256, wrong-hash rejection, live HTTPS cancellation/partial cleanup, safe extraction, version probes, same-version replacement and failed-health-check rollback. All files stayed in isolated `/tmp` directories. The test exposed and fixed standalone yt-dlp cold-start detection; see [record](../verification/component-cold-start.md).
+
+`release/component-review.json` binds reviews to the SHA-256 of the exact candidate. Publication remains **not approved**. Every target requires downloaded-hash, native smoke and exact-binary notice/source review. `scripts/verify-component-review.mjs` refuses stale/incomplete reviews and floating URLs, before the publishing workflow reads its private key. Signature/publication endpoint tests and other native targets remain open; no Release was created or modified.
+
+Operator-run native helper (refuses an existing output directory):
+
+```sh
+cargo run --locked --features release-tools --manifest-path src-tauri/Cargo.toml \
+  --bin component_release_smoke -- release/components.unsigned.json /path/to/asset-cache /tmp/new-smoke
+```
+
+All signing/verifying CLI helpers now require `--features release-tools`, keeping them out of application bundles. Signing scripts already pass it. Remaining exact-binary notices include standalone yt-dlp's third-party dependencies and FFmpeg's configuration/source obligations; application-source notices do not replace these reviews.
+
+The details below preserve the **historical 2026-10-21 preparation**, not the current versions or validation status above.
 
 Status: prepared locally; **not signed with the production key and not published**.
 
@@ -36,7 +55,7 @@ Local verification can be run without production credentials:
 ```sh
 jq empty release/components.unsigned.json
 bash -n scripts/sign-component-manifest.sh
-cargo run --locked --manifest-path src-tauri/Cargo.toml --bin component_manifest_payload -- release/components.unsigned.json >/dev/null
+cargo run --locked --features release-tools --manifest-path src-tauri/Cargo.toml --bin component_manifest_payload -- release/components.unsigned.json >/dev/null
 ```
 
 Do not use the real signing key for routine tests. A temporary test key should only be used to confirm that signature generation works; because it will not match the app's pinned public key, the final verification step is expected to reject it.

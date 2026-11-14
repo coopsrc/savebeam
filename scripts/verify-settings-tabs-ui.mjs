@@ -508,7 +508,7 @@ try {
     assert.deepEqual(scene.errors, []);
     await scene.page.close();
     process.stdout.write(
-      `settings tabs: 3 desktop profiles × 5 groups (${scheme}) at 1280x800 passed\n`,
+      `settings tabs: 3 desktop profiles × ${labels.length} groups (${scheme}) at 1280x800 passed\n`,
     );
   }
 } finally {

@@ -86,7 +86,7 @@ try {
     await page.goto("http://127.0.0.1:1421/#/settings");
     await page.getByRole("tab", { name: en ? "About" : "关于", exact: true }).click();
     const check = page.getByRole("button", {
-        name: en ? "Check app updates" : "检查应用更新",
+      name: en ? "Check app updates" : "检查应用更新",
       exact: true,
     });
     await check.waitFor();

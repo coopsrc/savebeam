@@ -30,14 +30,14 @@ cleanup() {
 }
 trap cleanup EXIT HUP INT TERM
 
-cargo run --quiet --locked --manifest-path src-tauri/Cargo.toml \
+cargo run --quiet --locked --features release-tools --manifest-path src-tauri/Cargo.toml \
   --bin component_manifest_payload -- "$manifest_path" > "$temp_dir/payload.bin"
 openssl pkeyutl -sign -rawin -inkey "$key_path" \
   -in "$temp_dir/payload.bin" -out "$temp_dir/signature.bin"
 signature_hex=$(xxd -p -c 64 "$temp_dir/signature.bin" | tr -d '\n')
 jq --arg signature "$signature_hex" '.signature = $signature' \
   "$manifest_path" > "$temp_dir/output.json"
-cargo run --quiet --locked --manifest-path src-tauri/Cargo.toml \
+cargo run --quiet --locked --features release-tools --manifest-path src-tauri/Cargo.toml \
   --bin verify_component_manifest -- "$temp_dir/output.json"
 
 output_parent=$(dirname "$output_path")

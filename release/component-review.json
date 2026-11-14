@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "manifestSha256": "9e0ceeb75db0b378f8668f5f225ca9610e6d9cd4cfbf45d0376f4aa137d789b2",
+  "approvedForPublication": false,
+  "checkedAt": "2026-11-14",
+  "entries": {
+    "yt_dlp/mac_os/aarch64": {
+      "downloadedHashVerified": true,
+      "nativeSmokePassed": true,
+      "binaryNoticesReviewed": false
+    },
+    "yt_dlp/mac_os/x86_64": {
+      "downloadedHashVerified": false,
+      "nativeSmokePassed": false,
+      "binaryNoticesReviewed": false
+    },
+    "yt_dlp/windows/x86_64": {
+      "downloadedHashVerified": false,
+      "nativeSmokePassed": false,
+      "binaryNoticesReviewed": false
+    },
+    "yt_dlp/windows/aarch64": {
+      "downloadedHashVerified": false,
+      "nativeSmokePassed": false,
+      "binaryNoticesReviewed": false
+    },
+    "yt_dlp/linux/x86_64": {
+      "downloadedHashVerified": false,
+      "nativeSmokePassed": false,
+      "binaryNoticesReviewed": false
+    },
+    "yt_dlp/linux/aarch64": {
+      "downloadedHashVerified": false,
+      "nativeSmokePassed": false,
+      "binaryNoticesReviewed": false
+    },
+    "java_script_runtime/mac_os/aarch64": {
+      "downloadedHashVerified": true,
+      "nativeSmokePassed": true,
+      "binaryNoticesReviewed": false
+    },
+    "java_script_runtime/mac_os/x86_64": {
+      "downloadedHashVerified": false,
+      "nativeSmokePassed": false,
+      "binaryNoticesReviewed": false
+    },
+    "java_script_runtime/windows/x86_64": {
+      "downloadedHashVerified": false,
+      "nativeSmokePassed": false,
+      "binaryNoticesReviewed": false
+    },
+    "java_script_runtime/windows/aarch64": {
+      "downloadedHashVerified": false,
+      "nativeSmokePassed": false,
+      "binaryNoticesReviewed": false
+    },
+    "java_script_runtime/linux/x86_64": {
+      "downloadedHashVerified": false,
+      "nativeSmokePassed": false,
+      "binaryNoticesReviewed": false
+    },
+    "java_script_runtime/linux/aarch64": {
+      "downloadedHashVerified": false,
+      "nativeSmokePassed": false,
+      "binaryNoticesReviewed": false
+    },
+    "ffmpeg/windows/x86_64": {
+      "downloadedHashVerified": false,
+      "nativeSmokePassed": false,
+      "binaryNoticesReviewed": false
+    },
+    "ffprobe/windows/x86_64": {
+      "downloadedHashVerified": false,
+      "nativeSmokePassed": false,
+      "binaryNoticesReviewed": false
+    },
+    "ffmpeg/windows/aarch64": {
+      "downloadedHashVerified": false,
+      "nativeSmokePassed": false,
+      "binaryNoticesReviewed": false
+    },
+    "ffprobe/windows/aarch64": {
+      "downloadedHashVerified": false,
+      "nativeSmokePassed": false,
+      "binaryNoticesReviewed": false
+    },
+    "ffmpeg/linux/x86_64": {
+      "downloadedHashVerified": false,
+      "nativeSmokePassed": false,
+      "binaryNoticesReviewed": false
+    },
+    "ffprobe/linux/x86_64": {
+      "downloadedHashVerified": false,
+      "nativeSmokePassed": false,
+      "binaryNoticesReviewed": false
+    },
+    "ffmpeg/linux/aarch64": {
+      "downloadedHashVerified": false,
+      "nativeSmokePassed": false,
+      "binaryNoticesReviewed": false
+    },
+    "ffprobe/linux/aarch64": {
+      "downloadedHashVerified": false,
+      "nativeSmokePassed": false,
+      "binaryNoticesReviewed": false
+    }
+  }
+}

@@ -7,6 +7,29 @@ license = "Apache-2.0"
 edition = "2024"
 default-run = "savebeam"
 
+[features]
+release-tools = []
+
+[[bin]]
+name = "component_manifest_payload"
+path = "src/bin/component_manifest_payload.rs"
+required-features = ["release-tools"]
+
+[[bin]]
+name = "verify_component_manifest"
+path = "src/bin/verify_component_manifest.rs"
+required-features = ["release-tools"]
+
+[[bin]]
+name = "verify_app_artifact"
+path = "src/bin/verify_app_artifact.rs"
+required-features = ["release-tools"]
+
+[[bin]]
+name = "component_release_smoke"
+path = "src/bin/component_release_smoke.rs"
+required-features = ["release-tools"]
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
@@ -38,6 +61,7 @@ xz2 = { version = "0.1", features = ["static"] }
 tauri-plugin-dialog = "2.8.3"
 trash = { version = "5.2.9", default-features = false, features = ["chrono", "coinit_multithreaded"] }
 tauri-plugin-updater = "2"
+minisign-verify = "0.3"
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
