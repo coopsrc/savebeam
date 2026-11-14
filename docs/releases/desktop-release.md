@@ -4,7 +4,7 @@ Updated: 2026-11-14. Targets: macOS Apple Silicon (12+), Windows x64. Linux rema
 
 ## Build candidates
 
-`.github/workflows/release.yml` is manually dispatched from `main`, under the `desktop-release` environment. It runs locked checks, regenerates/rechecks notices, packages both platforms, verifies updater signatures and uploads private Actions artifacts for 14 days. It does not create or publish a GitHub Release. Configure environment reviewers and restrict its branch before giving it production credentials.
+`.github/workflows/release.yml` runs from `main`, under the `desktop-release` environment. Manual dispatch selects signing mode; edits to this workflow on `main` also run an **unsigned-only** candidate build, ensuring a new repository can register and exercise it. It runs locked checks, regenerates/rechecks notices, packages both platforms, verifies updater signatures and uploads Actions artifacts for 14 days. Artifacts in a public repository are accessible to users with repository read access, so only public package files are exported. It does not create or publish a GitHub Release. Configure environment reviewers and restrict its branch before giving it production credentials.
 
 - `unsigned` (default): macOS ad-hoc signing and unsigned Windows NSIS; internal testing only. Updater packages still require their separate Minisign key. Metadata explicitly says OS signature verification has not passed.
 - `signed`: requires Developer ID Application plus notarization on macOS and a usable Windows code-signing PFX. Missing credentials fail closed. macOS checks `codesign`, stapling and `spctl`; Windows checks Authenticode. Only successful checks mark `osSignatureVerified`.

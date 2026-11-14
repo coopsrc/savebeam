@@ -1,6 +1,9 @@
 name: Build desktop release candidates
 
 on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/release.yml]
   workflow_dispatch:
     inputs:
       signing_mode:
@@ -20,6 +23,9 @@ jobs:
   package:
     if: github.ref == 'refs/heads/main'
     environment: desktop-release
+    env:
+      SIGNING_MODE: ${{ inputs.signing_mode || 'unsigned' }}
+      npm_config_registry: https://registry.npmjs.org/
     strategy:
       fail-fast: false
       matrix:
@@ -102,15 +108,15 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$TAURI_SIGNING_PRIVATE_KEY"
-          if [[ '${{ matrix.platform }}' == darwin && '${{ inputs.signing_mode }}' == signed ]]; then
+          if [[ '${{ matrix.platform }}' == darwin && "$SIGNING_MODE" == signed ]]; then
             export APPLE_API_KEY_PATH="$RUNNER_TEMP/AuthKey.p8"
           else
             unset APPLE_SIGNING_IDENTITY APPLE_API_ISSUER APPLE_API_KEY
           fi
-          node scripts/prepare-release.mjs '${{ matrix.platform }}' '${{ inputs.signing_mode }}' "$RUNNER_TEMP/release.json"
+          node scripts/prepare-release.mjs '${{ matrix.platform }}' "$SIGNING_MODE" "$RUNNER_TEMP/release.json"
           pnpm tauri build --target '${{ matrix.target }}' --config "$RUNNER_TEMP/release.json" -- --locked
           node scripts/verify-release-signatures.mjs 'src-tauri/target/${{ matrix.target }}/release/bundle'
-          node scripts/collect-release.mjs 'src-tauri/target/${{ matrix.target }}/release/bundle' release-candidate '${{ matrix.platform }}' '${{ inputs.signing_mode }}'
+          node scripts/collect-release.mjs 'src-tauri/target/${{ matrix.target }}/release/bundle' release-candidate '${{ matrix.platform }}' "$SIGNING_MODE"
       - name: Verify macOS OS signatures and notarization
         if: matrix.platform == 'darwin' && inputs.signing_mode == 'signed'
         shell: bash
@@ -135,7 +141,7 @@ jobs:
         run: node -e 'const fs=require("node:fs"),p="release-candidate/build-info.json",j=JSON.parse(fs.readFileSync(p));j.osSignatureVerified=true;fs.writeFileSync(p,JSON.stringify(j,null,2)+"\n")'
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: savebeam-${{ matrix.target }}-${{ inputs.signing_mode }}
+          name: savebeam-${{ matrix.target }}-${{ env.SIGNING_MODE }}
           path: release-candidate/
           retention-days: 14
           if-no-files-found: error
