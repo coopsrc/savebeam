@@ -37,6 +37,8 @@ e137c461adcdd01667798e63bacba0feb9bc2c9375323d79e4b2558ff4adf71b  Savebeam_0.1.0
 
 ## 尚未关闭的实际门禁
 
+最终检查：`pnpm check` 全部通过（74 前端测试、198 Rust 测试通过/1 忽略），`release-tools` 全目标 Clippy 和两份发布工作流 actionlint 通过。Gitleaks 8.30.1 的官方 arm64 工具包 SHA-256 已核对；对全部 129 个 Git 提交进行脱敏扫描，未发现泄露。该扫描不等于代码或法律审计全部通过。
+
 1. 项目没有 Developer ID Application / Notary 或 Windows 代码签名凭据，不能执行正式签名验收。
 2. Windows 原生构建、安装/升级/卸载、进程取消及辅助技术未运行；macOS 正式 release 安装启动、跨版本真实更新和 VoiceOver 人工巡检仍未完成。屏幕捕获工具未能获取验证窗口图像，不以此替代人工巡检。
 3. GitHub 仓库当前为空且公开，本地尚未配置 remote；没有首次公开推送、Release 或 workflow dispatch。
