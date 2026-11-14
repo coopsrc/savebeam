@@ -111,7 +111,10 @@ fn extract_zip(path: &Path, executable_name: &str, destination: &Path) -> Result
         if entry.is_dir() {
             continue;
         }
-        let Some(name) = entry.name().rsplit(['/', '\\']).next() else {
+        let entry_name = entry
+            .name()
+            .map_err(|error| invalid_archive(error.to_string()))?;
+        let Some(name) = entry_name.rsplit(['/', '\\']).next() else {
             continue;
         };
         if name != executable_name {

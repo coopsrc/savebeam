@@ -1,0 +1,3 @@
+overrides:
+  # typescript-eslint still permits minimatch 10; replace its vulnerable glob implementation.
+  "minimatch@>=7 <11.0.1": "^11.0.5"

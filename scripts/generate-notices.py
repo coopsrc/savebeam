@@ -35,6 +35,7 @@ def main():
         if row["name"] == "savebeam":
             continue
         packages.append(("Rust", row["name"], row["version"], row.get("license") or "metadata unavailable", [Path(row["manifest_path"]).parent], row.get("license_file")))
+    supplemental = json.loads((ROOT / "docs/releases/supplemental-notices.json").read_text())
     texts = {}
     lines = ["Savebeam third-party dependency notices", "", "Generated from the locked Rust graph (including target/build dependencies) and installed production npm dependencies.", "External yt-dlp, FFmpeg/ffprobe and runtimes are separate programs; consult each installed binary's own provider notices.", "The inventory is not a claim that all target binaries have been tested or that third-party software uses Savebeam's license.", ""]
     missing = []
@@ -54,6 +55,21 @@ def main():
                 texts[key] = content
                 references.add(key)
         lines.append(f"{ecosystem}: {name} {version} | {license_name}")
+        lines.append("Source archive: " + (
+            f"https://crates.io/api/v1/crates/{name}/{version}/download"
+            if ecosystem == "Rust" else
+            f"https://registry.npmjs.org/{name}/-/{name.rsplit('/', 1)[-1]}-{version}.tgz"
+        ))
+        for entry in supplemental.get(f"{ecosystem}:{name}@{version}", []):
+            content = entry["text"]
+            if hashlib.sha256(content.encode()).hexdigest() != entry["sha256"]:
+                raise ValueError(f"Supplemental license hash mismatch: {name}")
+            key = hashlib.sha256(content.strip().encode()).hexdigest()[:16]
+            texts[key] = content.strip()
+            references.add(key)
+            lines.append("Supplemental source: " + entry["url"])
+            if entry.get("note"):
+                lines.append("Review note: " + entry["note"])
         lines.append("License texts: " + (", ".join(sorted(references)) if references else "not included in the installed package; release review required"))
         if not references:
             missing.append(f"{ecosystem}:{name}@{version}")
@@ -63,6 +79,8 @@ def main():
     output.write_text("\n".join(lines) + "\n")
     print(f"Wrote {len(packages)} dependencies and {len(texts)} license texts ({output.stat().st_size} bytes).")
     print("Missing packaged license texts: " + (", ".join(missing) if missing else "none"))
+    if missing:
+        raise SystemExit("Missing license text; review dependencies before releasing.")
 
 
 if __name__ == "__main__":

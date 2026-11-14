@@ -5,1175 +5,1841 @@ External yt-dlp, FFmpeg/ffprobe and runtimes are separate programs; consult each
 The inventory is not a claim that all target binaries have been tested or that third-party software uses Savebeam's license.
 
 Rust: adler2 2.0.1 | 0BSD OR MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/adler2/2.0.1/download
 License texts: 1bc86297d0320153, 30fefc3a7d6a0041, a21c914647d33e48
 Rust: aho-corasick 1.1.5 | Unlicense OR MIT
+Source archive: https://crates.io/api/v1/crates/aho-corasick/1.1.5/download
 License texts: 154c1af2b38e25e5, 65314a6c96683f76
 Rust: alloc-no-stdlib 3.0.0 | BSD-3-Clause
+Source archive: https://crates.io/api/v1/crates/alloc-no-stdlib/3.0.0/download
 License texts: 6c91ec82929f91ff
 Rust: alloc-stdlib 0.3.0 | BSD-3-Clause
-License texts: not included in the installed package; release review required
+Source archive: https://crates.io/api/v1/crates/alloc-stdlib/0.3.0/download
+Supplemental source: https://raw.githubusercontent.com/dropbox/rust-alloc-no-stdlib/0a81fd6928ea3b33c8cd484aa4575d50ffb98012/LICENSE
+License texts: 6c91ec82929f91ff
 Rust: android_system_properties 0.1.6 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/android_system_properties/0.1.6/download
 License texts: af6e2a74133b16af, dd0815108f8e4002
 Rust: anyhow 1.0.104 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/anyhow/1.0.104/download
 License texts: 30fefc3a7d6a0041, 85ad950cce8752f7
-Rust: arbitrary 1.5.0 | MIT OR Apache-2.0
-License texts: 66a2ea9ed607dd0e, 954f335b8baf5e1a
 Rust: async-broadcast 0.7.2 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/async-broadcast/0.7.2/download
 License texts: 48d36a6709db4f01, a7c537a25fc829c9
 Rust: async-channel 2.5.0 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/async-channel/2.5.0/download
 License texts: 30fefc3a7d6a0041, 954f335b8baf5e1a
 Rust: async-executor 1.14.0 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/async-executor/1.14.0/download
 License texts: 30fefc3a7d6a0041, 954f335b8baf5e1a
 Rust: async-io 2.6.0 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/async-io/2.6.0/download
 License texts: 30fefc3a7d6a0041, 954f335b8baf5e1a
 Rust: async-lock 3.4.2 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/async-lock/3.4.2/download
 License texts: 30fefc3a7d6a0041, 954f335b8baf5e1a
 Rust: async-process 2.5.0 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/async-process/2.5.0/download
 License texts: 30fefc3a7d6a0041, 954f335b8baf5e1a
 Rust: async-recursion 1.2.0 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/async-recursion/1.2.0/download
 License texts: 30fefc3a7d6a0041, 954f335b8baf5e1a
 Rust: async-signal 0.2.14 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/async-signal/0.2.14/download
 License texts: 30fefc3a7d6a0041, 954f335b8baf5e1a
 Rust: async-task 4.7.1 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/async-task/4.7.1/download
 License texts: 30fefc3a7d6a0041, 954f335b8baf5e1a
 Rust: async-trait 0.1.92 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/async-trait/0.1.92/download
 License texts: 30fefc3a7d6a0041, 85ad950cce8752f7
 Rust: atk 0.18.2 | MIT
+Source archive: https://crates.io/api/v1/crates/atk/0.18.2/download
 License texts: 21a2121221d2a35d, 410f62c80f1b6d1c
 Rust: atk-sys 0.18.2 | MIT
+Source archive: https://crates.io/api/v1/crates/atk-sys/0.18.2/download
 License texts: 21a2121221d2a35d
 Rust: atomic-waker 1.1.2 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/atomic-waker/1.1.2/download
 License texts: 20746cc8a2fdc9ca, 30fefc3a7d6a0041, 954f335b8baf5e1a
 Rust: autocfg 1.5.1 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/autocfg/1.5.1/download
 License texts: 954f335b8baf5e1a, 99afaa30c1780120
 Rust: base64 0.21.7 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/base64/0.21.7/download
 License texts: 6a8da4c78c729176, 954f335b8baf5e1a
 Rust: base64 0.22.1 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/base64/0.22.1/download
 License texts: 6a8da4c78c729176, 954f335b8baf5e1a
 Rust: base64 0.23.1 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/base64/0.23.1/download
 License texts: 2ff8d973431258f8, 954f335b8baf5e1a
 Rust: base64ct 1.8.3 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/base64ct/1.8.3/download
 License texts: 79697635de7275c5, e8541ea93f027a6c
 Rust: bit-set 0.8.0 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/bit-set/0.8.0/download
 License texts: 4c4e6eed8b86b56f, 7e1b38c60796dd99
 Rust: bit-vec 0.8.0 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/bit-vec/0.8.0/download
 License texts: 4c4e6eed8b86b56f, 7e1b38c60796dd99
 Rust: bitflags 1.3.2 | MIT/Apache-2.0
+Source archive: https://crates.io/api/v1/crates/bitflags/1.3.2/download
 License texts: 14435fbcd271e278, 954f335b8baf5e1a
 Rust: bitflags 2.13.2 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/bitflags/2.13.2/download
 License texts: 14435fbcd271e278, 954f335b8baf5e1a
 Rust: block-buffer 0.10.4 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/block-buffer/0.10.4/download
 License texts: 5ff5253f2cb9347c, e8541ea93f027a6c
 Rust: block2 0.6.2 | MIT
-License texts: not included in the installed package; release review required
+Source archive: https://crates.io/api/v1/crates/block2/0.6.2/download
+Supplemental source: https://raw.githubusercontent.com/madsmtm/objc2/b4167b582b2f75f9a1be75495c41b765344fd03c/LICENSE.md
+License texts: 1aa0a34224480ff9
 Rust: blocking 1.7.0 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/blocking/1.7.0/download
 License texts: 30fefc3a7d6a0041, 954f335b8baf5e1a
 Rust: brotli 9.0.0 | BSD-3-Clause AND MIT
+Source archive: https://crates.io/api/v1/crates/brotli/9.0.0/download
 License texts: 2a57418d6b10947f, 6c91ec82929f91ff
 Rust: brotli-decompressor 6.0.1 | BSD-3-Clause/MIT
+Source archive: https://crates.io/api/v1/crates/brotli-decompressor/6.0.1/download
 License texts: 6c91ec82929f91ff
 Rust: bs58 0.5.1 | MIT/Apache-2.0
+Source archive: https://crates.io/api/v1/crates/bs58/0.5.1/download
 License texts: 67047503c71f9091, 954f335b8baf5e1a
 Rust: bumpalo 3.20.3 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/bumpalo/3.20.3/download
 License texts: 5662394bebb1a815, 954f335b8baf5e1a
 Rust: bytemuck 1.25.2 | Zlib OR Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/bytemuck/1.25.2/download
 License texts: 0e3cbff251c122b9, 943f36fd309fb5ea, dfbd1c2a36dcf9af
 Rust: byteorder 1.5.0 | Unlicense OR MIT
+Source archive: https://crates.io/api/v1/crates/byteorder/1.5.0/download
 License texts: 154c1af2b38e25e5, 65314a6c96683f76
 Rust: bytes 1.12.1 | MIT
+Source archive: https://crates.io/api/v1/crates/bytes/1.12.1/download
 License texts: 51f778ffff2c0705
 Rust: cairo-rs 0.18.5 | MIT
+Source archive: https://crates.io/api/v1/crates/cairo-rs/0.18.5/download
 License texts: 21a2121221d2a35d, 410f62c80f1b6d1c
 Rust: cairo-sys-rs 0.18.2 | MIT
+Source archive: https://crates.io/api/v1/crates/cairo-sys-rs/0.18.2/download
 License texts: 21a2121221d2a35d
 Rust: camino 1.2.6 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/camino/1.2.6/download
 License texts: 30fefc3a7d6a0041, 954f335b8baf5e1a
 Rust: cargo-platform 0.1.9 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/cargo-platform/0.1.9/download
 License texts: 1bc86297d0320153, 30fefc3a7d6a0041
 Rust: cargo_metadata 0.19.2 | MIT
+Source archive: https://crates.io/api/v1/crates/cargo_metadata/0.19.2/download
 License texts: 30fefc3a7d6a0041
 Rust: cargo_toml 1.0.1 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/cargo_toml/1.0.1/download
 License texts: fa4363848a0f6846
 Rust: cc 1.9.0 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/cc/1.9.0/download
 License texts: 84e1bbfebd74e419, 954f335b8baf5e1a
 Rust: cesu8 1.1.0 | Apache-2.0/MIT
+Source archive: https://crates.io/api/v1/crates/cesu8/1.1.0/download
 License texts: 9691fb0518c7b100
 Rust: cfb 0.14.0 | MIT
+Source archive: https://crates.io/api/v1/crates/cfb/0.14.0/download
 License texts: 3ce3e2561c6a4cd4
 Rust: cfg-expr 0.15.8 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/cfg-expr/0.15.8/download
 License texts: 6d182023b788976d, 7e1b38c60796dd99
 Rust: cfg-if 1.0.5 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/cfg-if/1.0.5/download
 License texts: 84e1bbfebd74e419, 954f335b8baf5e1a
 Rust: cfg_aliases 0.2.2 | MIT
+Source archive: https://crates.io/api/v1/crates/cfg_aliases/0.2.2/download
 License texts: 48513346d335b96c, bc56efd19e4d2537
 Rust: chacha20 0.10.2 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/chacha20/0.10.2/download
 License texts: 1038b7737a0a04bd, e8541ea93f027a6c
 Rust: chrono 0.4.45 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/chrono/0.4.45/download
 License texts: ce4a94c006fa5d15
 Rust: combine 4.6.9 | MIT
+Source archive: https://crates.io/api/v1/crates/combine/4.6.9/download
 License texts: a8d7d8157c7166af
 Rust: concurrent-queue 2.5.0 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/concurrent-queue/2.5.0/download
 License texts: 30fefc3a7d6a0041, 954f335b8baf5e1a
 Rust: const-oid 0.9.6 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/const-oid/0.9.6/download
 License texts: 045a1c4f9aa0a307, e8541ea93f027a6c
 Rust: constant_time_eq 0.6.1 | CC0-1.0 OR MIT-0 OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/constant_time_eq/0.6.1/download
 License texts: 6d489af6292662d9, 85ad950cce8752f7, ee3c852dd133c6ca
 Rust: cookie 0.18.2 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/cookie/0.18.2/download
 License texts: 47c8d25246e6cb7b, c859d211879e327d
 Rust: core-foundation 0.10.1 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/core-foundation/0.10.1/download
 License texts: 3bfacc197ff245b6, 954f335b8baf5e1a
 Rust: core-foundation 0.9.4 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/core-foundation/0.9.4/download
 License texts: 3bfacc197ff245b6, 954f335b8baf5e1a
 Rust: core-foundation-sys 0.8.7 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/core-foundation-sys/0.8.7/download
 License texts: 3bfacc197ff245b6, 954f335b8baf5e1a
 Rust: core-graphics 0.25.0 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/core-graphics/0.25.0/download
 License texts: 3bfacc197ff245b6, 537db907352420ce, 954f335b8baf5e1a
 Rust: core-graphics-types 0.2.0 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/core-graphics-types/0.2.0/download
 License texts: 3bfacc197ff245b6, 954f335b8baf5e1a
 Rust: cpufeatures 0.2.17 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/cpufeatures/0.2.17/download
 License texts: 6334e52844d698f5, e8541ea93f027a6c
 Rust: cpufeatures 0.3.1 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/cpufeatures/0.3.1/download
 License texts: e8541ea93f027a6c, ea753cf1e3ec3e02
 Rust: crc32fast 1.5.3 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/crc32fast/1.5.3/download
 License texts: 6dc0e068dcf3a5bc, 9599127e421e1659
 Rust: crossbeam-channel 0.5.17 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/crossbeam-channel/0.5.17/download
 License texts: 5a7d13c6710cdec2, 954f335b8baf5e1a, d10fa7c720bcb4da
 Rust: crossbeam-utils 0.8.23 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/crossbeam-utils/0.8.23/download
 License texts: 5a7d13c6710cdec2, 954f335b8baf5e1a
 Rust: crypto-common 0.1.7 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/crypto-common/0.1.7/download
 License texts: 692b1604961dd580, e8541ea93f027a6c
 Rust: cssparser 0.37.0 | MPL-2.0
+Source archive: https://crates.io/api/v1/crates/cssparser/0.37.0/download
 License texts: c76f740d1521b9be
 Rust: cssparser-macros 0.7.1 | MPL-2.0
+Source archive: https://crates.io/api/v1/crates/cssparser-macros/0.7.1/download
 License texts: c76f740d1521b9be
 Rust: ctor 1.0.13 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/ctor/1.0.13/download
 License texts: 6dc0e068dcf3a5bc, bccaa8b6c09f94e8
 Rust: curve25519-dalek 4.1.3 | BSD-3-Clause
+Source archive: https://crates.io/api/v1/crates/curve25519-dalek/4.1.3/download
 License texts: 82771e440a2341f4
 Rust: curve25519-dalek-derive 0.1.1 | MIT/Apache-2.0
+Source archive: https://crates.io/api/v1/crates/curve25519-dalek-derive/0.1.1/download
 License texts: 30fefc3a7d6a0041, 954f335b8baf5e1a
 Rust: darling 0.24.1 | MIT
+Source archive: https://crates.io/api/v1/crates/darling/0.24.1/download
 License texts: cc8f3c8ab396de7f
 Rust: darling_core 0.24.1 | MIT
+Source archive: https://crates.io/api/v1/crates/darling_core/0.24.1/download
 License texts: cc8f3c8ab396de7f
 Rust: darling_macro 0.24.1 | MIT
+Source archive: https://crates.io/api/v1/crates/darling_macro/0.24.1/download
 License texts: cc8f3c8ab396de7f
 Rust: dbus 0.9.12 | Apache-2.0/MIT
+Source archive: https://crates.io/api/v1/crates/dbus/0.9.12/download
 License texts: 8d2ca3a111ce03ed, de3911c2d98c8bd2
 Rust: defmt 1.2.0 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/defmt/1.2.0/download
 License texts: 2710a622a896bba6, 7e1b38c60796dd99
 Rust: defmt-macros 1.2.0 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/defmt-macros/1.2.0/download
 License texts: 2710a622a896bba6, 7e1b38c60796dd99
 Rust: defmt-parser 1.1.0 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/defmt-parser/1.1.0/download
 License texts: 2710a622a896bba6, 7e1b38c60796dd99
 Rust: der 0.7.10 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/der/0.7.10/download
 License texts: 6b118915d98a1411, e8541ea93f027a6c
 Rust: deranged 0.5.9 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/deranged/0.5.9/download
 License texts: 1b66e3be6894b377, b4839ecf405b5fa4
-Rust: derive_arbitrary 1.5.0 | MIT OR Apache-2.0
-License texts: 66a2ea9ed607dd0e, 954f335b8baf5e1a
 Rust: derive_more 2.1.1 | MIT
+Source archive: https://crates.io/api/v1/crates/derive_more/2.1.1/download
 License texts: 4a4d43f3f90d1d8b
 Rust: derive_more-impl 2.1.1 | MIT
+Source archive: https://crates.io/api/v1/crates/derive_more-impl/2.1.1/download
 License texts: 4a4d43f3f90d1d8b
 Rust: digest 0.10.7 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/digest/0.10.7/download
 License texts: 9c5127ab88e8f55b, e8541ea93f027a6c
 Rust: dirs 7.0.0 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/dirs/7.0.0/download
 License texts: 74f1c9127a52df2c, f25a5b606859d4fa
 Rust: dirs-sys 0.5.0 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/dirs-sys/0.5.0/download
 License texts: 74f1c9127a52df2c, f25a5b606859d4fa
 Rust: dispatch2 0.3.1 | Zlib OR Apache-2.0 OR MIT
-License texts: not included in the installed package; release review required
+Source archive: https://crates.io/api/v1/crates/dispatch2/0.3.1/download
+Supplemental source: https://raw.githubusercontent.com/madsmtm/objc2/8852b424193ca41602281b3d7540d7c8ed51e49a/LICENSE.md
+License texts: 1aa0a34224480ff9
 Rust: displaydoc 0.2.7 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/displaydoc/0.2.7/download
 License texts: 30fefc3a7d6a0041, 954f335b8baf5e1a
 Rust: dlopen2 0.8.2 | MIT
-License texts: not included in the installed package; release review required
+Source archive: https://crates.io/api/v1/crates/dlopen2/0.8.2/download
+Supplemental source: https://raw.githubusercontent.com/OpenByteDev/dlopen2/cc80e4a0a90d499b677fdf7743699b4b3a43a989/LICENSE
+License texts: 26633be0c19e2e61
 Rust: dlopen2_derive 0.4.3 | MIT
-License texts: not included in the installed package; release review required
+Source archive: https://crates.io/api/v1/crates/dlopen2_derive/0.4.3/download
+Supplemental source: https://raw.githubusercontent.com/OpenByteDev/dlopen2/cc80e4a0a90d499b677fdf7743699b4b3a43a989/LICENSE
+License texts: 26633be0c19e2e61
 Rust: dom_query 0.28.0 | MIT
+Source archive: https://crates.io/api/v1/crates/dom_query/0.28.0/download
 License texts: 7554701d1e74fc43
 Rust: dpi 0.1.2 | Apache-2.0 AND MIT
+Source archive: https://crates.io/api/v1/crates/dpi/0.1.2/download
 License texts: 6dc0e068dcf3a5bc, e07664cb9e316442
 Rust: dtoa 1.0.11 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/dtoa/1.0.11/download
 License texts: 30fefc3a7d6a0041, 85ad950cce8752f7
 Rust: dtoa-short 0.3.5 | MPL-2.0
+Source archive: https://crates.io/api/v1/crates/dtoa-short/0.3.5/download
 License texts: 4b89d4518bd135ab
 Rust: dunce 1.0.5 | CC0-1.0 OR MIT-0 OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/dunce/1.0.5/download
 License texts: 6d489af6292662d9
 Rust: dyn-clone 1.0.20 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/dyn-clone/1.0.20/download
 License texts: 30fefc3a7d6a0041, 85ad950cce8752f7
 Rust: ed25519 2.2.3 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/ed25519/2.2.3/download
 License texts: 7d9f551458e84cf8, f330b45715b8c05a
 Rust: ed25519-dalek 2.2.0 | BSD-3-Clause
+Source archive: https://crates.io/api/v1/crates/ed25519-dalek/2.2.0/download
 License texts: d2778eb7f5d0322f
 Rust: embed-resource 3.0.12 | MIT
+Source archive: https://crates.io/api/v1/crates/embed-resource/3.0.12/download
 License texts: c4be15bd543af192
 Rust: embed_plist 1.2.2 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/embed_plist/1.2.2/download
 License texts: 283ea6cc2997a1a7, a29c4d8a8e7cebc9
 Rust: endi 1.1.1 | MIT
+Source archive: https://crates.io/api/v1/crates/endi/1.1.1/download
 License texts: 30fefc3a7d6a0041
 Rust: enumflags2 0.7.12 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/enumflags2/0.7.12/download
 License texts: 1f6efa554fb0411e, de561d2b653aaad4
 Rust: enumflags2_derive 0.7.12 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/enumflags2_derive/0.7.12/download
 License texts: 12a9724e2927cff8, 4247075817677c99
 Rust: equivalent 1.0.3 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/equivalent/1.0.3/download
 License texts: 4428cd87371acbd4, 954f335b8baf5e1a
 Rust: erased-serde 0.4.10 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/erased-serde/0.4.10/download
 License texts: 30fefc3a7d6a0041, 85ad950cce8752f7
 Rust: errno 0.3.14 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/errno/0.3.14/download
 License texts: 7f91c2a4eddb4828, 954f335b8baf5e1a
 Rust: event-listener 5.4.2 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/event-listener/5.4.2/download
 License texts: 30fefc3a7d6a0041, 954f335b8baf5e1a
 Rust: event-listener-strategy 0.5.4 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/event-listener-strategy/0.5.4/download
 License texts: 30fefc3a7d6a0041, 954f335b8baf5e1a
 Rust: fallible-iterator 0.3.0 | MIT/Apache-2.0
+Source archive: https://crates.io/api/v1/crates/fallible-iterator/0.3.0/download
 License texts: 2ff0b8901359ce9b, 6dc0e068dcf3a5bc
 Rust: fallible-streaming-iterator 0.1.9 | MIT/Apache-2.0
+Source archive: https://crates.io/api/v1/crates/fallible-streaming-iterator/0.1.9/download
 License texts: 6dc0e068dcf3a5bc, dfc632cd74cca1e2
 Rust: fastrand 2.5.0 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/fastrand/2.5.0/download
 License texts: 30fefc3a7d6a0041, 954f335b8baf5e1a
 Rust: fdeflate 0.3.7 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/fdeflate/0.3.7/download
 License texts: 4bf96504d6e83ce5, 77949ead506e84e3
 Rust: fiat-crypto 0.2.9 | MIT OR Apache-2.0 OR BSD-1-Clause
+Source archive: https://crates.io/api/v1/crates/fiat-crypto/0.2.9/download
 License texts: 5abb4b606ff4cbad, cb320ccefaa5680e, d9b4bc5257686af9, f1954d2b51ee6ac8
 Rust: field-offset 0.3.6 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/field-offset/0.3.6/download
 License texts: 4bf96504d6e83ce5, f4bc3f3c5bfd943c
 Rust: filetime 0.2.29 | MIT/Apache-2.0
+Source archive: https://crates.io/api/v1/crates/filetime/0.2.29/download
 License texts: 84e1bbfebd74e419, 954f335b8baf5e1a
 Rust: find-msvc-tools 0.1.15 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/find-msvc-tools/0.1.15/download
 License texts: 84e1bbfebd74e419, 954f335b8baf5e1a
 Rust: flate2 1.1.10 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/flate2/1.1.10/download
 License texts: 1b7402ea003f3186, 954f335b8baf5e1a
 Rust: fnv 1.0.7 | Apache-2.0 / MIT
+Source archive: https://crates.io/api/v1/crates/fnv/1.0.7/download
 License texts: 954f335b8baf5e1a, c48b7333c00b9776
 Rust: foldhash 0.2.0 | Zlib
+Source archive: https://crates.io/api/v1/crates/foldhash/0.2.0/download
 License texts: b1181a40b2a7b25c
 Rust: foreign-types 0.5.0 | MIT/Apache-2.0
+Source archive: https://crates.io/api/v1/crates/foreign-types/0.5.0/download
 License texts: 6dc0e068dcf3a5bc, c9067b1cc20b89f5
 Rust: foreign-types-macros 0.2.4 | MIT/Apache-2.0
+Source archive: https://crates.io/api/v1/crates/foreign-types-macros/0.2.4/download
 License texts: 6dc0e068dcf3a5bc, c9067b1cc20b89f5
 Rust: foreign-types-shared 0.3.1 | MIT/Apache-2.0
+Source archive: https://crates.io/api/v1/crates/foreign-types-shared/0.3.1/download
 License texts: 6dc0e068dcf3a5bc, c9067b1cc20b89f5
 Rust: form_urlencoded 1.2.2 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/form_urlencoded/1.2.2/download
 License texts: 33ed9a8ecf556f16, 954f335b8baf5e1a
 Rust: futures-channel 0.3.34 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/futures-channel/0.3.34/download
 License texts: 27480f391bd92f66, b420d8add23b5cf7
 Rust: futures-core 0.3.34 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/futures-core/0.3.34/download
 License texts: 27480f391bd92f66, b420d8add23b5cf7
 Rust: futures-executor 0.3.34 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/futures-executor/0.3.34/download
 License texts: 27480f391bd92f66, b420d8add23b5cf7
 Rust: futures-io 0.3.34 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/futures-io/0.3.34/download
 License texts: 27480f391bd92f66, b420d8add23b5cf7
 Rust: futures-lite 2.6.1 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/futures-lite/2.6.1/download
 License texts: 20746cc8a2fdc9ca, 30fefc3a7d6a0041, 954f335b8baf5e1a
 Rust: futures-macro 0.3.34 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/futures-macro/0.3.34/download
 License texts: 27480f391bd92f66, b420d8add23b5cf7
 Rust: futures-sink 0.3.34 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/futures-sink/0.3.34/download
 License texts: 27480f391bd92f66, b420d8add23b5cf7
 Rust: futures-task 0.3.34 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/futures-task/0.3.34/download
 License texts: 27480f391bd92f66, b420d8add23b5cf7
 Rust: futures-util 0.3.34 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/futures-util/0.3.34/download
 License texts: 27480f391bd92f66, b420d8add23b5cf7
 Rust: gdk 0.18.2 | MIT
+Source archive: https://crates.io/api/v1/crates/gdk/0.18.2/download
 License texts: 21a2121221d2a35d, 410f62c80f1b6d1c
 Rust: gdk-pixbuf 0.18.5 | MIT
+Source archive: https://crates.io/api/v1/crates/gdk-pixbuf/0.18.5/download
 License texts: 21a2121221d2a35d, 410f62c80f1b6d1c
 Rust: gdk-pixbuf-sys 0.18.0 | MIT
+Source archive: https://crates.io/api/v1/crates/gdk-pixbuf-sys/0.18.0/download
 License texts: 21a2121221d2a35d
 Rust: gdk-sys 0.18.2 | MIT
+Source archive: https://crates.io/api/v1/crates/gdk-sys/0.18.2/download
 License texts: 21a2121221d2a35d
 Rust: gdkwayland-sys 0.18.2 | MIT
+Source archive: https://crates.io/api/v1/crates/gdkwayland-sys/0.18.2/download
 License texts: 21a2121221d2a35d
 Rust: gdkx11 0.18.2 | MIT
+Source archive: https://crates.io/api/v1/crates/gdkx11/0.18.2/download
 License texts: 21a2121221d2a35d, 410f62c80f1b6d1c
 Rust: gdkx11-sys 0.18.2 | MIT
+Source archive: https://crates.io/api/v1/crates/gdkx11-sys/0.18.2/download
 License texts: 21a2121221d2a35d
 Rust: generic-array 0.14.7 | MIT
+Source archive: https://crates.io/api/v1/crates/generic-array/0.14.7/download
 License texts: ad4fcfaf8d5b12b9
 Rust: getrandom 0.2.17 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/getrandom/0.2.17/download
 License texts: 478d530cbce79fc1, e7330bf53074b4a9
 Rust: getrandom 0.3.4 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/getrandom/0.3.4/download
 License texts: 73af2019a565c0e6, e7330bf53074b4a9
 Rust: getrandom 0.4.3 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/getrandom/0.4.3/download
 License texts: 94b1870d380ccf53, e7330bf53074b4a9
 Rust: gio 0.18.4 | MIT
+Source archive: https://crates.io/api/v1/crates/gio/0.18.4/download
 License texts: 21a2121221d2a35d, 410f62c80f1b6d1c
 Rust: gio-sys 0.18.1 | MIT
+Source archive: https://crates.io/api/v1/crates/gio-sys/0.18.1/download
 License texts: 21a2121221d2a35d
 Rust: glib 0.18.5 | MIT
+Source archive: https://crates.io/api/v1/crates/glib/0.18.5/download
 License texts: 21a2121221d2a35d, 410f62c80f1b6d1c
 Rust: glib-macros 0.18.5 | MIT
+Source archive: https://crates.io/api/v1/crates/glib-macros/0.18.5/download
 License texts: 21a2121221d2a35d, 410f62c80f1b6d1c
 Rust: glib-sys 0.18.1 | MIT
+Source archive: https://crates.io/api/v1/crates/glib-sys/0.18.1/download
 License texts: 21a2121221d2a35d
 Rust: glob 0.3.4 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/glob/0.3.4/download
 License texts: 14435fbcd271e278, 954f335b8baf5e1a
 Rust: gobject-sys 0.18.0 | MIT
+Source archive: https://crates.io/api/v1/crates/gobject-sys/0.18.0/download
 License texts: 21a2121221d2a35d
 Rust: gtk 0.18.2 | MIT
+Source archive: https://crates.io/api/v1/crates/gtk/0.18.2/download
 License texts: 21a2121221d2a35d, 410f62c80f1b6d1c
 Rust: gtk-sys 0.18.2 | MIT
+Source archive: https://crates.io/api/v1/crates/gtk-sys/0.18.2/download
 License texts: 21a2121221d2a35d
 Rust: gtk3-macros 0.18.2 | MIT
+Source archive: https://crates.io/api/v1/crates/gtk3-macros/0.18.2/download
 License texts: 21a2121221d2a35d, 410f62c80f1b6d1c
 Rust: hashbrown 0.12.3 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/hashbrown/0.12.3/download
 License texts: 954f335b8baf5e1a, ae9791f02f2bbe0c
 Rust: hashbrown 0.16.1 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/hashbrown/0.16.1/download
 License texts: 954f335b8baf5e1a, ae9791f02f2bbe0c
 Rust: hashbrown 0.17.1 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/hashbrown/0.17.1/download
 License texts: 954f335b8baf5e1a, ae9791f02f2bbe0c
 Rust: hashlink 0.12.2 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/hashlink/0.12.2/download
 License texts: 7e1b38c60796dd99, e915669a595b11a2
 Rust: heck 0.4.1 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/heck/0.4.1/download
 License texts: 033a9383ff21d1e4, 954f335b8baf5e1a
 Rust: heck 0.5.0 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/heck/0.5.0/download
 License texts: 033a9383ff21d1e4, 954f335b8baf5e1a
 Rust: hermit-abi 0.5.3 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/hermit-abi/0.5.3/download
 License texts: 30fefc3a7d6a0041, 954f335b8baf5e1a
 Rust: hex 0.4.3 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/hex/0.4.3/download
 License texts: 6dc0e068dcf3a5bc, 9dde4a6ad4966063
 Rust: html5ever 0.39.0 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/html5ever/0.39.0/download
 License texts: 35af0fd883383c93, 954f335b8baf5e1a
 Rust: http 1.5.0 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/http/1.5.0/download
 License texts: 881c9fe2d29b216a, f47894ff9c86dc7e
 Rust: http-body 1.1.0 | MIT
+Source archive: https://crates.io/api/v1/crates/http-body/1.1.0/download
 License texts: 57f841bc9767b5b8
 Rust: http-body-util 0.1.5 | MIT
+Source archive: https://crates.io/api/v1/crates/http-body-util/0.1.5/download
 License texts: 57f841bc9767b5b8
 Rust: httparse 1.10.1 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/httparse/1.10.1/download
 License texts: 8502803cebb30a72, 954f335b8baf5e1a
 Rust: hyper 1.12.0 | MIT
+Source archive: https://crates.io/api/v1/crates/hyper/1.12.0/download
 License texts: 05f344491a7d18e1
 Rust: hyper-rustls 0.27.10 | Apache-2.0 OR ISC OR MIT
+Source archive: https://crates.io/api/v1/crates/hyper-rustls/0.27.10/download
 License texts: 954f335b8baf5e1a, a3320aa8d192a02c, af6da3f3f6b4929e
 Rust: hyper-util 0.1.21 | MIT
+Source archive: https://crates.io/api/v1/crates/hyper-util/0.1.21/download
 License texts: e7d622e4783e8c97
 Rust: iana-time-zone 0.1.65 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/iana-time-zone/0.1.65/download
 License texts: 3444712f3370b1c8, 793420c92f3ce7d3
 Rust: iana-time-zone-haiku 0.1.2 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/iana-time-zone-haiku/0.1.2/download
 License texts: 3444712f3370b1c8, 793420c92f3ce7d3
 Rust: ico 0.5.0 | MIT
+Source archive: https://crates.io/api/v1/crates/ico/0.5.0/download
 License texts: 95573f040b56af53
 Rust: icu_collections 2.3.0 | Unicode-3.0
+Source archive: https://crates.io/api/v1/crates/icu_collections/2.3.0/download
 License texts: cde87abe221f413f
 Rust: icu_locale_core 2.3.0 | Unicode-3.0
+Source archive: https://crates.io/api/v1/crates/icu_locale_core/2.3.0/download
 License texts: cde87abe221f413f
 Rust: icu_normalizer 2.3.0 | Unicode-3.0
+Source archive: https://crates.io/api/v1/crates/icu_normalizer/2.3.0/download
 License texts: cde87abe221f413f
 Rust: icu_normalizer_data 2.3.0 | Unicode-3.0
+Source archive: https://crates.io/api/v1/crates/icu_normalizer_data/2.3.0/download
 License texts: cde87abe221f413f
 Rust: icu_properties 2.3.0 | Unicode-3.0
+Source archive: https://crates.io/api/v1/crates/icu_properties/2.3.0/download
 License texts: cde87abe221f413f
 Rust: icu_properties_data 2.3.0 | Unicode-3.0
+Source archive: https://crates.io/api/v1/crates/icu_properties_data/2.3.0/download
 License texts: cde87abe221f413f
 Rust: icu_provider 2.3.1 | Unicode-3.0
+Source archive: https://crates.io/api/v1/crates/icu_provider/2.3.1/download
 License texts: cde87abe221f413f
 Rust: ident_case 1.0.1 | MIT/Apache-2.0
+Source archive: https://crates.io/api/v1/crates/ident_case/1.0.1/download
 License texts: 1847e0e0698142ed
 Rust: idna 1.1.0 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/idna/1.1.0/download
 License texts: 7a8093fb4a93f23e, 954f335b8baf5e1a
 Rust: idna_adapter 1.2.2 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/idna_adapter/1.2.2/download
 License texts: 0d8a0aecbcbaf057, 954f335b8baf5e1a
 Rust: indexmap 1.9.3 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/indexmap/1.9.3/download
 License texts: 4f2ac128e429d964, 954f335b8baf5e1a
 Rust: indexmap 2.14.2 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/indexmap/2.14.2/download
 License texts: 4f2ac128e429d964, 954f335b8baf5e1a
 Rust: infer 0.22.0 | MIT
+Source archive: https://crates.io/api/v1/crates/infer/0.22.0/download
 License texts: 7804ded9273b80f1
 Rust: ipnet 2.12.2 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/ipnet/2.12.2/download
 License texts: 9d8e882729a53481, c935506fff2ef821
 Rust: is-docker 0.2.0 | MIT
+Source archive: https://crates.io/api/v1/crates/is-docker/0.2.0/download
 License texts: d9da1a97dd07b64f
 Rust: is-wsl 0.4.0 | MIT
+Source archive: https://crates.io/api/v1/crates/is-wsl/0.4.0/download
 License texts: d9da1a97dd07b64f
 Rust: itoa 1.0.18 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/itoa/1.0.18/download
 License texts: 30fefc3a7d6a0041, 85ad950cce8752f7
 Rust: javascriptcore-rs 1.1.2 | MIT
+Source archive: https://crates.io/api/v1/crates/javascriptcore-rs/1.1.2/download
 License texts: 8a08757a7c385903
 Rust: javascriptcore-rs-sys 1.1.1 | MIT
+Source archive: https://crates.io/api/v1/crates/javascriptcore-rs-sys/1.1.1/download
 License texts: 4603441e4a5a2a38
 Rust: jiff 0.2.38 | Unlicense OR MIT
+Source archive: https://crates.io/api/v1/crates/jiff/0.2.38/download
 License texts: 154c1af2b38e25e5, 65314a6c96683f76
 Rust: jiff-core 0.1.1 | Unlicense OR MIT
+Source archive: https://crates.io/api/v1/crates/jiff-core/0.1.1/download
 License texts: 154c1af2b38e25e5, 65314a6c96683f76
 Rust: jiff-static 0.2.38 | Unlicense OR MIT
+Source archive: https://crates.io/api/v1/crates/jiff-static/0.2.38/download
 License texts: 154c1af2b38e25e5, 65314a6c96683f76
 Rust: jiff-tzdb 0.1.9 | Unlicense OR MIT
+Source archive: https://crates.io/api/v1/crates/jiff-tzdb/0.1.9/download
 License texts: 154c1af2b38e25e5, 65314a6c96683f76
 Rust: jiff-tzdb-platform 0.1.3 | Unlicense OR MIT
+Source archive: https://crates.io/api/v1/crates/jiff-tzdb-platform/0.1.3/download
 License texts: 154c1af2b38e25e5, 65314a6c96683f76
 Rust: jni 0.21.1 | MIT/Apache-2.0
+Source archive: https://crates.io/api/v1/crates/jni/0.21.1/download
 License texts: 6c1dcd86d8ae78f2, 954f335b8baf5e1a
 Rust: jni 0.22.4 | MIT OR Apache-2.0
-License texts: not included in the installed package; release review required
+Source archive: https://crates.io/api/v1/crates/jni/0.22.4/download
+Supplemental source: https://raw.githubusercontent.com/jni-rs/jni-rs/5ae9458a4ec44c5318f37ddc7569c1d4ae8a69e7/LICENSE-APACHE
+Supplemental source: https://raw.githubusercontent.com/jni-rs/jni-rs/5ae9458a4ec44c5318f37ddc7569c1d4ae8a69e7/LICENSE-MIT
+License texts: 6c1dcd86d8ae78f2, 954f335b8baf5e1a
 Rust: jni-macros 0.22.4 | MIT OR Apache-2.0
-License texts: not included in the installed package; release review required
+Source archive: https://crates.io/api/v1/crates/jni-macros/0.22.4/download
+Supplemental source: https://raw.githubusercontent.com/jni-rs/jni-rs/33045a124105c939d1e2cbdcb5a39e5d868ffa03/LICENSE-APACHE
+Supplemental source: https://raw.githubusercontent.com/jni-rs/jni-rs/33045a124105c939d1e2cbdcb5a39e5d868ffa03/LICENSE-MIT
+License texts: 6c1dcd86d8ae78f2, 954f335b8baf5e1a
 Rust: jni-sys 0.3.1 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/jni-sys/0.3.1/download
 License texts: 3a771adcf280ae32, 6dc0e068dcf3a5bc
 Rust: jni-sys 0.4.1 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/jni-sys/0.4.1/download
 License texts: 3a771adcf280ae32, 6dc0e068dcf3a5bc
 Rust: jni-sys-macros 0.4.1 | MIT OR Apache-2.0
-License texts: not included in the installed package; release review required
+Source archive: https://crates.io/api/v1/crates/jni-sys-macros/0.4.1/download
+Supplemental source: https://raw.githubusercontent.com/jni-rs/jni-sys/64d77b7a5f119d7b55b4e2c169a4668067ff59e6/LICENSE-APACHE
+Supplemental source: https://raw.githubusercontent.com/jni-rs/jni-sys/64d77b7a5f119d7b55b4e2c169a4668067ff59e6/LICENSE-MIT
+License texts: 3a771adcf280ae32, 6dc0e068dcf3a5bc
 Rust: js-sys 0.3.106 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/js-sys/0.3.106/download
 License texts: 84e1bbfebd74e419, 954f335b8baf5e1a
 Rust: json-patch 4.2.0 | MIT/Apache-2.0
+Source archive: https://crates.io/api/v1/crates/json-patch/4.2.0/download
 License texts: 19328c46c44f54ce, 6dc0e068dcf3a5bc
 Rust: jsonptr 0.7.1 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/jsonptr/0.7.1/download
 License texts: 055a1711063672c8, 5f89ce4ac63b1c60
 Rust: keyboard-types 0.8.3 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/keyboard-types/0.8.3/download
 License texts: 31dbbab009f1b2e5, 954f335b8baf5e1a
 Rust: libappindicator 0.9.0 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/libappindicator/0.9.0/download
 License texts: 954f335b8baf5e1a, d2c4a2667e88ca68
 Rust: libappindicator-sys 0.9.0 | Apache-2.0 OR MIT
-License texts: not included in the installed package; release review required
+Source archive: https://crates.io/api/v1/crates/libappindicator-sys/0.9.0/download
+Supplemental source: https://raw.githubusercontent.com/tauri-apps/libappindicator-rs/eafd1e3682a1247f595410266091e9684021cb6f/LICENSE-APACHE
+Supplemental source: https://raw.githubusercontent.com/tauri-apps/libappindicator-rs/eafd1e3682a1247f595410266091e9684021cb6f/LICENSE-MIT
+License texts: 954f335b8baf5e1a, d2c4a2667e88ca68
 Rust: libc 0.2.191 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/libc/0.2.191/download
 License texts: 85ad950cce8752f7, c96302294382bf16
 Rust: libdbus-sys 0.2.7 | Apache-2.0/MIT
+Source archive: https://crates.io/api/v1/crates/libdbus-sys/0.2.7/download
 License texts: 8d2ca3a111ce03ed, de3911c2d98c8bd2
 Rust: libloading 0.7.4 | ISC
+Source archive: https://crates.io/api/v1/crates/libloading/0.7.4/download
 License texts: bbf1ea3140c4d068
 Rust: libredox 0.1.25 | MIT
+Source archive: https://crates.io/api/v1/crates/libredox/0.1.25/download
 License texts: 7dbbefcddfaa1e07
-Rust: libsqlite3-sys 0.38.2 | MIT
+Rust: libsqlite3-sys 0.39.1 | MIT
+Source archive: https://crates.io/api/v1/crates/libsqlite3-sys/0.39.1/download
 License texts: 6061b8ea5b16d94a
 Rust: linux-raw-sys 0.12.1 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/linux-raw-sys/0.12.1/download
 License texts: 2f213ec6b1355dc8, 30fefc3a7d6a0041, 7813bacdaa2b1012, 954f335b8baf5e1a
 Rust: litemap 0.8.3 | Unicode-3.0
+Source archive: https://crates.io/api/v1/crates/litemap/0.8.3/download
 License texts: cde87abe221f413f
 Rust: lock_api 0.4.14 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/lock_api/0.4.14/download
 License texts: 8d1f81ea4e87111d, 954f335b8baf5e1a
 Rust: log 0.4.34 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/log/0.4.34/download
 License texts: 14435fbcd271e278, 954f335b8baf5e1a
 Rust: lru-slab 0.1.3 | MIT OR Apache-2.0 OR Zlib
+Source archive: https://crates.io/api/v1/crates/lru-slab/0.1.3/download
 License texts: 283ea6cc2997a1a7, c9cf4d18fd9d2ab3, cebce11166dcba43
 Rust: lzma-sys 0.1.20 | MIT/Apache-2.0
+Source archive: https://crates.io/api/v1/crates/lzma-sys/0.1.20/download
 License texts: 954f335b8baf5e1a, efccd96727c0efa8
 Rust: markup5ever 0.39.0 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/markup5ever/0.39.0/download
 License texts: 35af0fd883383c93, 954f335b8baf5e1a
 Rust: memchr 2.8.3 | Unlicense OR MIT
+Source archive: https://crates.io/api/v1/crates/memchr/2.8.3/download
 License texts: 154c1af2b38e25e5, 65314a6c96683f76
 Rust: memoffset 0.9.1 | MIT
+Source archive: https://crates.io/api/v1/crates/memoffset/0.9.1/download
 License texts: 3234ac55816264ee
 Rust: mime 0.3.17 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/mime/0.3.17/download
 License texts: 954f335b8baf5e1a, a302dc760d97dc62
 Rust: minisign-verify 0.3.0 | MIT
+Source archive: https://crates.io/api/v1/crates/minisign-verify/0.3.0/download
 License texts: 58f66933c7bba2f4
 Rust: miniz_oxide 0.8.9 | MIT OR Zlib OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/miniz_oxide/0.8.9/download
 License texts: 4bf96504d6e83ce5, 7427abc630365f63, ac9859ce4e9a80a4, eac3911cc3d41ffb
 Rust: miniz_oxide 0.9.1 | MIT OR Zlib OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/miniz_oxide/0.9.1/download
 License texts: 4bf96504d6e83ce5, 7427abc630365f63, ac9859ce4e9a80a4, eac3911cc3d41ffb
 Rust: mio 1.2.4 | MIT
+Source archive: https://crates.io/api/v1/crates/mio/1.2.4/download
 License texts: c804065b0956d00a
 Rust: muda 0.20.0 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/muda/0.20.0/download
 License texts: 859a90323b684e46, 954f335b8baf5e1a, b99f9d43803f2ac9
 Rust: ndk 0.9.0 | MIT OR Apache-2.0
-License texts: not included in the installed package; release review required
+Source archive: https://crates.io/api/v1/crates/ndk/0.9.0/download
+Supplemental source: https://raw.githubusercontent.com/rust-mobile/ndk/49bbbba16c58ff63cb8a0ad0eca5a9fb7ecaec25/LICENSE-APACHE
+Supplemental source: https://raw.githubusercontent.com/rust-mobile/ndk/49bbbba16c58ff63cb8a0ad0eca5a9fb7ecaec25/LICENSE-MIT
+License texts: 1847e0e0698142ed, 283ea6cc2997a1a7
 Rust: ndk-context 0.1.1 | MIT OR Apache-2.0
-License texts: not included in the installed package; release review required
+Source archive: https://crates.io/api/v1/crates/ndk-context/0.1.1/download
+Supplemental source: https://raw.githubusercontent.com/rust-windowing/android-ndk-rs/10f2ba388fca20f7349996ebae26ccda7a6fda5c/LICENSE-APACHE
+Supplemental source: https://raw.githubusercontent.com/rust-windowing/android-ndk-rs/10f2ba388fca20f7349996ebae26ccda7a6fda5c/LICENSE-MIT
+License texts: 1847e0e0698142ed, 283ea6cc2997a1a7
 Rust: ndk-sys 0.6.0+11769913 | MIT OR Apache-2.0
-License texts: not included in the installed package; release review required
+Source archive: https://crates.io/api/v1/crates/ndk-sys/0.6.0+11769913/download
+Supplemental source: https://raw.githubusercontent.com/rust-mobile/ndk/49bbbba16c58ff63cb8a0ad0eca5a9fb7ecaec25/LICENSE-APACHE
+Supplemental source: https://raw.githubusercontent.com/rust-mobile/ndk/49bbbba16c58ff63cb8a0ad0eca5a9fb7ecaec25/LICENSE-MIT
+License texts: 1847e0e0698142ed, 283ea6cc2997a1a7
 Rust: new_debug_unreachable 1.0.6 | MIT
+Source archive: https://crates.io/api/v1/crates/new_debug_unreachable/1.0.6/download
 License texts: 42d8a095dbffdf17
 Rust: nix 0.31.3 | MIT
+Source archive: https://crates.io/api/v1/crates/nix/0.31.3/download
 License texts: b9b039b5058cfe96
 Rust: num-conv 0.2.2 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/num-conv/0.2.2/download
 License texts: 4bf96504d6e83ce5, 4d83b119f786daf6
 Rust: num-traits 0.2.19 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/num-traits/0.2.19/download
 License texts: 14435fbcd271e278, 954f335b8baf5e1a
 Rust: num_enum 0.7.6 | BSD-3-Clause OR MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/num_enum/0.7.6/download
 License texts: 30fefc3a7d6a0041, 85ad950cce8752f7, 882b129495bcec1c
 Rust: num_enum_derive 0.7.6 | BSD-3-Clause OR MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/num_enum_derive/0.7.6/download
 License texts: 30fefc3a7d6a0041, 85ad950cce8752f7, 882b129495bcec1c
 Rust: objc2 0.6.5 | MIT
-License texts: not included in the installed package; release review required
+Source archive: https://crates.io/api/v1/crates/objc2/0.6.5/download
+Supplemental source: https://raw.githubusercontent.com/madsmtm/objc2/d7d2fa23ceaa5e6096c923b081040e5d81b3b9df/LICENSE.md
+License texts: 1aa0a34224480ff9
 Rust: objc2-app-kit 0.3.2 | Zlib OR Apache-2.0 OR MIT
-License texts: not included in the installed package; release review required
+Source archive: https://crates.io/api/v1/crates/objc2-app-kit/0.3.2/download
+Supplemental source: https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md
+License texts: 1aa0a34224480ff9
 Rust: objc2-cloud-kit 0.3.2 | Zlib OR Apache-2.0 OR MIT
-License texts: not included in the installed package; release review required
+Source archive: https://crates.io/api/v1/crates/objc2-cloud-kit/0.3.2/download
+Supplemental source: https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md
+License texts: 1aa0a34224480ff9
 Rust: objc2-core-data 0.3.2 | Zlib OR Apache-2.0 OR MIT
-License texts: not included in the installed package; release review required
+Source archive: https://crates.io/api/v1/crates/objc2-core-data/0.3.2/download
+Supplemental source: https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md
+License texts: 1aa0a34224480ff9
 Rust: objc2-core-foundation 0.3.2 | Zlib OR Apache-2.0 OR MIT
-License texts: not included in the installed package; release review required
+Source archive: https://crates.io/api/v1/crates/objc2-core-foundation/0.3.2/download
+Supplemental source: https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md
+License texts: 1aa0a34224480ff9
 Rust: objc2-core-graphics 0.3.2 | Zlib OR Apache-2.0 OR MIT
-License texts: not included in the installed package; release review required
+Source archive: https://crates.io/api/v1/crates/objc2-core-graphics/0.3.2/download
+Supplemental source: https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md
+License texts: 1aa0a34224480ff9
 Rust: objc2-core-image 0.3.2 | Zlib OR Apache-2.0 OR MIT
-License texts: not included in the installed package; release review required
+Source archive: https://crates.io/api/v1/crates/objc2-core-image/0.3.2/download
+Supplemental source: https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md
+License texts: 1aa0a34224480ff9
 Rust: objc2-core-location 0.3.2 | Zlib OR Apache-2.0 OR MIT
-License texts: not included in the installed package; release review required
+Source archive: https://crates.io/api/v1/crates/objc2-core-location/0.3.2/download
+Supplemental source: https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md
+License texts: 1aa0a34224480ff9
 Rust: objc2-core-text 0.3.2 | Zlib OR Apache-2.0 OR MIT
-License texts: not included in the installed package; release review required
+Source archive: https://crates.io/api/v1/crates/objc2-core-text/0.3.2/download
+Supplemental source: https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md
+License texts: 1aa0a34224480ff9
 Rust: objc2-encode 4.1.0 | MIT
-License texts: not included in the installed package; release review required
+Source archive: https://crates.io/api/v1/crates/objc2-encode/4.1.0/download
+Supplemental source: https://raw.githubusercontent.com/madsmtm/objc2/8d214f5477365ffcbcbb7de058c86ed9a518efb7/LICENSE.md
+License texts: 1aa0a34224480ff9
 Rust: objc2-exception-helper 0.1.1 | Zlib OR Apache-2.0 OR MIT
-License texts: not included in the installed package; release review required
+Source archive: https://crates.io/api/v1/crates/objc2-exception-helper/0.1.1/download
+Supplemental source: https://raw.githubusercontent.com/madsmtm/objc2/8d214f5477365ffcbcbb7de058c86ed9a518efb7/LICENSE.md
+License texts: 1aa0a34224480ff9
 Rust: objc2-foundation 0.3.2 | MIT
-License texts: not included in the installed package; release review required
+Source archive: https://crates.io/api/v1/crates/objc2-foundation/0.3.2/download
+Supplemental source: https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md
+License texts: 1aa0a34224480ff9
 Rust: objc2-io-surface 0.3.2 | Zlib OR Apache-2.0 OR MIT
-License texts: not included in the installed package; release review required
+Source archive: https://crates.io/api/v1/crates/objc2-io-surface/0.3.2/download
+Supplemental source: https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md
+License texts: 1aa0a34224480ff9
 Rust: objc2-osa-kit 0.3.2 | Zlib OR Apache-2.0 OR MIT
-License texts: not included in the installed package; release review required
+Source archive: https://crates.io/api/v1/crates/objc2-osa-kit/0.3.2/download
+Supplemental source: https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md
+License texts: 1aa0a34224480ff9
 Rust: objc2-quartz-core 0.3.2 | Zlib OR Apache-2.0 OR MIT
-License texts: not included in the installed package; release review required
+Source archive: https://crates.io/api/v1/crates/objc2-quartz-core/0.3.2/download
+Supplemental source: https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md
+License texts: 1aa0a34224480ff9
 Rust: objc2-ui-kit 0.3.2 | Zlib OR Apache-2.0 OR MIT
-License texts: not included in the installed package; release review required
+Source archive: https://crates.io/api/v1/crates/objc2-ui-kit/0.3.2/download
+Supplemental source: https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md
+License texts: 1aa0a34224480ff9
 Rust: objc2-user-notifications 0.3.2 | Zlib OR Apache-2.0 OR MIT
-License texts: not included in the installed package; release review required
+Source archive: https://crates.io/api/v1/crates/objc2-user-notifications/0.3.2/download
+Supplemental source: https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md
+License texts: 1aa0a34224480ff9
 Rust: objc2-web-kit 0.3.2 | Zlib OR Apache-2.0 OR MIT
-License texts: not included in the installed package; release review required
+Source archive: https://crates.io/api/v1/crates/objc2-web-kit/0.3.2/download
+Supplemental source: https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md
+License texts: 1aa0a34224480ff9
 Rust: once_cell 1.21.4 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/once_cell/1.21.4/download
 License texts: 30fefc3a7d6a0041, 954f335b8baf5e1a
 Rust: open 5.4.4 | MIT
+Source archive: https://crates.io/api/v1/crates/open/5.4.4/download
 License texts: c3ca23514163a6fe
 Rust: openssl-probe 0.2.2 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/openssl-probe/0.2.2/download
 License texts: 84e1bbfebd74e419, 954f335b8baf5e1a
 Rust: option-ext 0.2.0 | MPL-2.0
+Source archive: https://crates.io/api/v1/crates/option-ext/0.2.0/download
 License texts: fb72181dd02473b6
 Rust: ordered-stream 0.2.0 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/ordered-stream/0.2.0/download
 License texts: 30fefc3a7d6a0041, 954f335b8baf5e1a
 Rust: osakit 0.3.1 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/osakit/0.3.1/download
 License texts: 6ca34f7d0a421357, 85ad950cce8752f7
 Rust: pango 0.18.3 | MIT
+Source archive: https://crates.io/api/v1/crates/pango/0.18.3/download
 License texts: 21a2121221d2a35d, 410f62c80f1b6d1c
 Rust: pango-sys 0.18.0 | MIT
+Source archive: https://crates.io/api/v1/crates/pango-sys/0.18.0/download
 License texts: 21a2121221d2a35d
 Rust: parking 2.2.1 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/parking/2.2.1/download
 License texts: 30fefc3a7d6a0041, 954f335b8baf5e1a, c43e20176655c7a7
 Rust: parking_lot 0.12.5 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/parking_lot/0.12.5/download
 License texts: 8d1f81ea4e87111d, 954f335b8baf5e1a
 Rust: parking_lot_core 0.9.12 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/parking_lot_core/0.9.12/download
 License texts: 8d1f81ea4e87111d, 954f335b8baf5e1a
 Rust: percent-encoding 2.3.2 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/percent-encoding/2.3.2/download
 License texts: 7a8093fb4a93f23e, 954f335b8baf5e1a
 Rust: phf 0.13.1 | MIT
+Source archive: https://crates.io/api/v1/crates/phf/0.13.1/download
 License texts: ec5d7c32366268f1
 Rust: phf_codegen 0.13.1 | MIT
+Source archive: https://crates.io/api/v1/crates/phf_codegen/0.13.1/download
 License texts: ec5d7c32366268f1
 Rust: phf_generator 0.13.1 | MIT
+Source archive: https://crates.io/api/v1/crates/phf_generator/0.13.1/download
 License texts: ec5d7c32366268f1
 Rust: phf_macros 0.13.1 | MIT
+Source archive: https://crates.io/api/v1/crates/phf_macros/0.13.1/download
 License texts: ec5d7c32366268f1
 Rust: phf_shared 0.13.1 | MIT
+Source archive: https://crates.io/api/v1/crates/phf_shared/0.13.1/download
 License texts: ec5d7c32366268f1
 Rust: pin-project-lite 0.2.17 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/pin-project-lite/0.2.17/download
 License texts: 30fefc3a7d6a0041, 4bf96504d6e83ce5
 Rust: piper 0.2.5 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/piper/0.2.5/download
 License texts: 30fefc3a7d6a0041, 954f335b8baf5e1a
 Rust: pkcs8 0.10.2 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/pkcs8/0.10.2/download
 License texts: 6b118915d98a1411, e8541ea93f027a6c
 Rust: pkg-config 0.3.34 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/pkg-config/0.3.34/download
 License texts: 84e1bbfebd74e419, 954f335b8baf5e1a
 Rust: plist 1.10.2 | MIT
+Source archive: https://crates.io/api/v1/crates/plist/1.10.2/download
 License texts: 5b0ae40d1a35f7ae
 Rust: png 0.17.16 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/png/0.17.16/download
 License texts: 80cdd90699e446ab, 954f335b8baf5e1a
 Rust: png 0.18.1 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/png/0.18.1/download
 License texts: 80cdd90699e446ab, 954f335b8baf5e1a
 Rust: polling 3.11.0 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/polling/3.11.0/download
 License texts: 30fefc3a7d6a0041, 954f335b8baf5e1a
 Rust: portable-atomic 1.15.0 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/portable-atomic/1.15.0/download
 License texts: 30fefc3a7d6a0041, 4bf96504d6e83ce5
 Rust: portable-atomic-util 0.2.8 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/portable-atomic-util/0.2.8/download
 License texts: 30fefc3a7d6a0041, 4bf96504d6e83ce5
 Rust: potential_utf 0.1.6 | Unicode-3.0
+Source archive: https://crates.io/api/v1/crates/potential_utf/0.1.6/download
 License texts: cde87abe221f413f
 Rust: powerfmt 0.2.1 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/powerfmt/0.2.1/download
 License texts: 4b05c4b43039d82b, 6e972f314e81b300
 Rust: precomputed-hash 0.1.1 | MIT
+Source archive: https://crates.io/api/v1/crates/precomputed-hash/0.1.1/download
 License texts: 695de7436b470fd9
 Rust: proc-macro-crate 1.3.1 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/proc-macro-crate/1.3.1/download
 License texts: 1bc86297d0320153, 30fefc3a7d6a0041
 Rust: proc-macro-crate 2.0.2 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/proc-macro-crate/2.0.2/download
 License texts: 1bc86297d0320153, 30fefc3a7d6a0041
 Rust: proc-macro-crate 3.5.0 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/proc-macro-crate/3.5.0/download
 License texts: 1bc86297d0320153, 30fefc3a7d6a0041
 Rust: proc-macro-error 1.0.4 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/proc-macro-error/1.0.4/download
 License texts: 2bbedf556bfd75e8, c7495b7b3a525563
 Rust: proc-macro-error-attr 1.0.4 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/proc-macro-error-attr/1.0.4/download
 License texts: 2bbedf556bfd75e8, c7495b7b3a525563
 Rust: proc-macro2 1.0.107 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/proc-macro2/1.0.107/download
 License texts: 30fefc3a7d6a0041, 85ad950cce8752f7
 Rust: quick-xml 0.42.0 | MIT
+Source archive: https://crates.io/api/v1/crates/quick-xml/0.42.0/download
 License texts: 12bfa73c9eacbe1e
 Rust: quinn 0.11.12 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/quinn/0.11.12/download
 License texts: 05fa1ba3228aab8d, 283ea6cc2997a1a7
 Rust: quinn-proto 0.11.19 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/quinn-proto/0.11.19/download
 License texts: 05fa1ba3228aab8d, 283ea6cc2997a1a7
 Rust: quinn-udp 0.5.16 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/quinn-udp/0.5.16/download
 License texts: 05fa1ba3228aab8d, 283ea6cc2997a1a7
 Rust: quote 1.0.47 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/quote/1.0.47/download
 License texts: 30fefc3a7d6a0041, 85ad950cce8752f7
 Rust: r-efi 5.3.0 | MIT OR Apache-2.0 OR LGPL-2.1-or-later
-License texts: not included in the installed package; release review required
+Source archive: https://crates.io/api/v1/crates/r-efi/5.3.0/download
+Supplemental source: https://raw.githubusercontent.com/spdx/license-list-data/31846481de7ea17d92f2f46fad76abe58b2e9bb0/text/MIT.txt
+Review note: Standard MIT text; README declares MIT OR Apache-2.0 OR LGPL-2.1-or-later; AUTHORS and README retained below.
+Supplemental source: https://raw.githubusercontent.com/r-efi/r-efi/97b55bed1c2c91dcbf787674849f05337ff80b33/AUTHORS
+Supplemental source: https://raw.githubusercontent.com/r-efi/r-efi/97b55bed1c2c91dcbf787674849f05337ff80b33/README.md
+License texts: 07c7993a082dd284, 23a50c6a034f431e, f30e9ee33dbf771d
 Rust: r-efi 6.0.0 | MIT OR Apache-2.0 OR LGPL-2.1-or-later
-License texts: not included in the installed package; release review required
+Source archive: https://crates.io/api/v1/crates/r-efi/6.0.0/download
+Supplemental source: https://raw.githubusercontent.com/spdx/license-list-data/31846481de7ea17d92f2f46fad76abe58b2e9bb0/text/MIT.txt
+Review note: Standard MIT text; README declares MIT OR Apache-2.0 OR LGPL-2.1-or-later; AUTHORS and README retained below.
+Supplemental source: https://raw.githubusercontent.com/r-efi/r-efi/7e1b0322d31d625f81a5656096330934f9cd835d/AUTHORS
+Supplemental source: https://raw.githubusercontent.com/r-efi/r-efi/7e1b0322d31d625f81a5656096330934f9cd835d/README.md
+License texts: 07c7993a082dd284, 23a50c6a034f431e, 3349455e35ec5738
 Rust: rand 0.10.3 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/rand/0.10.3/download
 License texts: 2411d70acb18e15a, cc367a7134c2b07d, fee4d7ce394c9161
 Rust: rand_core 0.10.1 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/rand_core/0.10.1/download
 License texts: 179c83ef07a51414, 704f0e5f1c848609, c9027c55c9307b0c
 Rust: rand_core 0.6.4 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/rand_core/0.6.4/download
 License texts: 179c83ef07a51414, 2411d70acb18e15a, cc367a7134c2b07d
 Rust: rand_pcg 0.10.2 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/rand_pcg/0.10.2/download
 License texts: 179c83ef07a51414, 2411d70acb18e15a, c3df7fccc8e57971
 Rust: raw-window-handle 0.6.2 | MIT OR Apache-2.0 OR Zlib
+Source archive: https://crates.io/api/v1/crates/raw-window-handle/0.6.2/download
 License texts: 4bf96504d6e83ce5, 81976b4834c3cbdd, aa69fda6dd940f9f
 Rust: redox_syscall 0.5.18 | MIT
+Source archive: https://crates.io/api/v1/crates/redox_syscall/0.5.18/download
 License texts: fde59e25bf5342ef
 Rust: redox_users 0.5.3 | MIT
+Source archive: https://crates.io/api/v1/crates/redox_users/0.5.3/download
 License texts: 157e9bc5ce84d48f
 Rust: ref-cast 1.0.27 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/ref-cast/1.0.27/download
 License texts: 30fefc3a7d6a0041, 85ad950cce8752f7
 Rust: ref-cast-impl 1.0.27 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/ref-cast-impl/1.0.27/download
 License texts: 30fefc3a7d6a0041, 85ad950cce8752f7
 Rust: regex 1.13.1 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/regex/1.13.1/download
 License texts: 14435fbcd271e278, 954f335b8baf5e1a
 Rust: regex-automata 0.4.18 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/regex-automata/0.4.18/download
 License texts: 14435fbcd271e278, 954f335b8baf5e1a
 Rust: regex-syntax 0.8.11 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/regex-syntax/0.8.11/download
 License texts: 14435fbcd271e278, 954f335b8baf5e1a
 Rust: reqwest 0.12.28 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/reqwest/0.12.28/download
 License texts: 54987d63f2660141, 5c3866f31ed28362
 Rust: reqwest 0.13.5 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/reqwest/0.13.5/download
 License texts: 5c3866f31ed28362, bde59a7e336fcb58
 Rust: rfd 0.16.0 | MIT
+Source archive: https://crates.io/api/v1/crates/rfd/0.16.0/download
 License texts: 1a6dd9555214dc74
 Rust: ring 0.17.14 | Apache-2.0 AND ISC
+Source archive: https://crates.io/api/v1/crates/ring/0.17.14/download
 License texts: 07414b6c33f30acf, 473867fcf89f7595, edb9c6dbff4676b9
 Rust: rsqlite-vfs 0.1.1 | MIT
-License texts: not included in the installed package; release review required
-Rust: rusqlite 0.40.2 | MIT
+Source archive: https://crates.io/api/v1/crates/rsqlite-vfs/0.1.1/download
+Supplemental source: https://raw.githubusercontent.com/Spxg/sqlite-wasm-rs/1bb309784f25c401ddf95131dcde4c4cdad7aee7/LICENSE
+License texts: 4a219f6afd099a6e
+Rust: rusqlite 0.41.1 | MIT
+Source archive: https://crates.io/api/v1/crates/rusqlite/0.41.1/download
 License texts: 6061b8ea5b16d94a
 Rust: rustc-hash 2.1.3 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/rustc-hash/2.1.3/download
 License texts: 30fefc3a7d6a0041, 85ad950cce8752f7
 Rust: rustc_version 0.4.1 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/rustc_version/0.4.1/download
 License texts: 8d1f81ea4e87111d, 954f335b8baf5e1a
-Rust: rustix 1.1.5 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT
+Rust: rustix 1.1.6 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/rustix/1.1.6/download
 License texts: 2f213ec6b1355dc8, 30fefc3a7d6a0041, 954f335b8baf5e1a, fde2a68c47d27938
 Rust: rustls 0.23.46 | Apache-2.0 OR ISC OR MIT
+Source archive: https://crates.io/api/v1/crates/rustls/0.23.46/download
 License texts: 954f335b8baf5e1a, a3320aa8d192a02c, af6da3f3f6b4929e
 Rust: rustls-native-certs 0.8.5 | Apache-2.0 OR ISC OR MIT
+Source archive: https://crates.io/api/v1/crates/rustls-native-certs/0.8.5/download
 License texts: 29fbc81a3f88db20, 954f335b8baf5e1a, a3320aa8d192a02c, af6da3f3f6b4929e
 Rust: rustls-pki-types 1.15.1 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/rustls-pki-types/1.15.1/download
 License texts: 430e912c26cec30c, c5e7f780f961f850
 Rust: rustls-platform-verifier 0.7.1 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/rustls-platform-verifier/0.7.1/download
 License texts: 283ea6cc2997a1a7, 6205904d553962d4
 Rust: rustls-platform-verifier-android 0.2.0 | MIT OR Apache-2.0
-License texts: not included in the installed package; release review required
+Source archive: https://crates.io/api/v1/crates/rustls-platform-verifier-android/0.2.0/download
+Supplemental source: https://raw.githubusercontent.com/rustls/rustls-platform-verifier/252e25161a91af476cbea620e29d277592d27ec7/LICENSE-APACHE
+Supplemental source: https://raw.githubusercontent.com/rustls/rustls-platform-verifier/252e25161a91af476cbea620e29d277592d27ec7/LICENSE-MIT
+Supplemental source: https://raw.githubusercontent.com/rustls/rustls-platform-verifier/252e25161a91af476cbea620e29d277592d27ec7/android-release-support/LICENSE-APACHE
+Supplemental source: https://raw.githubusercontent.com/rustls/rustls-platform-verifier/252e25161a91af476cbea620e29d277592d27ec7/android-release-support/LICENSE-MIT
+License texts: 154397a08d0cb342, 283ea6cc2997a1a7, 6205904d553962d4, 72af89a828df52a9
 Rust: rustls-webpki 0.103.16 | ISC
+Source archive: https://crates.io/api/v1/crates/rustls-webpki/0.103.16/download
 License texts: 3ac27594ed56fd07
 Rust: rustversion 1.0.23 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/rustversion/1.0.23/download
 License texts: 30fefc3a7d6a0041, 85ad950cce8752f7
 Rust: ryu 1.0.23 | Apache-2.0 OR BSL-1.0
+Source archive: https://crates.io/api/v1/crates/ryu/1.0.23/download
 License texts: 85ad950cce8752f7, 8d8291caf1cee26d
 Rust: same-file 1.0.6 | Unlicense/MIT
+Source archive: https://crates.io/api/v1/crates/same-file/1.0.6/download
 License texts: 65314a6c96683f76, 739620ea44ad8f99
 Rust: schannel 0.1.30 | MIT
+Source archive: https://crates.io/api/v1/crates/schannel/0.1.30/download
 License texts: 1ecbb241444ad7fe
 Rust: schemars 0.8.22 | MIT
+Source archive: https://crates.io/api/v1/crates/schemars/0.8.22/download
 License texts: 1ddb39b2b497012f
 Rust: schemars 0.9.0 | MIT
+Source archive: https://crates.io/api/v1/crates/schemars/0.9.0/download
 License texts: 1ddb39b2b497012f
 Rust: schemars 1.2.3 | MIT
+Source archive: https://crates.io/api/v1/crates/schemars/1.2.3/download
 License texts: 1ddb39b2b497012f
 Rust: schemars_derive 0.8.22 | MIT
+Source archive: https://crates.io/api/v1/crates/schemars_derive/0.8.22/download
 License texts: 1ddb39b2b497012f
 Rust: scopeguard 1.2.0 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/scopeguard/1.2.0/download
 License texts: 1a6aa2616e740569, 954f335b8baf5e1a
 Rust: security-framework 3.7.0 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/security-framework/3.7.0/download
 License texts: 37412fff76e3ad06, 954f335b8baf5e1a
 Rust: security-framework-sys 2.17.0 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/security-framework-sys/2.17.0/download
 License texts: 37412fff76e3ad06, 954f335b8baf5e1a
 Rust: selectors 0.38.0 | MPL-2.0
-License texts: not included in the installed package; release review required
+Source archive: https://crates.io/api/v1/crates/selectors/0.38.0/download
+Supplemental source: https://raw.githubusercontent.com/spdx/license-list-data/31846481de7ea17d92f2f46fad76abe58b2e9bb0/text/MPL-2.0.txt
+Review note: Upstream source file headers declare MPL-2.0; use the standard license text with source/header below.
+Supplemental source: https://raw.githubusercontent.com/servo/stylo/572ecba2d1600e7c3d490586692a209faf703baa/selectors/lib.rs
+License texts: d53e8dfd8f4c3779, fb72181dd02473b6
 Rust: semver 1.0.28 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/semver/1.0.28/download
 License texts: 30fefc3a7d6a0041, 85ad950cce8752f7
 Rust: serde 1.0.229 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/serde/1.0.229/download
 License texts: 30fefc3a7d6a0041, 85ad950cce8752f7
 Rust: serde-untagged 0.1.9 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/serde-untagged/0.1.9/download
 License texts: 30fefc3a7d6a0041, 85ad950cce8752f7
 Rust: serde_core 1.0.229 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/serde_core/1.0.229/download
 License texts: 30fefc3a7d6a0041, 85ad950cce8752f7
 Rust: serde_derive 1.0.229 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/serde_derive/1.0.229/download
 License texts: 30fefc3a7d6a0041, 85ad950cce8752f7
 Rust: serde_derive_internals 0.29.1 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/serde_derive_internals/0.29.1/download
 License texts: 30fefc3a7d6a0041, 85ad950cce8752f7
 Rust: serde_json 1.0.154 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/serde_json/1.0.154/download
 License texts: 30fefc3a7d6a0041, 85ad950cce8752f7
 Rust: serde_repr 0.1.21 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/serde_repr/0.1.21/download
 License texts: 30fefc3a7d6a0041, 85ad950cce8752f7
 Rust: serde_spanned 0.6.9 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/serde_spanned/0.6.9/download
 License texts: 4498464c2864825d, 6dc0e068dcf3a5bc
 Rust: serde_spanned 1.1.2 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/serde_spanned/1.1.2/download
 License texts: 4498464c2864825d, 9b689eac99cd7407
 Rust: serde_urlencoded 0.7.1 | MIT/Apache-2.0
+Source archive: https://crates.io/api/v1/crates/serde_urlencoded/0.7.1/download
 License texts: 85ad950cce8752f7, b5dae95324262088
 Rust: serde_with 3.24.0 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/serde_with/3.24.0/download
 License texts: 954f335b8baf5e1a, fdd1c2117bcf8157
 Rust: serde_with_macros 3.24.0 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/serde_with_macros/3.24.0/download
 License texts: 954f335b8baf5e1a, fdd1c2117bcf8157
 Rust: serialize-to-javascript 0.1.2 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/serialize-to-javascript/0.1.2/download
 License texts: 283ea6cc2997a1a7, 777eb7417541b414
 Rust: serialize-to-javascript-impl 0.1.2 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/serialize-to-javascript-impl/0.1.2/download
 License texts: 283ea6cc2997a1a7, 777eb7417541b414
 Rust: servo_arc 0.4.3 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/servo_arc/0.4.3/download
 License texts: 30fefc3a7d6a0041, 954f335b8baf5e1a
 Rust: sha2 0.10.9 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/sha2/0.10.9/download
 License texts: 4031faf6212ee744, e8541ea93f027a6c
 Rust: shlex 2.0.1 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/shlex/2.0.1/download
 License texts: a759ce38c686a204, cc5ba5589dfb7bbc
 Rust: signal-hook-registry 1.4.8 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/signal-hook-registry/1.4.8/download
 License texts: 954f335b8baf5e1a, aaac889d0a4a1875
 Rust: signature 2.2.0 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/signature/2.2.0/download
 License texts: 7d9f551458e84cf8, e8541ea93f027a6c
 Rust: simd-adler32 0.3.10 | MIT
+Source archive: https://crates.io/api/v1/crates/simd-adler32/0.3.10/download
 License texts: 627eff66d6c4b984
 Rust: simd_cesu8 1.2.0 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/simd_cesu8/1.2.0/download
 License texts: 30fefc3a7d6a0041, 954f335b8baf5e1a
 Rust: simdutf8 0.1.5 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/simdutf8/0.1.5/download
 License texts: 1847e0e0698142ed, 4bf96504d6e83ce5
 Rust: siphasher 1.0.4 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/siphasher/1.0.4/download
 License texts: 21a2121221d2a35d, 24e26e8fb783e2db, 283ea6cc2997a1a7
 Rust: slab 0.4.12 | MIT
+Source archive: https://crates.io/api/v1/crates/slab/0.4.12/download
 License texts: 12c7116c4425c559
 Rust: smallvec 1.16.3 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/smallvec/1.16.3/download
 License texts: 7f194ae45c2525a5, 954f335b8baf5e1a
 Rust: socket2 0.6.5 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/socket2/0.6.5/download
 License texts: 84e1bbfebd74e419, 954f335b8baf5e1a
 Rust: softbuffer 0.4.8 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/softbuffer/0.4.8/download
 License texts: 1fc3bc7f4a1b9e2f, f8babf2965a40be2
 Rust: soup3 0.5.0 | MIT
+Source archive: https://crates.io/api/v1/crates/soup3/0.5.0/download
 License texts: 4603441e4a5a2a38
 Rust: soup3-sys 0.5.0 | MIT
+Source archive: https://crates.io/api/v1/crates/soup3-sys/0.5.0/download
 License texts: 4603441e4a5a2a38
 Rust: spki 0.7.3 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/spki/0.7.3/download
 License texts: 07ce2f16212bdab8, e8541ea93f027a6c
 Rust: sqlite-wasm-rs 0.5.5 | MIT
+Source archive: https://crates.io/api/v1/crates/sqlite-wasm-rs/0.5.5/download
 License texts: 4a219f6afd099a6e
 Rust: stable_deref_trait 1.2.1 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/stable_deref_trait/1.2.1/download
 License texts: 5e05b024f653a5ce, 954f335b8baf5e1a
 Rust: static_vcruntime 3.0.0 | MIT OR Apache-2.0 OR Zlib
+Source archive: https://crates.io/api/v1/crates/static_vcruntime/3.0.0/download
 License texts: 0e3cbff251c122b9, 0eec7daefad90253, c0fb98161c4fbc6e, fdbaaf920cb3866c
 Rust: string_cache 0.9.0 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/string_cache/0.9.0/download
 License texts: 3bfacc197ff245b6, 954f335b8baf5e1a
 Rust: string_cache_codegen 0.6.1 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/string_cache_codegen/0.6.1/download
 License texts: 3bfacc197ff245b6, 954f335b8baf5e1a
 Rust: strsim 0.11.1 | MIT
+Source archive: https://crates.io/api/v1/crates/strsim/0.11.1/download
 License texts: 8fd8980cab8977a5
 Rust: subtle 2.6.1 | BSD-3-Clause
+Source archive: https://crates.io/api/v1/crates/subtle/2.6.1/download
 License texts: 24fa06d8eae3c3ba
 Rust: swift-rs 1.0.9 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/swift-rs/1.0.9/download
 License texts: 7593ea50d2d4010b, e88bc3fa7f782130
 Rust: syn 1.0.109 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/syn/1.0.109/download
 License texts: 30fefc3a7d6a0041, 954f335b8baf5e1a
 Rust: syn 2.0.119 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/syn/2.0.119/download
 License texts: 30fefc3a7d6a0041, 85ad950cce8752f7
 Rust: syn 3.0.9 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/syn/3.0.9/download
 License texts: 30fefc3a7d6a0041, 85ad950cce8752f7
 Rust: sync_wrapper 1.0.2 | Apache-2.0
+Source archive: https://crates.io/api/v1/crates/sync_wrapper/1.0.2/download
 License texts: 4bf96504d6e83ce5
 Rust: synstructure 0.14.0 | MIT
+Source archive: https://crates.io/api/v1/crates/synstructure/0.14.0/download
 License texts: 3a036676ec8c0dba
 Rust: system-configuration 0.7.0 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/system-configuration/0.7.0/download
 License texts: 954f335b8baf5e1a, eefdbe714980ed70
 Rust: system-configuration-sys 0.6.0 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/system-configuration-sys/0.6.0/download
 License texts: 954f335b8baf5e1a, eefdbe714980ed70
 Rust: system-deps 6.2.2 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/system-deps/6.2.2/download
 License texts: 30fefc3a7d6a0041, 954f335b8baf5e1a
 Rust: tao 0.37.1 | Apache-2.0
+Source archive: https://crates.io/api/v1/crates/tao/0.37.1/download
 License texts: 28694f36acab4f50, 6dc0e068dcf3a5bc
 Rust: tao-macros 0.1.4 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/tao-macros/0.1.4/download
 License texts: 1d5680a70055e433, 26e6f69cf1f6665d, 954f335b8baf5e1a
 Rust: tar 0.4.46 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/tar/0.4.46/download
 License texts: 954f335b8baf5e1a, e6e853531994cb47
 Rust: target-lexicon 0.12.16 | Apache-2.0 WITH LLVM-exception
+Source archive: https://crates.io/api/v1/crates/target-lexicon/0.12.16/download
 License texts: 2f213ec6b1355dc8
 Rust: tauri 2.12.4 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/tauri/2.12.4/download
 License texts: 4bf96504d6e83ce5, 89ff9689dcf9dd53
 Rust: tauri-build 2.7.3 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/tauri-build/2.7.3/download
 License texts: 4bf96504d6e83ce5, 89ff9689dcf9dd53
 Rust: tauri-codegen 2.7.3 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/tauri-codegen/2.7.3/download
 License texts: 4bf96504d6e83ce5, 89ff9689dcf9dd53
 Rust: tauri-macros 2.7.3 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/tauri-macros/2.7.3/download
 License texts: 4bf96504d6e83ce5, 89ff9689dcf9dd53
 Rust: tauri-plugin 2.7.2 | Apache-2.0 OR MIT
-License texts: not included in the installed package; release review required
+Source archive: https://crates.io/api/v1/crates/tauri-plugin/2.7.2/download
+Supplemental source: https://raw.githubusercontent.com/tauri-apps/tauri/59b63ab500da9859f12d8888c3298bc29bba0b92/LICENSE-APACHE-2.0
+Supplemental source: https://raw.githubusercontent.com/tauri-apps/tauri/59b63ab500da9859f12d8888c3298bc29bba0b92/LICENSE-MIT
+Supplemental source: https://raw.githubusercontent.com/tauri-apps/tauri/59b63ab500da9859f12d8888c3298bc29bba0b92/LICENSE.spdx
+License texts: 4bf96504d6e83ce5, 7c667b0cf9860e6a, 89ff9689dcf9dd53
 Rust: tauri-plugin-dialog 2.8.3 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/tauri-plugin-dialog/2.8.3/download
 License texts: 4bf96504d6e83ce5, 89ff9689dcf9dd53, eb8a6c84630461b3
 Rust: tauri-plugin-fs 2.7.1 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/tauri-plugin-fs/2.7.1/download
 License texts: 4bf96504d6e83ce5, 89ff9689dcf9dd53, eb8a6c84630461b3
 Rust: tauri-plugin-opener 2.7.2 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/tauri-plugin-opener/2.7.2/download
 License texts: 4bf96504d6e83ce5, 89ff9689dcf9dd53, eb8a6c84630461b3
 Rust: tauri-plugin-updater 2.14.1 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/tauri-plugin-updater/2.14.1/download
 License texts: 4bf96504d6e83ce5, 89ff9689dcf9dd53, eb8a6c84630461b3
 Rust: tauri-runtime 2.12.2 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/tauri-runtime/2.12.2/download
 License texts: 4bf96504d6e83ce5, 89ff9689dcf9dd53
 Rust: tauri-runtime-wry 2.12.2 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/tauri-runtime-wry/2.12.2/download
 License texts: 4bf96504d6e83ce5, 89ff9689dcf9dd53
 Rust: tauri-utils 2.10.2 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/tauri-utils/2.10.2/download
 License texts: 4bf96504d6e83ce5, 89ff9689dcf9dd53
 Rust: tauri-winres 0.3.7 | MIT
+Source archive: https://crates.io/api/v1/crates/tauri-winres/0.3.7/download
 License texts: a2c382fbddcc15f8
 Rust: tempfile 3.27.0 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/tempfile/3.27.0/download
 License texts: 7bdd5c5e8ad0c973, 954f335b8baf5e1a
 Rust: tendril 0.5.1 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/tendril/0.5.1/download
 License texts: 954f335b8baf5e1a, dfa7fbad0178fda1
 Rust: thiserror 1.0.69 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/thiserror/1.0.69/download
 License texts: 30fefc3a7d6a0041, 85ad950cce8752f7
 Rust: thiserror 2.0.21 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/thiserror/2.0.21/download
 License texts: 30fefc3a7d6a0041, 85ad950cce8752f7
 Rust: thiserror-impl 1.0.69 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/thiserror-impl/1.0.69/download
 License texts: 30fefc3a7d6a0041, 85ad950cce8752f7
 Rust: thiserror-impl 2.0.21 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/thiserror-impl/2.0.21/download
 License texts: 30fefc3a7d6a0041, 85ad950cce8752f7
 Rust: time 0.3.55 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/time/0.3.55/download
 License texts: 4bf96504d6e83ce5, 7fdbca77dec6709a
 Rust: time-core 0.1.9 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/time-core/0.1.9/download
 License texts: 4bf96504d6e83ce5, 7fdbca77dec6709a
 Rust: time-macros 0.2.32 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/time-macros/0.2.32/download
 License texts: 4bf96504d6e83ce5, 7fdbca77dec6709a
 Rust: tinystr 0.8.4 | Unicode-3.0
+Source archive: https://crates.io/api/v1/crates/tinystr/0.8.4/download
 License texts: cde87abe221f413f
 Rust: tinyvec 1.13.3 | Zlib OR Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/tinyvec/1.13.3/download
 License texts: 283ea6cc2997a1a7, 943f36fd309fb5ea, bccaa8b6c09f94e8
-Rust: tokio 1.54.0 | MIT
+Rust: tokio 1.54.1 | MIT
+Source archive: https://crates.io/api/v1/crates/tokio/1.54.1/download
 License texts: 3e1bef82aa0dfee4
 Rust: tokio-rustls 0.26.6 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/tokio-rustls/0.26.6/download
 License texts: 1b0258c48739a24e, acddfb05f07ab004
 Rust: tokio-util 0.7.20 | MIT
+Source archive: https://crates.io/api/v1/crates/tokio-util/0.7.20/download
 License texts: 3e1bef82aa0dfee4
 Rust: toml 0.8.2 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/toml/0.8.2/download
 License texts: 4498464c2864825d, 6dc0e068dcf3a5bc
 Rust: toml 1.1.8+spec-1.1.0 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/toml/1.1.8+spec-1.1.0/download
 License texts: 4498464c2864825d, 9b689eac99cd7407
 Rust: toml_datetime 0.6.3 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/toml_datetime/0.6.3/download
 License texts: 84e1bbfebd74e419, 954f335b8baf5e1a
 Rust: toml_datetime 1.1.2+spec-1.1.0 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/toml_datetime/1.1.2+spec-1.1.0/download
 License texts: 4498464c2864825d, 9b689eac99cd7407
 Rust: toml_edit 0.19.15 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/toml_edit/0.19.15/download
 License texts: 4498464c2864825d, 6dc0e068dcf3a5bc
 Rust: toml_edit 0.20.2 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/toml_edit/0.20.2/download
 License texts: 4498464c2864825d, 6dc0e068dcf3a5bc
 Rust: toml_edit 0.25.17+spec-1.1.0 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/toml_edit/0.25.17+spec-1.1.0/download
 License texts: 4498464c2864825d, 9b689eac99cd7407
 Rust: toml_parser 1.1.5+spec-1.1.0 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/toml_parser/1.1.5+spec-1.1.0/download
 License texts: 4498464c2864825d, 9b689eac99cd7407
 Rust: toml_writer 1.1.3+spec-1.1.0 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/toml_writer/1.1.3+spec-1.1.0/download
 License texts: 4498464c2864825d, 9b689eac99cd7407
 Rust: tower 0.5.3 | MIT
+Source archive: https://crates.io/api/v1/crates/tower/0.5.3/download
 License texts: da6b30502badfa05
 Rust: tower-http 0.6.11 | MIT
+Source archive: https://crates.io/api/v1/crates/tower-http/0.6.11/download
 License texts: edd4b164997f6709
 Rust: tower-layer 0.3.3 | MIT
+Source archive: https://crates.io/api/v1/crates/tower-layer/0.3.3/download
 License texts: da6b30502badfa05
 Rust: tower-service 0.3.3 | MIT
+Source archive: https://crates.io/api/v1/crates/tower-service/0.3.3/download
 License texts: da6b30502badfa05
 Rust: tracing 0.1.44 | MIT
+Source archive: https://crates.io/api/v1/crates/tracing/0.1.44/download
 License texts: c1e08ee9a7288bf6
 Rust: tracing-attributes 0.1.31 | MIT
+Source archive: https://crates.io/api/v1/crates/tracing-attributes/0.1.31/download
 License texts: c1e08ee9a7288bf6
 Rust: tracing-core 0.1.36 | MIT
+Source archive: https://crates.io/api/v1/crates/tracing-core/0.1.36/download
 License texts: c1e08ee9a7288bf6
 Rust: trash 5.2.9 | MIT
+Source archive: https://crates.io/api/v1/crates/trash/5.2.9/download
 License texts: 2e5096718c28d1de
 Rust: tray-icon 0.25.1 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/tray-icon/0.25.1/download
 License texts: 6c1e5d0ccf5e8951, 859a90323b684e46, 954f335b8baf5e1a
 Rust: try-lock 0.2.5 | MIT
+Source archive: https://crates.io/api/v1/crates/try-lock/0.2.5/download
 License texts: 381f992f70f7089d
 Rust: typed-path 0.13.0 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/typed-path/0.13.0/download
 License texts: 30fefc3a7d6a0041, 85ad950cce8752f7
 Rust: typeid 1.0.3 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/typeid/1.0.3/download
 License texts: 30fefc3a7d6a0041, 85ad950cce8752f7
 Rust: typenum 1.20.1 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/typenum/1.20.1/download
 License texts: 65dc2a869ff7fe71, 87ebb37988efc328, db11fec9946737df
 Rust: uds_windows 1.2.1 | MIT
+Source archive: https://crates.io/api/v1/crates/uds_windows/1.2.1/download
 License texts: 8e1c6bd583a7e67b
 Rust: unicode-ident 1.0.27 | (MIT OR Apache-2.0) AND Unicode-3.0
+Source archive: https://crates.io/api/v1/crates/unicode-ident/1.0.27/download
 License texts: 30fefc3a7d6a0041, 361d7912957842f2, 85ad950cce8752f7
 Rust: unicode-segmentation 1.13.3 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/unicode-segmentation/1.13.3/download
 License texts: 033a9383ff21d1e4, 20cec30ad7780437, 954f335b8baf5e1a
 Rust: untrusted 0.9.0 | ISC
+Source archive: https://crates.io/api/v1/crates/untrusted/0.9.0/download
 License texts: a1fff344297822d3
 Rust: url 2.5.8 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/url/2.5.8/download
 License texts: 7a8093fb4a93f23e, 954f335b8baf5e1a
 Rust: urlencoding 2.1.3 | MIT
+Source archive: https://crates.io/api/v1/crates/urlencoding/2.1.3/download
 License texts: 5df9b8726f15e8bc
 Rust: urlpattern 0.6.0 | MIT
+Source archive: https://crates.io/api/v1/crates/urlpattern/0.6.0/download
 License texts: f2459c4b106b4bee
 Rust: utf8_iter 1.0.4 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/utf8_iter/1.0.4/download
 License texts: 283ea6cc2997a1a7, 76c0e37c107dd35a, 7dc2f64024477c92
 Rust: uuid 1.28.0 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/uuid/1.28.0/download
 License texts: 11cd7e6caed4b237, 954f335b8baf5e1a
 Rust: vcpkg 0.2.15 | MIT/Apache-2.0
+Source archive: https://crates.io/api/v1/crates/vcpkg/0.2.15/download
 License texts: 6196143cbaf5e145, 954f335b8baf5e1a
 Rust: version-compare 0.2.1 | MIT
+Source archive: https://crates.io/api/v1/crates/version-compare/0.2.1/download
 License texts: 2970d8b03b77f5a8
 Rust: version_check 0.9.5 | MIT/Apache-2.0
+Source archive: https://crates.io/api/v1/crates/version_check/0.9.5/download
 License texts: 954f335b8baf5e1a, ed2fda479dacddad
 Rust: vswhom 0.1.0 | MIT
+Source archive: https://crates.io/api/v1/crates/vswhom/0.1.0/download
 License texts: b9720ca7a91fb6bf
 Rust: vswhom-sys 0.1.3 | MIT
+Source archive: https://crates.io/api/v1/crates/vswhom-sys/0.1.3/download
 License texts: b9720ca7a91fb6bf
 Rust: walkdir 2.5.0 | Unlicense/MIT
+Source archive: https://crates.io/api/v1/crates/walkdir/2.5.0/download
 License texts: 154c1af2b38e25e5, 65314a6c96683f76
 Rust: want 0.3.2 | MIT
+Source archive: https://crates.io/api/v1/crates/want/0.3.2/download
 License texts: f7dfffe03f9faba8
 Rust: wasi 0.11.1+wasi-snapshot-preview1 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/wasi/0.11.1+wasi-snapshot-preview1/download
 License texts: 2f213ec6b1355dc8, 30fefc3a7d6a0041, 954f335b8baf5e1a
 Rust: wasip2 1.0.4+wasi-0.2.12 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/wasip2/1.0.4+wasi-0.2.12/download
 License texts: 2f213ec6b1355dc8, 30fefc3a7d6a0041, 954f335b8baf5e1a
 Rust: wasm-bindgen 0.2.129 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/wasm-bindgen/0.2.129/download
 License texts: 84e1bbfebd74e419, 954f335b8baf5e1a
 Rust: wasm-bindgen-futures 0.4.79 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/wasm-bindgen-futures/0.4.79/download
 License texts: 84e1bbfebd74e419, 954f335b8baf5e1a
 Rust: wasm-bindgen-macro 0.2.129 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/wasm-bindgen-macro/0.2.129/download
 License texts: 84e1bbfebd74e419, 954f335b8baf5e1a
 Rust: wasm-bindgen-macro-support 0.2.129 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/wasm-bindgen-macro-support/0.2.129/download
 License texts: 84e1bbfebd74e419, 954f335b8baf5e1a
 Rust: wasm-bindgen-shared 0.2.129 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/wasm-bindgen-shared/0.2.129/download
 License texts: 84e1bbfebd74e419, 954f335b8baf5e1a
 Rust: wasm-streams 0.5.0 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/wasm-streams/0.5.0/download
 License texts: 30fefc3a7d6a0041, 85ad950cce8752f7
 Rust: web-sys 0.3.106 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/web-sys/0.3.106/download
 License texts: 84e1bbfebd74e419, 954f335b8baf5e1a
 Rust: web-time 1.1.0 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/web-time/1.1.0/download
 License texts: 32ae0b6c9e4c00e6, b7bb0c98ad20c5e4
 Rust: web_atoms 0.2.6 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/web_atoms/0.2.6/download
 License texts: 35af0fd883383c93, 954f335b8baf5e1a
 Rust: webkit2gtk 2.0.2 | MIT
+Source archive: https://crates.io/api/v1/crates/webkit2gtk/2.0.2/download
 License texts: 2b446734be0c9504
 Rust: webkit2gtk-sys 2.0.2 | MIT
+Source archive: https://crates.io/api/v1/crates/webkit2gtk-sys/2.0.2/download
 License texts: 2d964b2478763057
 Rust: webpki-root-certs 1.0.12 | CDLA-Permissive-2.0
+Source archive: https://crates.io/api/v1/crates/webpki-root-certs/1.0.12/download
 License texts: d30183ec6610abca
 Rust: webpki-roots 1.0.10 | CDLA-Permissive-2.0
+Source archive: https://crates.io/api/v1/crates/webpki-roots/1.0.10/download
 License texts: d30183ec6610abca
 Rust: webview2-com 0.39.1 | MIT
-License texts: not included in the installed package; release review required
+Source archive: https://crates.io/api/v1/crates/webview2-com/0.39.1/download
+Supplemental source: https://raw.githubusercontent.com/wravery/webview2-rs/edc2caf886175ccaebe86078c9cfe1ae2a187328/LICENSE
+License texts: 008f1b11c6d18763
 Rust: webview2-com-macros 0.8.1 | MIT
-License texts: not included in the installed package; release review required
+Source archive: https://crates.io/api/v1/crates/webview2-com-macros/0.8.1/download
+Supplemental source: https://raw.githubusercontent.com/wravery/webview2-rs/dffa41a8a46d3f5565eefbff2de57d38d399f158/LICENSE
+License texts: 008f1b11c6d18763
 Rust: webview2-com-sys 0.39.1 | MIT
-License texts: not included in the installed package; release review required
+Source archive: https://crates.io/api/v1/crates/webview2-com-sys/0.39.1/download
+Supplemental source: https://raw.githubusercontent.com/wravery/webview2-rs/edc2caf886175ccaebe86078c9cfe1ae2a187328/LICENSE
+License texts: 008f1b11c6d18763
 Rust: winapi 0.3.9 | MIT/Apache-2.0
+Source archive: https://crates.io/api/v1/crates/winapi/0.3.9/download
 License texts: 2d01145596179ab6, 6dc0e068dcf3a5bc
 Rust: winapi-i686-pc-windows-gnu 0.4.0 | MIT/Apache-2.0
-License texts: not included in the installed package; release review required
+Source archive: https://crates.io/api/v1/crates/winapi-i686-pc-windows-gnu/0.4.0/download
+Supplemental source: https://raw.githubusercontent.com/retep998/winapi-rs/796a8e6c2971dc2ff1bcff166e6671284f9b5b6b/LICENSE-APACHE
+Supplemental source: https://raw.githubusercontent.com/retep998/winapi-rs/796a8e6c2971dc2ff1bcff166e6671284f9b5b6b/LICENSE-MIT
+License texts: 2d01145596179ab6, 6dc0e068dcf3a5bc
 Rust: winapi-util 0.1.11 | Unlicense OR MIT
+Source archive: https://crates.io/api/v1/crates/winapi-util/0.1.11/download
 License texts: 65314a6c96683f76, 739620ea44ad8f99
 Rust: winapi-x86_64-pc-windows-gnu 0.4.0 | MIT/Apache-2.0
-License texts: not included in the installed package; release review required
+Source archive: https://crates.io/api/v1/crates/winapi-x86_64-pc-windows-gnu/0.4.0/download
+Supplemental source: https://raw.githubusercontent.com/retep998/winapi-rs/796a8e6c2971dc2ff1bcff166e6671284f9b5b6b/LICENSE-APACHE
+Supplemental source: https://raw.githubusercontent.com/retep998/winapi-rs/796a8e6c2971dc2ff1bcff166e6671284f9b5b6b/LICENSE-MIT
+License texts: 2d01145596179ab6, 6dc0e068dcf3a5bc
 Rust: window-vibrancy 0.8.1 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/window-vibrancy/0.8.1/download
 License texts: 954f335b8baf5e1a, b46700117441967d, bb8278137f730fd0
 Rust: windows 0.62.2 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/windows/0.62.2/download
 License texts: 783829b43aacb86c, ff82c90f84945c60
 Rust: windows-collections 0.3.2 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/windows-collections/0.3.2/download
 License texts: 783829b43aacb86c, ff82c90f84945c60
 Rust: windows-core 0.62.2 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/windows-core/0.62.2/download
 License texts: 783829b43aacb86c, ff82c90f84945c60
 Rust: windows-future 0.3.2 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/windows-future/0.3.2/download
 License texts: 783829b43aacb86c, ff82c90f84945c60
 Rust: windows-implement 0.60.2 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/windows-implement/0.60.2/download
 License texts: 783829b43aacb86c, ff82c90f84945c60
 Rust: windows-interface 0.59.3 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/windows-interface/0.59.3/download
 License texts: 783829b43aacb86c, ff82c90f84945c60
 Rust: windows-link 0.2.1 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/windows-link/0.2.1/download
 License texts: 783829b43aacb86c, ff82c90f84945c60
 Rust: windows-numerics 0.3.1 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/windows-numerics/0.3.1/download
 License texts: 783829b43aacb86c, ff82c90f84945c60
 Rust: windows-registry 0.6.1 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/windows-registry/0.6.1/download
 License texts: 783829b43aacb86c, ff82c90f84945c60
 Rust: windows-result 0.4.1 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/windows-result/0.4.1/download
 License texts: 783829b43aacb86c, ff82c90f84945c60
 Rust: windows-strings 0.5.1 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/windows-strings/0.5.1/download
 License texts: 783829b43aacb86c, ff82c90f84945c60
 Rust: windows-sys 0.45.0 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/windows-sys/0.45.0/download
 License texts: 783829b43aacb86c, ff82c90f84945c60
 Rust: windows-sys 0.52.0 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/windows-sys/0.52.0/download
 License texts: 783829b43aacb86c, ff82c90f84945c60
 Rust: windows-sys 0.60.2 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/windows-sys/0.60.2/download
 License texts: 783829b43aacb86c, ff82c90f84945c60
 Rust: windows-sys 0.61.2 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/windows-sys/0.61.2/download
 License texts: 783829b43aacb86c, ff82c90f84945c60
 Rust: windows-targets 0.42.2 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/windows-targets/0.42.2/download
 License texts: 783829b43aacb86c, ff82c90f84945c60
 Rust: windows-targets 0.52.6 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/windows-targets/0.52.6/download
 License texts: 783829b43aacb86c, ff82c90f84945c60
 Rust: windows-targets 0.53.5 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/windows-targets/0.53.5/download
 License texts: 783829b43aacb86c, ff82c90f84945c60
 Rust: windows-threading 0.2.1 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/windows-threading/0.2.1/download
 License texts: 783829b43aacb86c, ff82c90f84945c60
 Rust: windows-version 0.1.7 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/windows-version/0.1.7/download
 License texts: 783829b43aacb86c, ff82c90f84945c60
 Rust: windows_aarch64_gnullvm 0.42.2 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/windows_aarch64_gnullvm/0.42.2/download
 License texts: 783829b43aacb86c, ff82c90f84945c60
 Rust: windows_aarch64_gnullvm 0.52.6 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/windows_aarch64_gnullvm/0.52.6/download
 License texts: 783829b43aacb86c, ff82c90f84945c60
 Rust: windows_aarch64_gnullvm 0.53.1 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/windows_aarch64_gnullvm/0.53.1/download
 License texts: 783829b43aacb86c, ff82c90f84945c60
 Rust: windows_aarch64_msvc 0.42.2 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/windows_aarch64_msvc/0.42.2/download
 License texts: 783829b43aacb86c, ff82c90f84945c60
 Rust: windows_aarch64_msvc 0.52.6 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/windows_aarch64_msvc/0.52.6/download
 License texts: 783829b43aacb86c, ff82c90f84945c60
 Rust: windows_aarch64_msvc 0.53.1 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/windows_aarch64_msvc/0.53.1/download
 License texts: 783829b43aacb86c, ff82c90f84945c60
 Rust: windows_i686_gnu 0.42.2 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/windows_i686_gnu/0.42.2/download
 License texts: 783829b43aacb86c, ff82c90f84945c60
 Rust: windows_i686_gnu 0.52.6 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/windows_i686_gnu/0.52.6/download
 License texts: 783829b43aacb86c, ff82c90f84945c60
 Rust: windows_i686_gnu 0.53.1 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/windows_i686_gnu/0.53.1/download
 License texts: 783829b43aacb86c, ff82c90f84945c60
 Rust: windows_i686_gnullvm 0.52.6 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/windows_i686_gnullvm/0.52.6/download
 License texts: 783829b43aacb86c, ff82c90f84945c60
 Rust: windows_i686_gnullvm 0.53.1 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/windows_i686_gnullvm/0.53.1/download
 License texts: 783829b43aacb86c, ff82c90f84945c60
 Rust: windows_i686_msvc 0.42.2 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/windows_i686_msvc/0.42.2/download
 License texts: 783829b43aacb86c, ff82c90f84945c60
 Rust: windows_i686_msvc 0.52.6 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/windows_i686_msvc/0.52.6/download
 License texts: 783829b43aacb86c, ff82c90f84945c60
 Rust: windows_i686_msvc 0.53.1 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/windows_i686_msvc/0.53.1/download
 License texts: 783829b43aacb86c, ff82c90f84945c60
 Rust: windows_x86_64_gnu 0.42.2 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/windows_x86_64_gnu/0.42.2/download
 License texts: 783829b43aacb86c, ff82c90f84945c60
 Rust: windows_x86_64_gnu 0.52.6 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/windows_x86_64_gnu/0.52.6/download
 License texts: 783829b43aacb86c, ff82c90f84945c60
 Rust: windows_x86_64_gnu 0.53.1 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/windows_x86_64_gnu/0.53.1/download
 License texts: 783829b43aacb86c, ff82c90f84945c60
 Rust: windows_x86_64_gnullvm 0.42.2 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/windows_x86_64_gnullvm/0.42.2/download
 License texts: 783829b43aacb86c, ff82c90f84945c60
 Rust: windows_x86_64_gnullvm 0.52.6 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/windows_x86_64_gnullvm/0.52.6/download
 License texts: 783829b43aacb86c, ff82c90f84945c60
 Rust: windows_x86_64_gnullvm 0.53.1 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/windows_x86_64_gnullvm/0.53.1/download
 License texts: 783829b43aacb86c, ff82c90f84945c60
 Rust: windows_x86_64_msvc 0.42.2 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/windows_x86_64_msvc/0.42.2/download
 License texts: 783829b43aacb86c, ff82c90f84945c60
 Rust: windows_x86_64_msvc 0.52.6 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/windows_x86_64_msvc/0.52.6/download
 License texts: 783829b43aacb86c, ff82c90f84945c60
 Rust: windows_x86_64_msvc 0.53.1 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/windows_x86_64_msvc/0.53.1/download
 License texts: 783829b43aacb86c, ff82c90f84945c60
 Rust: winnow 0.5.40 | MIT
+Source archive: https://crates.io/api/v1/crates/winnow/0.5.40/download
 License texts: 8793aa4141de4b16
 Rust: winnow 1.0.4 | MIT
+Source archive: https://crates.io/api/v1/crates/winnow/1.0.4/download
 License texts: 8793aa4141de4b16
 Rust: winreg 0.56.0 | MIT
+Source archive: https://crates.io/api/v1/crates/winreg/0.56.0/download
 License texts: d9ba37d9bbdf711b
 Rust: wit-bindgen 0.57.1 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/wit-bindgen/0.57.1/download
 License texts: 2f213ec6b1355dc8, 30fefc3a7d6a0041, 954f335b8baf5e1a
 Rust: writeable 0.6.4 | Unicode-3.0
+Source archive: https://crates.io/api/v1/crates/writeable/0.6.4/download
 License texts: cde87abe221f413f
 Rust: wry 0.57.0 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/wry/0.57.0/download
 License texts: 26235c41e314fb0d, 86eb6a41ef640b92, 954f335b8baf5e1a
 Rust: x11 2.21.0 | MIT
+Source archive: https://crates.io/api/v1/crates/x11/2.21.0/download
 License texts: 30fefc3a7d6a0041
 Rust: x11-dl 2.21.0 | MIT
+Source archive: https://crates.io/api/v1/crates/x11-dl/2.21.0/download
 License texts: 30fefc3a7d6a0041
 Rust: xattr 1.6.1 | MIT OR Apache-2.0
+Source archive: https://crates.io/api/v1/crates/xattr/1.6.1/download
 License texts: 7bdd5c5e8ad0c973, 954f335b8baf5e1a
 Rust: xz2 0.1.7 | MIT/Apache-2.0
+Source archive: https://crates.io/api/v1/crates/xz2/0.1.7/download
 License texts: 954f335b8baf5e1a, efccd96727c0efa8
 Rust: yoke 0.8.3 | Unicode-3.0
+Source archive: https://crates.io/api/v1/crates/yoke/0.8.3/download
 License texts: cde87abe221f413f
 Rust: yoke-derive 0.8.4 | Unicode-3.0
+Source archive: https://crates.io/api/v1/crates/yoke-derive/0.8.4/download
 License texts: cde87abe221f413f
 Rust: zbus 5.19.0 | MIT
+Source archive: https://crates.io/api/v1/crates/zbus/5.19.0/download
 License texts: a0e7d0739e030804
 Rust: zbus_macros 5.19.0 | MIT
+Source archive: https://crates.io/api/v1/crates/zbus_macros/5.19.0/download
 License texts: a0e7d0739e030804
 Rust: zbus_names 4.3.5 | MIT
+Source archive: https://crates.io/api/v1/crates/zbus_names/4.3.5/download
 License texts: a0e7d0739e030804
 Rust: zcheapstr 1.1.0 | MIT
+Source archive: https://crates.io/api/v1/crates/zcheapstr/1.1.0/download
 License texts: 36c68b249eb6de04
 Rust: zerofrom 0.1.8 | Unicode-3.0
+Source archive: https://crates.io/api/v1/crates/zerofrom/0.1.8/download
 License texts: cde87abe221f413f
 Rust: zerofrom-derive 0.1.8 | Unicode-3.0
+Source archive: https://crates.io/api/v1/crates/zerofrom-derive/0.1.8/download
 License texts: cde87abe221f413f
 Rust: zeroize 1.9.1 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/zeroize/1.9.1/download
 License texts: 283ea6cc2997a1a7, 836ed921bbad486c
 Rust: zeroize_derive 1.5.0 | Apache-2.0 OR MIT
+Source archive: https://crates.io/api/v1/crates/zeroize_derive/1.5.0/download
 License texts: 1038b7737a0a04bd, 283ea6cc2997a1a7
 Rust: zerotrie 0.2.5 | Unicode-3.0
+Source archive: https://crates.io/api/v1/crates/zerotrie/0.2.5/download
 License texts: cde87abe221f413f
 Rust: zerovec 0.11.8 | Unicode-3.0
+Source archive: https://crates.io/api/v1/crates/zerovec/0.11.8/download
 License texts: cde87abe221f413f
 Rust: zerovec-derive 0.11.6 | Unicode-3.0
+Source archive: https://crates.io/api/v1/crates/zerovec-derive/0.11.6/download
 License texts: cde87abe221f413f
-Rust: zip 2.6.1 | MIT
-License texts: 04dc52136d82400b
 Rust: zip 9.5.1 | MIT
+Source archive: https://crates.io/api/v1/crates/zip/9.5.1/download
 License texts: 6ac8711fb340c62c
 Rust: zlib-rs 0.6.8 | Zlib
+Source archive: https://crates.io/api/v1/crates/zlib-rs/0.6.8/download
 License texts: 1a7d409d51427f4f
 Rust: zmij 1.0.23 | MIT
+Source archive: https://crates.io/api/v1/crates/zmij/1.0.23/download
 License texts: 30fefc3a7d6a0041
 Rust: zopfli 0.8.4 | Apache-2.0
+Source archive: https://crates.io/api/v1/crates/zopfli/0.8.4/download
 License texts: b969ab4be2f63a5d
 Rust: zvariant 5.15.1 | MIT
+Source archive: https://crates.io/api/v1/crates/zvariant/5.15.1/download
 License texts: a0e7d0739e030804
 Rust: zvariant_derive 5.15.1 | MIT
+Source archive: https://crates.io/api/v1/crates/zvariant_derive/5.15.1/download
 License texts: a0e7d0739e030804
 Rust: zvariant_utils 4.2.0 | MIT
+Source archive: https://crates.io/api/v1/crates/zvariant_utils/4.2.0/download
 License texts: 30fefc3a7d6a0041
 npm: @floating-ui/core 1.8.0 | MIT
+Source archive: https://registry.npmjs.org/@floating-ui/core/-/core-1.8.0.tgz
 License texts: 6c1117dc530c1ffc
 npm: @floating-ui/dom 1.8.0 | MIT
+Source archive: https://registry.npmjs.org/@floating-ui/dom/-/dom-1.8.0.tgz
 License texts: 6c1117dc530c1ffc
 npm: @floating-ui/react 0.27.20 | MIT
+Source archive: https://registry.npmjs.org/@floating-ui/react/-/react-0.27.20.tgz
 License texts: 6c1117dc530c1ffc
 npm: @floating-ui/react-dom 2.1.9 | MIT
+Source archive: https://registry.npmjs.org/@floating-ui/react-dom/-/react-dom-2.1.9.tgz
 License texts: 6c1117dc530c1ffc
 npm: @floating-ui/utils 0.2.12 | MIT
+Source archive: https://registry.npmjs.org/@floating-ui/utils/-/utils-0.2.12.tgz
 License texts: 6c1117dc530c1ffc
 npm: @mantine/core 9.7.3 | MIT
+Source archive: https://registry.npmjs.org/@mantine/core/-/core-9.7.3.tgz
 License texts: 6ad8f00e57bb6686
 npm: @mantine/hooks 9.7.3 | MIT
+Source archive: https://registry.npmjs.org/@mantine/hooks/-/hooks-9.7.3.tgz
 License texts: 6ad8f00e57bb6686
 npm: @tabler/icons 3.49.0 | MIT
+Source archive: https://registry.npmjs.org/@tabler/icons/-/icons-3.49.0.tgz
 License texts: 673c26961804abba
 npm: @tabler/icons-react 3.49.0 | MIT
+Source archive: https://registry.npmjs.org/@tabler/icons-react/-/icons-react-3.49.0.tgz
 License texts: 673c26961804abba
 npm: @tauri-apps/api 2.12.4 | Apache-2.0 OR MIT
+Source archive: https://registry.npmjs.org/@tauri-apps/api/-/api-2.12.4.tgz
 License texts: 4bf96504d6e83ce5, 7c667b0cf9860e6a, 89ff9689dcf9dd53
 npm: @tauri-apps/plugin-dialog 2.8.3 | MIT OR Apache-2.0
+Source archive: https://registry.npmjs.org/@tauri-apps/plugin-dialog/-/plugin-dialog-2.8.3.tgz
 License texts: eb8a6c84630461b3
 npm: @tauri-apps/plugin-opener 2.7.2 | MIT OR Apache-2.0
+Source archive: https://registry.npmjs.org/@tauri-apps/plugin-opener/-/plugin-opener-2.7.2.tgz
 License texts: eb8a6c84630461b3
 npm: @types/react 19.3.0 | MIT
+Source archive: https://registry.npmjs.org/@types/react/-/react-19.3.0.tgz
 License texts: ff82c90f84945c60
 npm: clsx 2.1.1 | MIT
+Source archive: https://registry.npmjs.org/clsx/-/clsx-2.1.1.tgz
 License texts: 3d5b63706380c8c7
 npm: cookie 1.1.1 | MIT
+Source archive: https://registry.npmjs.org/cookie/-/cookie-1.1.1.tgz
 License texts: b970cfe4a7f34ca7
 npm: detect-node-es 1.1.0 | MIT
+Source archive: https://registry.npmjs.org/detect-node-es/-/detect-node-es-1.1.0.tgz
 License texts: 5dd2a43c0ed685c4
 npm: react 19.3.1 | MIT
+Source archive: https://registry.npmjs.org/react/-/react-19.3.1.tgz
 License texts: cf9b17822d1fcd4f
 npm: react-dom 19.3.1 | MIT
+Source archive: https://registry.npmjs.org/react-dom/-/react-dom-19.3.1.tgz
 License texts: cf9b17822d1fcd4f
 npm: react-number-format 5.4.5 | MIT
+Source archive: https://registry.npmjs.org/react-number-format/-/react-number-format-5.4.5.tgz
 License texts: 251d7a39da354562
 npm: react-remove-scroll 2.7.2 | MIT
+Source archive: https://registry.npmjs.org/react-remove-scroll/-/react-remove-scroll-2.7.2.tgz
 License texts: 07dfb46d2e36d998
 npm: react-remove-scroll-bar 2.3.8 | MIT
-License texts: not included in the installed package; release review required
+Source archive: https://registry.npmjs.org/react-remove-scroll-bar/-/react-remove-scroll-bar-2.3.8.tgz
+Supplemental source: https://raw.githubusercontent.com/spdx/license-list-data/31846481de7ea17d92f2f46fad76abe58b2e9bb0/text/MIT.txt
+Review note: Publication declares MIT but omits LICENSE. Standard MIT text included; author metadata: Anton Korzunov <thekashey@gmail.com>. Exact-release source/license provenance requires review; published gitHead is not reachable.
+License texts: 07c7993a082dd284
 npm: react-router 7.18.4 | MIT
+Source archive: https://registry.npmjs.org/react-router/-/react-router-7.18.4.tgz
 License texts: 9bd42e9ab2f84a39
 npm: react-router-dom 7.18.4 | MIT
+Source archive: https://registry.npmjs.org/react-router-dom/-/react-router-dom-7.18.4.tgz
 License texts: 9bd42e9ab2f84a39
 npm: react-style-singleton 2.2.3 | MIT
+Source archive: https://registry.npmjs.org/react-style-singleton/-/react-style-singleton-2.2.3.tgz
 License texts: 07dfb46d2e36d998
 npm: set-cookie-parser 2.7.2 | MIT
+Source archive: https://registry.npmjs.org/set-cookie-parser/-/set-cookie-parser-2.7.2.tgz
 License texts: 1798ebfcb7e5db70
 npm: tabbable 6.5.0 | MIT
+Source archive: https://registry.npmjs.org/tabbable/-/tabbable-6.5.0.tgz
 License texts: 020991f5faee10dd
 npm: tagged-tag 1.0.0 | MIT
+Source archive: https://registry.npmjs.org/tagged-tag/-/tagged-tag-1.0.0.tgz
 License texts: 1529f88b36750950
 npm: tslib 2.8.1 | 0BSD
+Source archive: https://registry.npmjs.org/tslib/-/tslib-2.8.1.tgz
 License texts: 0e8d2550baea17eb, 7932ec89afeb0991
 npm: type-fest 5.10.0 | (MIT OR CC0-1.0)
+Source archive: https://registry.npmjs.org/type-fest/-/type-fest-5.10.0.tgz
 License texts: 1529f88b36750950, 6d489af6292662d9
 npm: use-callback-ref 1.3.3 | MIT
+Source archive: https://registry.npmjs.org/use-callback-ref/-/use-callback-ref-1.3.3.tgz
 License texts: 07dfb46d2e36d998
 npm: use-sidecar 1.1.3 | MIT
+Source archive: https://registry.npmjs.org/use-sidecar/-/use-sidecar-1.1.3.tgz
 License texts: 07dfb46d2e36d998
 npm: zustand 5.0.15 | MIT
+Source archive: https://registry.npmjs.org/zustand/-/zustand-5.0.15.tgz
 License texts: 384a8fa756d4ca7e
+
+========================================================================
+License text 008f1b11c6d18763
+========================================================================
+MIT License
+
+Copyright (c) 2021 Bill Avery
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
 ========================================================================
 License text 020991f5faee10dd
@@ -1259,34 +1925,6 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 
 ========================================================================
-License text 04dc52136d82400b
-========================================================================
-The MIT License (MIT)
-
-Copyright (c) 2014 Mathijs van de Nes
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-
-Some files in the "tests/data" subdirectory of this repository are under other
-licences; see files named LICENSE.*.txt for details.
-
-========================================================================
 License text 055a1711063672c8
 ========================================================================
 MIT License
@@ -1361,6 +1999,28 @@ SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
 WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
 OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
 CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+========================================================================
+License text 07c7993a082dd284
+========================================================================
+MIT License
+
+Copyright (c) <year> <copyright holders>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
+associated documentation files (the "Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the
+following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial
+portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
+LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO
+EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ========================================================================
 License text 07ce2f16212bdab8
@@ -1726,6 +2386,11 @@ Permission is hereby granted, free of charge, to any person obtaining a copy of 
 The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+========================================================================
+License text 154397a08d0cb342
+========================================================================
+../LICENSE-APACHE
 
 ========================================================================
 License text 154c1af2b38e25e5
@@ -2117,6 +2782,44 @@ freely, subject to the following restrictions:
    misrepresented as being the original software.
 
 3. This notice may not be removed or altered from any source distribution.
+
+========================================================================
+License text 1aa0a34224480ff9
+========================================================================
+# License
+
+The licensing of these crates is a bit complicated:
+- The crates `objc2`, `block2`, `objc2-foundation` and `objc2-encode` are
+  [currently][#23] licensed under [the MIT license][MIT].
+- All other crates are trio-licensed under the [Zlib], [Apache-2.0] or [MIT]
+  license, at your option.
+
+Furthermore, the crates are (usually automatically) derived from Apple SDKs,
+and that may have implications for licensing, see below for details.
+
+[#23]: https://github.com/madsmtm/objc2/issues/23
+[MIT]: https://opensource.org/license/MIT
+[Zlib]: https://zlib.net/zlib_license.html
+[Apache-2.0]: https://www.apache.org/licenses/LICENSE-2.0
+
+
+## Apple SDKs
+
+These crates are derived from Apple SDKs shipped with Xcode. You can obtain a
+copy of the Xcode license at:
+
+https://www.apple.com/legal/sla/docs/xcode.pdf
+
+Or by typing `xcodebuild -license` in your terminal.
+
+From reading the license, it is unclear whether distributing derived works
+such as these crates are allowed?
+
+But in any case, to practically use these crates, you will have to link, and
+that only works when you have the correct Xcode SDK available to provide the
+required `.tbd` files, which is why we choose to still use the normal SPDX
+identifiers in the crates (Xcode is required to use the crates, and when using
+Xcode you have already agreed to the Xcode license).
 
 ========================================================================
 License text 1b0258c48739a24e
@@ -2822,6 +3525,109 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 ========================================================================
+License text 23a50c6a034f431e
+========================================================================
+r-efi
+=====
+
+UEFI Reference Specification Protocol Constants and Definitions
+
+The r-efi project provides the protocol constants and definitions of the
+UEFI Reference Specification as native rust code. The scope of this project is
+limited to those protocol definitions. The protocols are not actually
+implemented. As such, this project serves as base for any UEFI application that
+needs to interact with UEFI, or implement (parts of) the UEFI specification.
+
+### Project
+
+ * **Website**: <https://github.com/r-efi/r-efi/wiki>
+ * **Bug Tracker**: <https://github.com/r-efi/r-efi/issues>
+
+### Requirements
+
+The requirements for this project are:
+
+ * `rustc >= 1.68.0`
+
+### Build
+
+To build this project, run:
+
+```sh
+cargo build
+```
+
+Available configuration options are:
+
+ * **native**: This feature-selector enables compilation of modules and
+               examples that require native UEFI targets. Those will not
+               compile on foreign targets and thus are guarded by this flag.
+
+##### Build via: official toolchains
+
+Starting with rust-version 1.68, rustup distributes pre-compiled toolchains for
+many UEFI targets. You can enumerate and install them via `rustup`. This
+example shows how to enumerate all available targets for your stable toolchain
+and then install the UEFI target for the `x86_64` architecture:
+
+```sh
+rustup target list --toolchain=stable
+rustup target add --toolchain=stable x86_64-unknown-uefi
+```
+
+This project can then be compiled directly for the selected target:
+
+```sh
+cargo +stable build \
+    --examples \
+    --features native \
+    --lib \
+    --target x86_64-unknown-uefi
+```
+
+##### Build via: cargo/rustc nightly with -Zbuild-std
+
+If no pre-compiled toolchains are available for your selected target, you can
+compile the project and the required parts of the standard library via the
+experimental `-Zbuild-std` feature of rustc. This requires a nightly compiler:
+
+```sh
+cargo +nightly build \
+    -Zbuild-std=core,compiler_builtins,alloc \
+    -Zbuild-std-features=compiler-builtins-mem \
+    --examples \
+    --features native \
+    --lib \
+    --target x86_64-unknown-uefi
+```
+
+##### Build via: foreign target
+
+The project can be built for non-UEFI targets via the standard rust toolchains.
+This allows non-UEFI targets to interact with UEFI systems or otherwise host
+UEFI operations. Furthermore, this allows running the foreign test-suite of
+this project as long as the target supports the full standard library:
+
+```sh
+cargo +stable build --all-targets
+cargo +stable test --all-targets
+```
+
+Note that the `native` feature must not be enabled for foreign targets as it
+will not compile on non-UEFI systems.
+
+### Repository:
+
+ - **web**:   <https://github.com/r-efi/r-efi>
+ - **https**: `https://github.com/r-efi/r-efi.git`
+ - **ssh**:   `git@github.com:r-efi/r-efi.git`
+
+### License:
+
+ - **MIT** OR **Apache-2.0** OR **LGPL-2.1-or-later**
+ - See AUTHORS file for details.
+
+========================================================================
 License text 2411d70acb18e15a
 ========================================================================
 Copyrights in the Rand project are retained by their contributors. No
@@ -2929,6 +3735,33 @@ PackageDownloadLocation: git://github.com/tauri-apps/wry
 PackageDownloadLocation: git+https://github.com/tauri-apps/wry.git
 PackageDownloadLocation: git+ssh://github.com/tauri-apps/wry.git
 Creator: Person: Daniel Thompson-Yvetot
+
+========================================================================
+License text 26633be0c19e2e61
+========================================================================
+MIT License
+
+Copyright (c) 2017 Szymon Wieloch
+Copyright (C) 2019 Ahmed Masud <ahmed.masud@saf.ai>
+Copyright (C) 2022 OpenByte <development.openbyte@gmail.com>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
 ========================================================================
 License text 26e6f69cf1f6665d
@@ -4137,6 +4970,85 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+========================================================================
+License text 3349455e35ec5738
+========================================================================
+LICENSE:
+        This project is triple-licensed under the MIT License, the Apache
+        License, Version 2.0, and the GNU Lesser General Public License,
+        Version 2.1+.
+
+AUTHORS-MIT:
+        Permission is hereby granted, free of charge, to any person obtaining a
+        copy of this software and associated documentation files (the
+        "Software"), to deal in the Software without restriction, including
+        without limitation the rights to use, copy, modify, merge, publish,
+        distribute, sublicense, and/or sell copies of the Software, and to
+        permit persons to whom the Software is furnished to do so, subject to
+        the following conditions:
+
+        The above copyright notice and this permission notice shall be included
+        in all copies or substantial portions of the Software.
+
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+        OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+        MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+        IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+        CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+        TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+        SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+AUTHORS-ASL:
+        Licensed under the Apache License, Version 2.0 (the "License");
+        you may not use this file except in compliance with the License.
+        You may obtain a copy of the License at
+
+                http://www.apache.org/licenses/LICENSE-2.0
+
+        Unless required by applicable law or agreed to in writing, software
+        distributed under the License is distributed on an "AS IS" BASIS,
+        WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+        See the License for the specific language governing permissions and
+        limitations under the License.
+
+AUTHORS-LGPL:
+        This program is free software; you can redistribute it and/or modify it
+        under the terms of the GNU Lesser General Public License as published
+        by the Free Software Foundation; either version 2.1 of the License, or
+        (at your option) any later version.
+
+        This program is distributed in the hope that it will be useful, but
+        WITHOUT ANY WARRANTY; without even the implied warranty of
+        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+        Lesser General Public License for more details.
+
+        You should have received a copy of the GNU Lesser General Public License
+        along with this program; If not, see <http://www.gnu.org/licenses/>.
+
+COPYRIGHT: (ordered alphabetically)
+        Copyright (C) 2017-2023 Red Hat, Inc.
+        Copyright (C) 2019-2023 Microsoft Corporation
+        Copyright (C) 2022-2023 David Rheinsberg
+
+AUTHORS: (ordered alphabetically)
+        Alan Egerton <eggyal@gmail.com>
+        Alex James <theracermaster@gmail.com>
+        Ayush Singh <ayushsingh1325@gmail.com>
+        Boris-Chengbiao Zhou <bobo1239@web.de>
+        Bret Barkelew <bret@corthon.com>
+        Christopher Zurcher <christopher.zurcher@microsoft.com>
+        David Rheinsberg <david@readahead.eu>
+        Dmitry Mostovenko <trueberserker@gmail.com>
+        Hiroki Tokunaga <tokusan441@gmail.com>
+        Joe Richey <joerichey@google.com>
+        John Schock <joschock@microsoft.com>
+        Michael Kubacki <michael.kubacki@microsoft.com>
+        Oliver Smith-Denny <osde@microsoft.com>
+        Richard Wiedenhöft <richard@wiedenhoeft.xyz>
+        Rob Bradford <robert.bradford@intel.com>, <rbradford@rivosinc.com>
+        Tom Gundersen <teg@jklm.no>
+        Trevor Gross <tmgross@umich.edu>
 
 ========================================================================
 License text 33ed9a8ecf556f16
@@ -7339,37 +8251,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 ========================================================================
-License text 66a2ea9ed607dd0e
-========================================================================
-MIT License
-
-Copyright (c) 2019 Manish Goregaokar
-
-Permission is hereby granted, free of charge, to any
-person obtaining a copy of this software and associated
-documentation files (the "Software"), to deal in the
-Software without restriction, including without
-limitation the rights to use, copy, modify, merge,
-publish, distribute, sublicense, and/or sell copies of
-the Software, and to permit persons to whom the Software
-is furnished to do so, subject to the following
-conditions:
-
-The above copyright notice and this permission notice
-shall be included in all copies or substantial portions
-of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF
-ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
-TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
-PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
-SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
-OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
-IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-DEALINGS IN THE SOFTWARE.
-
-========================================================================
 License text 67047503c71f9091
 ========================================================================
 MIT License
@@ -8103,6 +8984,11 @@ CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
 IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
+
+========================================================================
+License text 72af89a828df52a9
+========================================================================
+../LICENSE-MIT
 
 ========================================================================
 License text 739620ea44ad8f99
@@ -15593,6 +16479,33 @@ of Data, including for example machine learning models and models'
 insights.
 
 ========================================================================
+License text d53e8dfd8f4c3779
+========================================================================
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
+
+// Make |cargo bench| work.
+#![cfg_attr(feature = "bench", feature(test))]
+
+pub mod attr;
+pub mod bloom;
+mod builder;
+pub mod context;
+pub mod kleene_value;
+pub mod matching;
+mod nth_index_cache;
+pub mod parser;
+pub mod relative_selector;
+pub mod sink;
+mod tree;
+pub mod visitor;
+
+pub use crate::nth_index_cache::NthIndexCache;
+pub use crate::parser::{Parser, SelectorImpl, SelectorList};
+pub use crate::tree::{Element, OpaqueElement};
+
+========================================================================
 License text d9b4bc5257686af9
 ========================================================================
 SPDX-License-Identifier: MIT OR Apache-2.0 OR BSD-1-Clause
@@ -16873,6 +17786,84 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+========================================================================
+License text f30e9ee33dbf771d
+========================================================================
+LICENSE:
+        This project is triple-licensed under the MIT License, the Apache
+        License, Version 2.0, and the GNU Lesser General Public License,
+        Version 2.1+.
+
+AUTHORS-MIT:
+        Permission is hereby granted, free of charge, to any person obtaining a
+        copy of this software and associated documentation files (the
+        "Software"), to deal in the Software without restriction, including
+        without limitation the rights to use, copy, modify, merge, publish,
+        distribute, sublicense, and/or sell copies of the Software, and to
+        permit persons to whom the Software is furnished to do so, subject to
+        the following conditions:
+
+        The above copyright notice and this permission notice shall be included
+        in all copies or substantial portions of the Software.
+
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+        OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+        MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+        IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+        CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+        TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+        SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+AUTHORS-ASL:
+        Licensed under the Apache License, Version 2.0 (the "License");
+        you may not use this file except in compliance with the License.
+        You may obtain a copy of the License at
+
+                http://www.apache.org/licenses/LICENSE-2.0
+
+        Unless required by applicable law or agreed to in writing, software
+        distributed under the License is distributed on an "AS IS" BASIS,
+        WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+        See the License for the specific language governing permissions and
+        limitations under the License.
+
+AUTHORS-LGPL:
+        This program is free software; you can redistribute it and/or modify it
+        under the terms of the GNU Lesser General Public License as published
+        by the Free Software Foundation; either version 2.1 of the License, or
+        (at your option) any later version.
+
+        This program is distributed in the hope that it will be useful, but
+        WITHOUT ANY WARRANTY; without even the implied warranty of
+        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+        Lesser General Public License for more details.
+
+        You should have received a copy of the GNU Lesser General Public License
+        along with this program; If not, see <http://www.gnu.org/licenses/>.
+
+COPYRIGHT: (ordered alphabetically)
+        Copyright (C) 2017-2023 Red Hat, Inc.
+        Copyright (C) 2019-2023 Microsoft Corporation
+        Copyright (C) 2022-2023 David Rheinsberg
+
+AUTHORS: (ordered alphabetically)
+        Alex James <theracermaster@gmail.com>
+        Ayush Singh <ayushsingh1325@gmail.com>
+        Boris-Chengbiao Zhou <bobo1239@web.de>
+        Bret Barkelew <bret@corthon.com>
+        Christopher Zurcher <christopher.zurcher@microsoft.com>
+        David Rheinsberg <david@readahead.eu>
+        Dmitry Mostovenko <trueberserker@gmail.com>
+        Hiroki Tokunaga <tokusan441@gmail.com>
+        Joe Richey <joerichey@google.com>
+        John Schock <joschock@microsoft.com>
+        Michael Kubacki <michael.kubacki@microsoft.com>
+        Oliver Smith-Denny <osde@microsoft.com>
+        Richard Wiedenhöft <richard@wiedenhoeft.xyz>
+        Rob Bradford <robert.bradford@intel.com>, <rbradford@rivosinc.com>
+        Tom Gundersen <teg@jklm.no>
+        Trevor Gross <tmgross@umich.edu>
 
 ========================================================================
 License text f330b45715b8c05a
