@@ -260,6 +260,7 @@ impl YtDlpProcessEngine {
                 .arg(browser.yt_dlp_name());
         }
 
+        super::process_supervisor::configure_process_group(&mut command);
         let mut child = command.arg(url).spawn().map_err(|_| {
             AppError::new(
                 ErrorCode::ComponentMissing,
@@ -274,8 +275,7 @@ impl YtDlpProcessEngine {
         let started_at = Instant::now();
         let status = loop {
             if cancellation.is_cancelled() {
-                let _ = child.kill();
-                let _ = child.wait();
+                super::process_supervisor::terminate_child(&mut child);
                 let _ = stdout_reader.join();
                 let _ = stderr_reader.join();
                 return Err(AppError::new(
@@ -285,8 +285,7 @@ impl YtDlpProcessEngine {
                 ));
             }
             if started_at.elapsed() >= timeout {
-                let _ = child.kill();
-                let _ = child.wait();
+                super::process_supervisor::terminate_child(&mut child);
                 let _ = stdout_reader.join();
                 let _ = stderr_reader.join();
                 return Err(AppError::new(
@@ -299,8 +298,7 @@ impl YtDlpProcessEngine {
                 Ok(Some(status)) => break status,
                 Ok(None) => thread::sleep(Duration::from_millis(25)),
                 Err(_) => {
-                    let _ = child.kill();
-                    let _ = child.wait();
+                    super::process_supervisor::terminate_child(&mut child);
                     let _ = stdout_reader.join();
                     let _ = stderr_reader.join();
                     return Err(AppError::new(
@@ -432,17 +430,22 @@ fn runtime_argument(path: &std::path::Path) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
+    #[cfg(unix)]
     use std::{
         fs,
         path::PathBuf,
         time::{SystemTime, UNIX_EPOCH},
     };
 
+    #[cfg(unix)]
     use crate::domain::download::CookiePreferences;
     use crate::domain::error::ErrorCode;
+    #[cfg(unix)]
     use crate::services::media_mapper::map_media_info;
 
-    use super::{CancellationToken, YtDlpProcessEngine, classify_process_error};
+    use super::classify_process_error;
+    #[cfg(unix)]
+    use super::{CancellationToken, YtDlpProcessEngine};
 
     #[cfg(unix)]
     #[test]

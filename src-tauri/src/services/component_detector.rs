@@ -106,13 +106,12 @@ fn installation(
 }
 
 pub fn is_usable_file(path: &Path) -> bool {
-    if !path.is_file() {
-        return false;
-    }
-
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
+        if !path.is_file() {
+            return false;
+        }
         std::fs::metadata(path)
             .map(|metadata| metadata.permissions().mode() & 0o111 != 0)
             .unwrap_or(false)
@@ -120,7 +119,7 @@ pub fn is_usable_file(path: &Path) -> bool {
 
     #[cfg(not(unix))]
     {
-        true
+        path.is_file()
     }
 }
 

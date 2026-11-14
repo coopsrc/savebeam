@@ -243,17 +243,20 @@ mod tests {
         assert!(start.elapsed() < std::time::Duration::from_secs(2));
         std::fs::remove_dir_all(root).unwrap();
     }
+    #[cfg(unix)]
     use std::{
         fs,
         path::PathBuf,
         time::{SystemTime, UNIX_EPOCH},
     };
 
-    use super::{
-        ComponentInstallation, MAX_CAPTURE_BYTES, extract_version, probe_installation, read_bounded,
-    };
+    #[cfg(unix)]
+    use super::{ComponentInstallation, probe_installation};
+    use super::{MAX_CAPTURE_BYTES, extract_version, read_bounded};
+    #[cfg(unix)]
     use crate::domain::component::{ComponentKind, ComponentSource, ComponentStatus};
 
+    #[cfg(unix)]
     fn test_executable_name(name: &str) -> PathBuf {
         let root = std::env::temp_dir().join(format!(
             "savebeam-probe-test-{}-{}",
@@ -264,11 +267,7 @@ mod tests {
                 .as_nanos()
         ));
         fs::create_dir_all(&root).expect("test directory should exist");
-        #[cfg(unix)]
-        let path = root.join(name);
-        #[cfg(windows)]
-        let path = root.join(format!("{name}.cmd"));
-        path
+        root.join(name)
     }
 
     #[test]

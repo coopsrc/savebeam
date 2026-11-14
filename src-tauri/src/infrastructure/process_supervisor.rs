@@ -338,7 +338,23 @@ pub(crate) fn terminate_child(child: &mut Child) {
         let _ = unsafe { libc::kill(process_group, libc::SIGKILL) };
         let _ = child.wait();
     }
-    #[cfg(not(unix))]
+    #[cfg(windows)]
+    {
+        // Fixed system tool and owned PID only; never invoke a command shell or image wildcard.
+        let system = std::env::var_os("SystemRoot").unwrap_or_else(|| "C:\\Windows".into());
+        let executable = std::path::PathBuf::from(system).join("System32/taskkill.exe");
+        let mut command = Command::new(executable);
+        command
+            .args(["/PID", &child.id().to_string(), "/T", "/F"])
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null());
+        configure_process_group(&mut command);
+        let _ = command.status();
+        let _ = child.kill();
+        let _ = child.wait();
+    }
+    #[cfg(not(any(unix, windows)))]
     {
         let _ = child.kill();
         let _ = child.wait();
@@ -351,12 +367,112 @@ pub(crate) fn configure_process_group(command: &mut Command) {
         use std::os::unix::process::CommandExt;
         command.process_group(0);
     }
-    #[cfg(not(unix))]
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        command.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
+    }
+    #[cfg(not(any(unix, windows)))]
     let _ = command;
 }
 
 #[cfg(test)]
 mod tests {
+    #[cfg(windows)]
+    #[test]
+    fn cancellation_stops_windows_child_processes() {
+        use crate::infrastructure::ytdlp_process::CancellationToken;
+        use base64::Engine;
+        use std::{
+            ffi::OsString,
+            fs,
+            process::Command,
+            time::{Duration, Instant, SystemTime, UNIX_EPOCH},
+        };
+        let root = std::env::temp_dir().join(format!(
+            "savebeam-process-tree-{}-{}",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        fs::create_dir_all(&root).unwrap();
+        let pid_file = root.join("child.pid");
+        let system = std::path::PathBuf::from(std::env::var_os("SystemRoot").unwrap());
+        let powershell = system.join("System32/WindowsPowerShell/v1.0/powershell.exe");
+        let script = format!(
+            "$p = Start-Process -FilePath '{}' -ArgumentList '-NoProfile','-NonInteractive','-Command','Start-Sleep -Seconds 60' -PassThru -WindowStyle Hidden; [IO.File]::WriteAllText('{}', $p.Id.ToString()); $p.WaitForExit()",
+            powershell.to_string_lossy().replace('\'', "''"),
+            pid_file.to_string_lossy().replace('\'', "''")
+        );
+        let encoded = base64::engine::general_purpose::STANDARD.encode(
+            script
+                .encode_utf16()
+                .flat_map(u16::to_le_bytes)
+                .collect::<Vec<_>>(),
+        );
+        let token = CancellationToken::default();
+        let child_token = token.clone();
+        let worker = std::thread::spawn(move || {
+            super::ProcessSupervisor::run(
+                &powershell,
+                &[
+                    OsString::from("-NoProfile"),
+                    OsString::from("-NonInteractive"),
+                    OsString::from("-EncodedCommand"),
+                    encoded.into(),
+                ],
+                "windows-tree",
+                &child_token,
+                |_| {},
+            )
+        });
+        let start = Instant::now();
+        let pid = loop {
+            if let Ok(pid) = fs::read_to_string(&pid_file)
+                && let Ok(pid) = pid.trim().parse::<u32>()
+            {
+                break Some(pid);
+            }
+            if start.elapsed() >= Duration::from_secs(15) {
+                break None;
+            }
+            std::thread::sleep(Duration::from_millis(50));
+        };
+        token.cancel();
+        let result = worker.join().unwrap();
+        let pid = pid.expect("native child should start");
+        assert!(pid > 0);
+        let mut query = Command::new(system.join("System32/tasklist.exe"));
+        query.args(["/FI", &format!("PID eq {pid}"), "/FO", "CSV", "/NH"]);
+        super::configure_process_group(&mut query);
+        let mut output = query.output().unwrap();
+        let stopped_at = Instant::now();
+        while String::from_utf8_lossy(&output.stdout).contains(&format!("\"{pid}\""))
+            && stopped_at.elapsed() < Duration::from_secs(3)
+        {
+            std::thread::sleep(Duration::from_millis(50));
+            output = query.output().unwrap();
+        }
+        let alive = String::from_utf8_lossy(&output.stdout).contains(&format!("\"{pid}\""));
+        if alive {
+            let _ = Command::new(system.join("System32/taskkill.exe"))
+                .args(["/PID", &pid.to_string(), "/T", "/F"])
+                .output();
+        }
+        fs::remove_dir_all(root).unwrap();
+        assert!(output.status.success(), "process query should succeed");
+        assert!(
+            !alive,
+            "a cancelled download must not leave its child running"
+        );
+        assert_eq!(
+            result.unwrap_err().code,
+            crate::domain::error::ErrorCode::Cancelled
+        );
+    }
+    #[cfg(unix)]
     use std::{
         ffi::OsString,
         fs,
@@ -364,7 +480,9 @@ mod tests {
         time::{Duration, SystemTime, UNIX_EPOCH},
     };
 
+    #[cfg(unix)]
     use super::ProcessSupervisor;
+    #[cfg(unix)]
     use crate::{
         domain::download::DownloadTaskStatus, infrastructure::ytdlp_process::CancellationToken,
     };
