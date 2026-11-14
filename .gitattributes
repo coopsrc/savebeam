@@ -1,0 +1,6 @@
+# Keep source, scripts and generated text reproducible on every desktop runner.
+* text=auto eol=lf
+
+*.png binary
+*.ico binary
+*.icns binary
