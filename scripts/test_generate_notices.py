@@ -4,6 +4,7 @@ import importlib.util
 from pathlib import Path
 import tempfile
 import unittest
+from unittest import mock
 
 spec = importlib.util.spec_from_file_location("notices", Path(__file__).with_name("generate-notices.py"))
 notices = importlib.util.module_from_spec(spec)
@@ -42,6 +43,21 @@ class ProductionDependencies(unittest.TestCase):
             (root / "package.json").write_text('{"dependencies":{"missing":"1"}}')
             with self.assertRaisesRegex(ValueError, "Missing installed production dependency"):
                 npm_packages(root)
+
+    def test_generation_preserves_utf8_authors_and_lf_independently_of_platform_locale(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "package.json").write_bytes(b'{"dependencies":{"ui":"1"}}')
+            package = self.package(root, "ui")
+            (package / "LICENSE").write_bytes("Copyright © 中文作者\nMIT terms\n".encode("utf-8"))
+            release = root / "docs/releases"
+            release.mkdir(parents=True)
+            (release / "supplemental-notices.json").write_bytes(b'{}')
+            with mock.patch.object(notices, "ROOT", root), mock.patch.object(notices, "command", return_value={"packages": []}):
+                notices.main()
+            content = (release / "THIRD_PARTY_NOTICES.txt").read_bytes()
+            self.assertNotIn(b"\r\n", content)
+            self.assertIn("Copyright © 中文作者".encode("utf-8"), content)
 
 
 if __name__ == "__main__":
