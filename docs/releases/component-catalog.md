@@ -19,6 +19,8 @@ cargo run --locked --features release-tools --manifest-path src-tauri/Cargo.toml
 
 All signing/verifying CLI helpers now require `--features release-tools`, keeping them out of application bundles. Signing scripts already pass it. Remaining exact-binary notices include standalone yt-dlp's third-party dependencies and FFmpeg's configuration/source obligations; application-source notices do not replace these reviews.
 
+`.github/workflows/component-smoke.yml` independently tests macOS/Windows native candidates and platform unit/process-cancellation tests. It has read-only repository permission and no signing secrets. `--download-missing` fills its temporary asset cache via the existing bounded downloader; size and SHA-256 are checked before any binary executes. It exports only a text result log and never approves/signs/publishes a catalog.
+
 The details below preserve the **historical 2026-10-21 preparation**, not the current versions or validation status above.
 
 Status: prepared locally; **not signed with the production key and not published**.

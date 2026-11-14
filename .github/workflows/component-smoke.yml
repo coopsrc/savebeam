@@ -1,0 +1,56 @@
+name: Native component smoke
+
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/component-smoke.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-15, windows-2022]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    env:
+      npm_config_registry: https://registry.npmjs.org/
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Install Rust
+        shell: bash
+        run: rustup toolchain install stable --profile minimal
+      - uses: Swatinem/rust-cache@e9d7b9f1e587218970671bac74e5511ed9506e6a # v2
+        with:
+          workspaces: src-tauri
+          cache-on-failure: true
+      - name: Prepare embedded frontend
+        shell: bash
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
+      - name: Test platform code and owned process cancellation
+        shell: bash
+        run: cargo test --locked --manifest-path src-tauri/Cargo.toml
+      - name: Check real native candidates in an isolated directory
+        shell: bash
+        run: |
+          cargo run --locked --features release-tools --manifest-path src-tauri/Cargo.toml \
+            --bin component_release_smoke -- release/components.unsigned.json \
+            "$RUNNER_TEMP/component-cache" "$RUNNER_TEMP/component-smoke" --download-missing \
+            | tee native-component-smoke.log
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: component-smoke-${{ runner.os }}-${{ runner.arch }}
+          path: native-component-smoke.log
+          if-no-files-found: error
+          retention-days: 14

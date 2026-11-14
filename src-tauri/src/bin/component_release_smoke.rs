@@ -17,8 +17,8 @@ use std::{env, fs, path::PathBuf};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<_> = env::args_os().skip(1).collect();
-    if args.len() != 3 {
-        return Err("usage: component_release_smoke <unsigned-candidate> <asset-cache> <new-smoke-directory>".into());
+    if args.len() != 3 && !(args.len() == 4 && args[3].to_str() == Some("--download-missing")) {
+        return Err("usage: component_release_smoke <unsigned-candidate> <asset-cache> <new-smoke-directory> [--download-missing]".into());
     }
     let manifest: ComponentManifest = serde_json::from_slice(&fs::read(&args[0])?)?;
     manifest.validate()?;
@@ -35,6 +35,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         let name = release.url.rsplit('/').next().ok_or("invalid URL")?;
         let archive = cache.join(name);
+        if !archive.is_file() && args.len() == 4 {
+            fs::create_dir_all(&cache)?;
+            download_to_temp(release, &archive, &CancellationToken::default(), |_| {})?;
+        }
         if !archive.is_file() {
             return Err(format!("native asset missing: {name}").into());
         }
