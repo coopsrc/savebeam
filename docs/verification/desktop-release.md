@@ -2,6 +2,8 @@
 
 日期：2026-11-14；本机 macOS Apple Silicon，远程 macOS arm64 / Windows x64 CI。**M8 整体验收未通过；未签名候选、原生自动化与正式签名/安装后人工验收分别记录。**
 
+本记录为首次公开推送时的候选验收快照。之后用户明确授权公开手动下载，已发布 [v0.1.0](https://github.com/coopsrc/savebeam/releases/tag/v0.1.0)；最终公开产物、固定 Tag 与下载验证见 [0.1.0 发布记录](release-0.1.0.md)。下面的历史候选哈希与“未创建 Release”描述均对应早先阶段，不能替代该发布记录。
+
 ## 发布实现
 
 - 手动 Windows x64 NSIS / macOS arm64 APP+DMG 流水线；依赖 Actions 固定 commit，环境/主分支限制、最小权限、临时凭据清理，无自动公开发布。

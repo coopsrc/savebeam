@@ -4,6 +4,8 @@ Updated: 2026-11-14
 
 ## Current review (2026-11-14)
 
+The app's [v0.1.0 manual-download Release](https://github.com/coopsrc/savebeam/releases/tag/v0.1.0) is now public under explicit user authorization. It does **not** include `components.json` or approve component redistribution; the catalog gates below remain open.
+
 The candidate now pins yt-dlp **2026.10.26**, Deno **2.9.8**, and FFmpeg-Builds **9.0.2-57-gd838f9f9ae / autobuild-2026-11-13-12-43**, replacing every floating `latest` asset URL. Sizes/hashes were refreshed from the fixed upstream GitHub Release assets. Actual downloaded bytes and native lifecycle tests passed for macOS arm64 yt-dlp/Deno and Windows x64 yt-dlp/Deno/FFmpeg/ffprobe in [native CI run 43570843859](https://github.com/coopsrc/savebeam/actions/runs/43570843859). Other targets remain metadata-only candidates. macOS FFmpeg stays system/custom by design.
 
 Real native macOS arm64 and Windows x64 tests passed: official binary SHA-256, wrong-hash rejection, live HTTPS cancellation/partial cleanup, safe extraction, version probes, same-version replacement and failed-health-check rollback. All files stayed in isolated temporary directories. The local test exposed and fixed standalone yt-dlp cold-start detection; see [record](../verification/component-cold-start.md). Native unit tests passed: macOS 198 and Windows 176, each with one explicitly ignored test. Windows also verified cancellation of an actual owned child-process tree.

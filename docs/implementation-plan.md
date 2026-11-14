@@ -557,6 +557,8 @@ M6 放在下载闭环之后，是为了先通过用户已有组件验证核心�
 
 用户于 2026-11-14 明确要求发布可直接下载的 0.1.0。新增 `main` + 每版本固定 Tag 的手动下载发布流程；允许说明限制的 unsigned/ad-hoc 安装包，但不降低正式自动更新、组件清单、系统签名/公证和整体验收门禁。发布工作流验证记录另见 [0.1.0](verification/release-0.1.0.md)。
 
+- [x] `v0.1.0` Tag 两平台构建和发布成功；Release 已公开，全部资产哈希/来源及更新签名复验通过，安装包匿名下载均为 HTTP 200。后续推送版本 Tag 自动执行相同发布流程；没有新增长期 release 分支。
+
 - [x] 获明确授权首次推送公开源码；macOS/Windows 基础检查与原生组件 CI 通过，见 [CI 记录](verification/ci-builds.md)。未创建 Release。
 - [x] 双平台未签名 DMG / NSIS 候选构建通过，下载后独立复验构建提交、长度、SHA-256 和版本绑定的更新签名。
 - [x] macOS arm64 的 yt-dlp/Deno、Windows x64 的 yt-dlp/Deno/FFmpeg/ffprobe 真实下载哈希、取消清理、解压、探测、替换及失败回滚通过。

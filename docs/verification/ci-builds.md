@@ -2,6 +2,8 @@
 
 日期：2026-11-14。用户明确授权首次推送公开源码及运行未签名检查，不创建或发布 Release。
 
+以上为首次推送阶段的授权与验证快照；后续用户另行要求公开发布，已完成 [v0.1.0 Tag 构建和 Release 下载验证](release-0.1.0.md)。本页旧候选不等于最终公开的安装包。
+
 - 首次通过现有 SSH 授权推送 `28ea66c` 到 `coopsrc/savebeam/main`；HTTPS OAuth 凭据缺少工作流写入权限，没有扩大其权限或替换凭据。
 - 新仓库仅手动触发的构建工作流未注册，增加仅工作流自身在 main 修改时触发的 unsigned 检查；signed 仍仅手动启动。推送构建与 GitHub Release 发布保持分离。
 - Windows 首轮因自动 CRLF 检出导致 210 项格式检查失败；新增 `.gitattributes`，以 `core.autocrlf=true` 的隔离克隆验证 LF 检出及 Prettier 全量通过。
