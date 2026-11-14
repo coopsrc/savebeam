@@ -10,7 +10,7 @@ const browser = await chromium.launch({
   headless: true,
 });
 const base = process.argv[3] ?? "http://127.0.0.1:1421/";
-const labels = ["通用", "下载", "网络与代理", "Cookie 与登录", "运行组件"];
+const labels = ["通用", "下载", "网络与代理", "Cookie 与登录", "运行组件", "关于"];
 
 async function fixture(colorScheme = "light", initialRoute = "settings") {
   const page = await browser.newPage({
@@ -477,7 +477,7 @@ try {
         assert.equal(selectedStyle.color, "rgb(255, 255, 255)");
         assert.equal(selectedStyle.border, "0px", "No leftover underline from default tabs");
         const tabs = scene.page.getByRole("tablist", { name: "设置分组", exact: true });
-        assert.equal(await tabs.getByRole("tab").count(), 5);
+        assert.equal(await tabs.getByRole("tab").count(), labels.length);
         assert.equal(await scene.page.getByRole("tabpanel").count(), 1);
         const box = await tabs.boundingBox();
         assert.ok(box.x >= 0 && box.x + box.width <= 1280, "All tabs fit minimum desktop width");

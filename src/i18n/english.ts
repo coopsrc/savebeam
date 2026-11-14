@@ -1,5 +1,54 @@
 /** English UI catalogue. Keys are Chinese source messages; parameters are literal values. */
 export const english: Record<string, string> = {
+  "另一个应用更新操作正在进行。": "Another application update operation is in progress.",
+  "应用更新状态不可用。": "Application update state is unavailable.",
+  "无法初始化应用更新。": "Could not initialize application updates.",
+  "暂时无法读取应用更新，请检查网络或稍后重试。":
+    "Could not check app updates. Check your connection or try again later.",
+  "应用更新信息无效。": "The application update information is invalid.",
+  "请重新检查应用更新。": "Check for application updates again.",
+  "开发版本不能安装更新，请使用正式安装的应用。":
+    "Development builds cannot install updates. Use an installed release build.",
+  "无法创建更新连接。": "Could not establish an update connection.",
+  "应用更新下载失败。": "The application update download failed.",
+  "应用更新包超出大小限制。": "The application update package exceeds the size limit.",
+  "应用更新下载中断，可重新检查后重试。":
+    "The update download was interrupted. Check again to retry.",
+  "应用更新验签失败，未安装更新。": "The update signature is invalid. No update was installed.",
+  "应用更新安装未完成，请重新检查后重试。":
+    "The update could not be installed. Check again to retry.",
+  "已取消应用更新下载。": "Application update download cancelled.",
+  "应用正在退出或安装更新，请稍后重试。":
+    "The application is exiting or installing an update. Try again later.",
+  关于: "About",
+  应用更新: "Application updates",
+  "手动检查主应用更新；下载包验签通过后才会安装。组件更新在运行组件中单独管理。":
+    "Check app updates manually. Packages are installed only after signature verification. Component updates are managed separately under Runtime components.",
+  检查应用更新: "Check app updates",
+  "下载并安装 {0}": "Download and install {0}",
+  取消更新下载: "Cancel update download",
+  "当前已是最新版本。": "You are up to date.",
+  "当前版本 {0}，可更新至 {1}": "Current version: {0}. Update available: {1}.",
+  "请先完成或取消下载任务，再安装应用更新。":
+    "Finish or cancel download tasks before installing an app update.",
+  "正在安装，完成后应用将重新启动。": "Installing. The app will restart when finished.",
+  安装应用更新: "Install application update",
+  "更新安装完成后将重新启动应用，本机设置与下载记录会保留。":
+    "The app will restart after installation. Local settings and download records will be retained.",
+  确认安装: "Confirm installation",
+  "版本 {0} · {1} · {2}": "Version {0} · {1} · {2}",
+  本地优先的视频下载工具: "A local-first video downloader",
+  查看源代码: "View source code",
+  政策与许可证: "Policies and licenses",
+  隐私政策: "Privacy policy",
+  使用条款: "Terms of use",
+  开源许可证: "Open-source license",
+  第三方声明: "Third-party notices",
+  问题反馈: "Feedback",
+  "不会自动上传崩溃日志或诊断信息。反馈会打开 GitHub；可在通用设置中主动导出本地诊断，分享前请检查敏感内容。":
+    "Crash logs and diagnostics are never uploaded automatically. Feedback opens GitHub. You can export a local diagnostic report in General settings; review sensitive information before sharing.",
+  报告问题: "Report an issue",
+  复制基本信息: "Copy basic information",
   "本轮 {0} 条 · 完成 {1} · 执行中 {2} · 等待 {3} · 失败 {4} · 已取消 {5}":
     "Current work: {0} items · {1} completed · {2} running · {3} waiting · {4} failed · {5} cancelled",
   " · 读取中 {0} · 等待 {1}": " · Reading {0} · Waiting {1}",

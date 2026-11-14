@@ -36,6 +36,7 @@ struct RegistryState {
     max_concurrent: usize,
     repository: Option<DownloadTaskRepository>,
     shutting_down: bool,
+    maintenance: bool,
 }
 
 impl Default for RegistryState {
@@ -50,6 +51,7 @@ impl Default for RegistryState {
             max_concurrent: 1,
             repository: None,
             shutting_down: false,
+            maintenance: false,
         }
     }
 }
@@ -103,6 +105,9 @@ impl DownloadTaskRegistry {
             created_at_unix_ms: timestamp,
         };
         let mut state = self.lock()?;
+        if state.maintenance || state.shutting_down {
+            return Err(maintenance_error());
+        }
         if let Some(repository) = &state.repository {
             repository.insert(&task, &options)?;
         }
@@ -250,6 +255,9 @@ impl DownloadTaskRegistry {
 
     pub fn retry(&self, task_id: &str) -> Result<(DownloadTask, DownloadOptions), AppError> {
         let mut state = self.lock()?;
+        if state.maintenance || state.shutting_down {
+            return Err(maintenance_error());
+        }
         let repository = state.repository.clone();
         let options =
             state.options.get(task_id).cloned().ok_or_else(|| {
@@ -303,7 +311,7 @@ impl DownloadTaskRegistry {
 
     pub fn claim_next(&self) -> Result<Option<(DownloadTask, DownloadOptions)>, AppError> {
         let mut state = self.lock()?;
-        if state.shutting_down {
+        if state.shutting_down || state.maintenance {
             return Ok(None);
         }
         let alive: HashSet<_> = state
@@ -393,11 +401,48 @@ impl DownloadTaskRegistry {
         Ok(())
     }
 
+    pub fn begin_update(&self) -> Result<(), AppError> {
+        let mut state = self.lock()?;
+        if state.maintenance
+            || state.shutting_down
+            || state.tasks.values().any(|t| {
+                matches!(
+                    t.status,
+                    DownloadTaskStatus::Queued
+                        | DownloadTaskStatus::Preparing
+                        | DownloadTaskStatus::Downloading
+                        | DownloadTaskStatus::PostProcessing
+                        | DownloadTaskStatus::Cancelling
+                )
+            })
+        {
+            return Err(AppError::new(
+                ErrorCode::InvalidPath,
+                "请先完成或取消下载任务，再安装应用更新。",
+                true,
+            ));
+        }
+        state.maintenance = true;
+        Ok(())
+    }
+    pub fn end_update(&self) -> Result<(), AppError> {
+        self.lock()?.maintenance = false;
+        Ok(())
+    }
+
     fn lock(&self) -> Result<std::sync::MutexGuard<'_, RegistryState>, AppError> {
         self.inner
             .lock()
             .map_err(|_| AppError::new(ErrorCode::Unknown, "下载任务状态暂时不可用。", true))
     }
+}
+
+fn maintenance_error() -> AppError {
+    AppError::new(
+        ErrorCode::InvalidPath,
+        "应用正在退出或安装更新，请稍后重试。",
+        true,
+    )
 }
 
 fn task_group_key(task: &DownloadTask) -> String {
@@ -438,6 +483,23 @@ mod tests {
     use crate::domain::download::{DownloadOptions, DownloadTaskStatus};
 
     use super::{DownloadTaskRegistry, can_transition};
+
+    #[test]
+    fn updating_blocks_new_work_and_failure_releases_the_gate() {
+        let registry = DownloadTaskRegistry::default();
+        let options = test_options("https://example.com/1", "First", "18");
+        let task = registry.create(options.clone()).unwrap();
+        assert!(registry.begin_update().is_err());
+        registry.cancel(&task.id).unwrap();
+        registry.begin_update().unwrap();
+        assert!(registry.begin_update().is_err());
+        assert!(registry.create(options.clone()).is_err());
+        assert!(registry.retry(&task.id).is_err());
+        assert!(registry.claim_next().unwrap().is_none());
+        registry.end_update().unwrap();
+        assert!(registry.retry(&task.id).is_ok());
+        assert!(registry.create(options).is_ok());
+    }
 
     #[test]
     fn permits_only_documented_download_task_transitions() {

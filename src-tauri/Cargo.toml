@@ -3,6 +3,7 @@ name = "savebeam"
 version = "0.1.0"
 description = "A local-first desktop media downloader"
 authors = ["CoopSrc"]
+license = "Apache-2.0"
 edition = "2024"
 default-run = "savebeam"
 
@@ -36,6 +37,7 @@ flate2 = "1"
 xz2 = { version = "0.1", features = ["static"] }
 tauri-plugin-dialog = "2.8.3"
 trash = { version = "5.2.9", default-features = false, features = ["chrono", "coinit_multithreaded"] }
+tauri-plugin-updater = "2"
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"

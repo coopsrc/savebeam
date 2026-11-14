@@ -11,6 +11,7 @@ import { DownloadOptionsPanel } from "./DownloadOptionsPanel";
 import { NetworkPreferencesPanel } from "./NetworkPreferencesPanel";
 import { GeneralPreferencesPanel } from "./GeneralPreferencesPanel";
 import { ConcurrencyPanel } from "./ConcurrencyPanel";
+import { AboutPanel } from "./AboutPanel";
 
 const groups = [
   {
@@ -41,6 +42,12 @@ const groups = [
     value: "components",
     get label() {
       return t("运行组件");
+    },
+  },
+  {
+    value: "about",
+    get label() {
+      return t("关于");
     },
   },
 ] as const;
@@ -99,6 +106,9 @@ export function SettingsPage({ active }: { active: boolean }) {
             <GeneralPreferencesPanel />
             <DiagnosticsPanel />
           </Stack>
+        </Tabs.Panel>
+        <Tabs.Panel value="about">
+          <AboutPanel active={active && tab === "about"} />
         </Tabs.Panel>
         <Tabs.Panel value="download">
           <Stack gap="lg">

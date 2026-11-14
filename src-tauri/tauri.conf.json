@@ -52,5 +52,12 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEE1MkEyOENDMjQ3RTcyNTgKUldSWWNuNGt6Q2dxcFdQRHN6QXY0Q3h6Y2hDRi9UZHlzdURDS0cyOWUxbXNHUHorNmRmcW8rWjcK",
+      "endpoints": ["https://github.com/coopsrc/savebeam/releases/latest/download/latest.json"],
+      "requireSignedVersion": true
+    }
   }
 }

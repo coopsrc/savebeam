@@ -1,0 +1,20 @@
+Savebeam Privacy Policy
+Effective date: November 14, 2026
+
+Local data
+Savebeam stores tasks, titles, source URLs, file paths, versions, subscriptions, settings and cover caches on your device. It provides no account, cloud sync, media hosting or relay service. It does not automatically upload download history, cookies, diagnostics or crash logs. Unsaved page drafts remain only in the current window session.
+
+Network connections
+When you inspect or download a link, yt-dlp connects to the site and its media servers. Subscription checks, detail reads, connection tests, component installation and app updates contact the relevant services when you use those features. Updates use distribution services such as GitHub. Those services can see your IP address and request information and apply their own policies. Media proxy settings do not automatically apply to app updates.
+
+Cookies and login
+Cookies are passed to local yt-dlp only after you select a source and explicitly authorize access. Settings retain the cookie-file path or browser source, not a copy of cookie contents in the database. Inspection and downloads can use the authorized source until you clear it in Settings. Protect cookie files and access to your local account.
+
+Diagnostics and feedback
+Remote telemetry and automatic crash reporting are not enabled. A diagnostic report is written locally only when you export it and choose its location. Review any report before sharing it. Feedback opens an external GitHub page without attaching files, URLs, paths, cookies or diagnostic contents automatically.
+
+Retention and deletion
+History and subscriptions remain locally until you remove them. Deleting history keeps media by default. If you also select deletion of downloaded files, only recorded, validated final media files are moved to the system Trash or Recycle Bin; directories are not recursively removed. Cover caches have a size limit and can be evicted. Missing files in completed history are marked without automatic redownload. Startup recovery of unfinished batches can redownload missing outputs.
+
+Your controls and contact
+You can change folders, clear cookie authorization, delete records and unsubscribe. Back up the local database and media before uninstalling if needed. Removal of application data during uninstall depends on your platform and chosen actions. Contact the maintainers through About → Report an issue. Never post sensitive data publicly.

@@ -11,6 +11,8 @@ pub fn run() {
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .manage(commands::app_updates::AppUpdates::default())
         .manage(commands::components::ComponentRegistry::default())
         .manage(services::component_install_registry::ComponentInstallRegistry::default())
         .manage(services::download_registry::DownloadTaskRegistry::default())
@@ -40,6 +42,11 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            commands::app_information::get_app_information,
+            commands::app_information::open_app_link,
+            commands::app_updates::check_app_update,
+            commands::app_updates::install_app_update,
+            commands::app_updates::cancel_app_update,
             commands::concurrency::get_concurrency_preferences,
             commands::concurrency::save_concurrency_preferences,
             commands::components::get_component_status,

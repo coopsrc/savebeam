@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "description": "A local-first desktop media downloader.",
   "author": "CoopSrc",
+  "license": "Apache-2.0",
   "packageManager": "pnpm@12.4.1",
   "engines": {
     "node": ">=24 <25"

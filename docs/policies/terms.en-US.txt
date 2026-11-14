@@ -1,0 +1,17 @@
+Savebeam Terms of Use
+Effective date: November 14, 2026
+
+Permitted use
+Savebeam is a local media download tool. Process only content you own, are authorized to download, or may lawfully download. You are responsible for applicable law and site terms. The application supplies no media and transfers no content rights. Support for DRM-protected content is not promised.
+
+Third-party services and components
+Sites and media formats change. Downloads, subtitles, quality selection and source-change detection may not always work. yt-dlp, FFmpeg, ffprobe, JavaScript runtimes and other dependencies are supplied by their maintainers under their respective licenses. You maintain system-installed and custom components. App-managed components are downloaded when you choose installation or update.
+
+Files and backups
+Protect local data, cookies and media, and back up important files. Overwriting files, deleting records, moving media to Trash, and updating software can change local data or applications. Size estimates, suspected source changes and format recommendations are aids to your decisions, not guarantees of file contents or integrity.
+
+Open source and responsibility
+Savebeam's own source code is provided under the Apache License 2.0. Third-party content and components retain their own licenses. The software is provided as is; the full bundled license governs warranties, liability limitations and other license conditions. These terms do not exclude rights that applicable law does not permit to be excluded.
+
+Feedback
+Feedback opens the project's external issue page. You choose whether to submit anything. Remove sensitive information first, and do not send cookies, proxy credentials or unrelated personal files.

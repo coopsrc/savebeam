@@ -3,6 +3,8 @@
 //! Commands validate transport-level input and delegate application work to
 //! services. Business rules do not belong in this layer.
 
+pub mod app_information;
+pub mod app_updates;
 pub mod components;
 pub mod concurrency;
 pub mod diagnostics;
