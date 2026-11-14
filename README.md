@@ -4,6 +4,12 @@ Savebeam 是一个本地优先的桌面媒体下载器。应用使用 Tauri 2、
 
 已提供媒体解析、下载队列、历史记录、系列订阅和本地组件管理。技术方案参见[软件设计说明书](docs/software-design.md)，任务与里程碑参见[实施计划](docs/implementation-plan.md)；开发验证不等同于跨平台正式发行验收。
 
+## 下载
+
+[GitHub Releases](https://github.com/coopsrc/savebeam/releases) 提供 macOS Apple Silicon 的 `.dmg` 和 Windows x64 的 `-setup.exe`；请选择安装包，`Source code` 是源码。0.1.0 尚无正式系统发行签名/Apple 公证，详见[发布说明](docs/releases/notes/0.1.0.md)。运行组件需要在设置中按平台安装或指定路径。
+
+开发使用 `main`，每次发布创建固定版本 Tag（如 `v0.1.0`），由 CI 构建并附加安装包至对应 Release。目前不使用长期 release 分支；需要并行维护旧版本时再从对应 Tag 建立维护分支。发布步骤见[发行流程](docs/releases/desktop-release.md)。
+
 历史记录和已完成任务的“来源与版本”可主动检查疑似来源变化，并重新下载到独立版本目录，保留旧文件。元数据或成品摘要不同不代表已确认 UP 主换源；旧下载没有来源基线时显示无法判断。详情见[版本行为与验证](docs/verification/source-versions.md)。自定义运行组件路径已保存到本地设置，重启后继续生效。
 
 ## 媒体代理

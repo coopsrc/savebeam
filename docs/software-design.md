@@ -809,7 +809,9 @@ YouTube 检查固定请求 `https://www.youtube.com/generate_204`，8 秒总超�
 
 ### 13.6 发布工具与候选隔离
 
-- 双平台手动构建工作流仅输出 Actions artifacts，内部未签名和正式签名模式分别记录。正式模式先验证 OS 凭据与签名结果，才允许生成面向用户的更新元数据。
+- `main` 为开发主线，每次发布使用固定的 `vMAJOR.MINOR.PATCH` Tag，无需长期 release 分支；仅并行维护旧版本时从原 Tag 建维护分支。Tag 必须与 package.json、Cargo.toml、Cargo.lock 的应用版本一致。
+- 双平台手动构建仅输出 Actions artifacts；推送版本 Tag 则在两平台检查、构建及独立更新签名通过后，校验提交/版本/长度/哈希和声明文件，先创建带资产的 draft，再检查上传文件名/长度并公开 GitHub Release。拒绝覆盖已有版本；已发布 Tag 不移动、不复用。
+- 用户可显式发布尚无正式 OS 证书的手动下载版本；公开说明 unsigned/ad-hoc 与公证限制，保留构建来源和 SHA256SUMS。此类版本不生成 `latest.json`，不发布未经批准的组件清单。正式自动更新仍须先验证 OS 凭据与签名结果。
 - `release-tools` feature 包含清单/更新包验签和原生组件 smoke CLI，默认应用构建排除这些二进制。法律声明打包为本地资源，不强制增加许可确认弹窗。
 - 组件发行审核绑定候选文件的 SHA-256，每个平台分别确认真实下载哈希、原生运行与二进制 notices，未完成就阻止签发。固定版本 URL 与哈希共同防止浮动替换。
 - 原生启动/迁移 smoke 使用独立 identifier 与 appDirectoriesOverride，避免读写当前用户应用数据。回滚需匹配二进制与数据库备份，不提供数据库逆向迁移。

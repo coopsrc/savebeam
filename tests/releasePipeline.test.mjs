@@ -9,6 +9,143 @@ import { releaseConfig } from "../scripts/prepare-release.mjs";
 import { collect } from "../scripts/collect-release.mjs";
 import { assemble } from "../scripts/assemble-update.mjs";
 import { verifyReview } from "../scripts/verify-component-review.mjs";
+import { checkVersion, prepare } from "../scripts/prepare-github-release.mjs";
+
+test("release tags must match all application source versions", () => {
+  const cargo = fs.readFileSync("src-tauri/Cargo.toml", "utf8");
+  const lock = fs.readFileSync("src-tauri/Cargo.lock", "utf8");
+  assert.equal(checkVersion("v0.1.0", "0.1.0", cargo, lock), "0.1.0");
+  for (const tag of ["0.1.0", "v01.1.0", "v0.1.0;echo bad", "v0.1.0-beta.1"])
+    assert.throws(() => checkVersion(tag, "0.1.0", cargo, lock), /tag/);
+  assert.throws(() => checkVersion("v0.2.0", "0.1.0", cargo, lock), /versions must match/);
+  assert.throws(
+    () =>
+      checkVersion(
+        "v0.1.0",
+        "0.1.0",
+        cargo.replace('version = "0.1.0"', 'version = "0.2.0"'),
+        lock,
+      ),
+    /versions must match/,
+  );
+  assert.throws(
+    () =>
+      checkVersion(
+        "v0.1.0",
+        "0.1.0",
+        cargo,
+        lock.replace(
+          /name = "savebeam"\nversion = "[^"]+"/,
+          'name = "savebeam"\nversion = "0.2.0"',
+        ),
+      ),
+    /versions must match/,
+  );
+});
+
+function publicCandidates() {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), "savebeam-public-release-"));
+  const root = path.join(temp, "candidates");
+  fs.mkdirSync(root);
+  const commit = "a".repeat(40);
+  const dirs = [
+    [
+      "darwin",
+      "aarch64-apple-darwin",
+      ["Savebeam_0.1.0_aarch64.dmg", "Savebeam.app.tar.gz", "Savebeam.app.tar.gz.sig"],
+    ],
+    [
+      "win32",
+      "x86_64-pc-windows-msvc",
+      ["Savebeam_0.1.0_x64-setup.exe", "Savebeam_0.1.0_x64-setup.exe.sig"],
+    ],
+  ].map(([platform, target, names]) => {
+    const bundle = path.join(temp, platform);
+    fs.mkdirSync(bundle);
+    if (platform === "darwin") {
+      const exe = path.join(bundle, "macos/Savebeam.app/Contents/MacOS");
+      fs.mkdirSync(exe, { recursive: true });
+      fs.writeFileSync(path.join(exe, "savebeam"), "main");
+    }
+    for (const name of names) fs.writeFileSync(path.join(bundle, name), "fixture");
+    const dir = path.join(root, `savebeam-${target}-unsigned`);
+    collect(bundle, dir, platform, "unsigned");
+    const info = JSON.parse(fs.readFileSync(path.join(dir, "build-info.json")));
+    info.commit = commit;
+    fs.writeFileSync(path.join(dir, "build-info.json"), JSON.stringify(info));
+    return dir;
+  });
+  return { temp, root, dirs, commit, output: path.join(temp, "public") };
+}
+
+test("manual-download release stages both exact-tag platforms and preserves unsigned provenance", () => {
+  const f = publicCandidates();
+  try {
+    prepare(f.root, f.output, "v0.1.0", f.commit);
+    assert.equal(fs.existsSync(path.join(f.output, "latest.json")), false);
+    const info = JSON.parse(fs.readFileSync(path.join(f.output, "build-info.json")));
+    assert.equal(info.commit, f.commit);
+    assert.equal(info.tag, "v0.1.0");
+    assert.ok(
+      info.platforms.every((p) => p.signingMode === "unsigned" && p.osSignatureVerified === false),
+    );
+    for (const line of fs
+      .readFileSync(path.join(f.output, "SHA256SUMS"), "utf8")
+      .trim()
+      .split("\n")) {
+      const [hash, name] = line.split("  ");
+      assert.equal(
+        createHash("sha256")
+          .update(fs.readFileSync(path.join(f.output, name)))
+          .digest("hex"),
+        hash,
+      );
+    }
+    assert.equal(fs.readdirSync(f.output).length, 10);
+    assert.throws(() => prepare(f.root, f.output, "v0.1.0", f.commit), /EEXIST/);
+  } finally {
+    fs.rmSync(f.temp, { recursive: true, force: true });
+  }
+});
+
+test("publication rejects stale builds, tampering, missing platforms, unexpected files and legal drift before staging", () => {
+  const mutations = [
+    (f) => {
+      const p = path.join(f.dirs[0], "build-info.json"),
+        j = JSON.parse(fs.readFileSync(p));
+      j.commit = "b".repeat(40);
+      fs.writeFileSync(p, JSON.stringify(j));
+    },
+    (f) => fs.rmSync(f.dirs[1], { recursive: true }),
+    (f) => fs.writeFileSync(path.join(f.dirs[1], "Savebeam_0.1.0_x64-setup.exe"), "tampered"),
+    (f) => fs.rmSync(path.join(f.dirs[1], "Savebeam_0.1.0_x64-setup.exe.sig")),
+    (f) => fs.writeFileSync(path.join(f.dirs[0], "secret.key"), "never publish"),
+    (f) => fs.writeFileSync(path.join(f.dirs[0], "LICENSE"), "different license"),
+    (f) => fs.writeFileSync(path.join(f.dirs[0], "SHA256SUMS"), "different hashes"),
+    (f) => {
+      const p = path.join(f.dirs[0], "build-info.json"),
+        j = JSON.parse(fs.readFileSync(p));
+      j.artifacts[0].name = "../../secret.key";
+      fs.writeFileSync(p, JSON.stringify(j));
+    },
+    (f) => {
+      const p = path.join(f.dirs[0], "build-info.json"),
+        j = JSON.parse(fs.readFileSync(p));
+      j.osSignatureVerified = true;
+      fs.writeFileSync(p, JSON.stringify(j));
+    },
+  ];
+  for (const mutate of mutations) {
+    const f = publicCandidates();
+    try {
+      mutate(f);
+      assert.throws(() => prepare(f.root, f.output, "v0.1.0", f.commit));
+      assert.equal(fs.existsSync(f.output), false);
+    } finally {
+      fs.rmSync(f.temp, { recursive: true, force: true });
+    }
+  }
+});
 
 test("component publication refuses missing platform reviews, stale hashes and floating assets", () => {
   const bytes = fs.readFileSync("release/components.unsigned.json");

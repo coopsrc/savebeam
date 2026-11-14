@@ -1,9 +1,8 @@
-name: Build desktop release candidates
+name: Build and release desktop packages
 
 on:
   push:
-    branches: [main]
-    paths: [.github/workflows/release.yml]
+    tags: [v*]
   workflow_dispatch:
     inputs:
       signing_mode:
@@ -21,7 +20,7 @@ concurrency:
 
 jobs:
   package:
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
     environment: desktop-release
     env:
       SIGNING_MODE: ${{ inputs.signing_mode || 'unsigned' }}
@@ -50,6 +49,11 @@ jobs:
         run: |
           rustup toolchain install stable --profile minimal --component rustfmt --component clippy
           rustup target add '${{ matrix.target }}'
+      - name: Verify release tag and source versions
+        # Reject inconsistent source versions before compiling or publishing.
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        run: node scripts/prepare-github-release.mjs --check-tag "$GITHUB_REF_NAME"
       - name: Cache Rust compilation
         uses: Swatinem/rust-cache@e9d7b9f1e587218970671bac74e5511ed9506e6a # v2
         with:
@@ -168,3 +172,47 @@ jobs:
         run: |
           if ($env:WINDOWS_CERTIFICATE_THUMBPRINT) { Remove-Item "Cert:\CurrentUser\My\$env:WINDOWS_CERTIFICATE_THUMBPRINT" -ErrorAction SilentlyContinue }
           Remove-Item "$env:RUNNER_TEMP\certificate.pfx" -ErrorAction SilentlyContinue
+
+  publish:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs: package
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: desktop-release
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      RELEASE_TAG: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: savebeam-*-unsigned
+          path: candidates
+      - name: Stage exact tag artifacts and public checksums
+        run: node scripts/prepare-github-release.mjs candidates release-public "$RELEASE_TAG" "$GITHUB_SHA"
+      - name: Create draft, verify uploads and publish
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo 'Release already exists; refusing to replace published assets or an incomplete draft.' >&2
+            exit 1
+          fi
+          gh release create "$RELEASE_TAG" release-public/* --verify-tag --draft \
+            --title "Savebeam $RELEASE_TAG" --notes-file "docs/releases/notes/${RELEASE_TAG#v}.md"
+          gh release view "$RELEASE_TAG" --json assets > "$RUNNER_TEMP/uploaded-assets.json"
+          node --input-type=module - <<'JS'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          const remote = JSON.parse(fs.readFileSync(`${process.env.RUNNER_TEMP}/uploaded-assets.json`)).assets;
+          const names = fs.readdirSync('release-public').sort();
+          assert.deepEqual(remote.map(a => a.name).sort(), names);
+          for (const a of remote) assert.equal(a.size, fs.statSync(`release-public/${a.name}`).size);
+          JS
+          gh release edit "$RELEASE_TAG" --draft=false --latest
