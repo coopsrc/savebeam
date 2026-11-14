@@ -1,5 +1,28 @@
 /** English UI catalogue. Keys are Chinese source messages; parameters are literal values. */
 export const english: Record<string, string> = {
+  "本轮 {0} 条 · 完成 {1} · 执行中 {2} · 等待 {3} · 失败 {4} · 已取消 {5}":
+    "Current work: {0} items · {1} completed · {2} running · {3} waiting · {4} failed · {5} cancelled",
+  " · 读取中 {0} · 等待 {1}": " · Reading {0} · Waiting {1}",
+  并发与队列: "Concurrency and queues",
+  信息读取总并发数: "Total metadata concurrency",
+  每个列表信息读取并发数: "Metadata concurrency per list",
+  同时下载任务数: "Concurrent download tasks",
+  每个列表同时下载视频数: "Concurrent videos per list",
+  "完成一项立即补位；信息读取与下载分别调度。每个合集或多 P 算一个下载任务。":
+    "Each finished item frees a slot immediately. Metadata and downloads use separate queues. A collection or multipart video counts as one download task.",
+  "最多同时处理 {0} 个下载视频。降低上限不终止已开始的工作；列表视频默认值只影响新任务。":
+    "Up to {0} videos can run at once. Reducing a limit lets started work finish; per-list defaults apply to new tasks.",
+  保存并发设置: "Save concurrency settings",
+  本任务视频并发数: "Video concurrency for this task",
+  "留空使用并发设置中的默认值；创建任务后随恢复与重试保留。":
+    "Leave blank to use the concurrency default. The task retains its value when restored or retried.",
+  "每个列表的视频并发数必须在 1 到 4 之间。": "Video concurrency per list must be between 1 and 4.",
+  "停止补充新条目，已开始的读取完成后停止。":
+    "No new items will start. Reads already started will finish.",
+  "展开时逐项补全缺失标题；标题和时长保存在本机。":
+    "Expand to fill missing titles item by item. Titles and durations are saved locally.",
+  "目录必须已存在；留空时使用系统下载目录。":
+    "The directory must exist. Leave blank to use the system Downloads folder.",
   "自动选择音视频，下载时确定": "Video and audio selected automatically at download time",
   "自动选择音频，下载时确定": "Audio selected automatically at download time",
   此旧任务未保存音视频参数: "Audio and video details were not saved for this older task",

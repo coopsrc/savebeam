@@ -38,6 +38,7 @@ async function fixture(page, scenario) {
           },
         ],
         hold: scenario === "hidden" || scenario === "stop",
+        releases: [],
         fail: scenario === "error",
       };
       window.__TAURI_EVENT_PLUGIN_INTERNALS__ = { unregisterListener() {} };
@@ -64,9 +65,10 @@ async function fixture(page, scenario) {
           if (command === "inspect_subscription_entries") {
             if (window.fixture.hold)
               await new Promise((resolve) => {
+                window.fixture.releases.push(resolve);
                 window.fixture.release = () => {
                   window.fixture.hold = false;
-                  resolve();
+                  window.fixture.releases.splice(0).forEach((release) => release());
                 };
               });
             if (window.fixture.fail) {
@@ -160,7 +162,7 @@ try {
       await card.getByRole("button", { name: "继续 / 重试读取信息", exact: true }).click();
     }
     if (scenario === "hidden" || scenario === "stop") {
-      await page.waitForFunction(() => typeof window.fixture.release === "function");
+      await page.waitForFunction(() => window.fixture.releases.length === 2);
       if (scenario === "hidden") {
         await card.getByRole("checkbox", { name: "第 1 项 · 标题待补全", exact: true }).check();
         await page.getByRole("link", { name: "任务", exact: true }).click();
@@ -168,10 +170,10 @@ try {
       } else await card.getByRole("button", { name: "停止读取信息", exact: true }).click();
       await page.evaluate(() => window.fixture.release());
       await page.waitForFunction(() =>
-        window.fixture.rows[0].entries.slice(0, 5).every((e) => e.title.startsWith("视频")),
+        window.fixture.rows[0].entries.slice(0, 2).every((e) => e.title.startsWith("视频")),
       );
       await page.waitForTimeout(100);
-      assert.equal(await count(page), 1);
+      assert.equal(await count(page), 2);
       if (scenario === "hidden")
         await page.getByRole("link", { name: "订阅", exact: true }).click();
       else await card.getByRole("button", { name: "继续 / 重试读取信息", exact: true }).click();
@@ -187,13 +189,13 @@ try {
       .getByRole("button", { name: "停止读取信息", exact: true })
       .waitFor({ state: "hidden" });
     if (scenario === "bounded") {
-      assert.equal(await count(page), 10);
+      assert.equal(await count(page), 50);
       await page.getByRole("link", { name: "任务", exact: true }).click();
       await page.getByRole("heading", { name: "任务", exact: true, level: 1 }).waitFor();
       await page.getByRole("link", { name: "订阅", exact: true }).click();
       await page.getByRole("heading", { name: "订阅", exact: true, level: 1 }).waitFor();
       await page.waitForTimeout(100);
-      assert.equal(await count(page), 10);
+      assert.equal(await count(page), 50);
       await card.getByRole("button", { name: "继续 / 重试读取信息", exact: true }).click();
       await card
         .getByRole("checkbox", {
@@ -201,9 +203,9 @@ try {
           exact: true,
         })
         .waitFor();
-      assert.equal(await count(page), 13);
+      assert.equal(await count(page), 65);
     } else {
-      assert.equal(await count(page), scenario === "error" ? 5 : 4);
+      assert.equal(await count(page), scenario === "error" ? 18 : 17);
       await card.getByText(/时长 2:17 · ID：BVfixture17/).waitFor();
       if (scenario === "hidden")
         assert.equal(
@@ -221,7 +223,7 @@ try {
         .filter((c) => c.command === "inspect_subscription_entries")
         .map((c) => c.args.mediaIds),
     );
-    assert.ok(batches.every((ids) => ids.length > 0 && ids.length <= 5));
+    assert.ok(batches.every((ids) => ids.length === 1));
     assert.equal(await page.getByText("SECRET_DIAGNOSTIC").count(), 0);
     assert.deepEqual(errors, []);
     await page.close();

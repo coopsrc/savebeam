@@ -11,6 +11,16 @@ use crate::{
 const KEY: &str = "download.option_defaults";
 
 pub fn validate(value: &DownloadOptionDefaults) -> Result<(), AppError> {
+    if value
+        .video_concurrency
+        .is_some_and(|n| !(1..=4).contains(&n))
+    {
+        return Err(AppError::new(
+            ErrorCode::InvalidPath,
+            "每个列表的视频并发数必须在 1 到 4 之间。",
+            false,
+        ));
+    }
     crate::security::download_args::validate_subtitle_languages(&value.subtitle_languages)?;
     if value.write_automatic_subtitles && value.subtitle_languages.is_empty() {
         return Err(AppError::new(
@@ -56,6 +66,7 @@ mod tests {
         let db = Database::open_in_memory().unwrap();
         assert_eq!(load(db.clone()).unwrap(), DownloadOptionDefaults::default());
         let value = DownloadOptionDefaults {
+            video_concurrency: None,
             audio_only: true,
             subtitle_languages: vec!["en".into(), "zh-Hans".into()],
             write_automatic_subtitles: true,
@@ -95,6 +106,7 @@ mod tests {
                 .as_nanos()
         ));
         let value = DownloadOptionDefaults {
+            video_concurrency: None,
             subtitle_languages: vec!["en".into()],
             write_automatic_subtitles: true,
             audio_only: true,

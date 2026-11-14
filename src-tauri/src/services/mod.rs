@@ -11,6 +11,7 @@ pub mod component_install_registry;
 pub mod component_installer;
 pub mod component_paths;
 pub mod component_probe;
+pub mod concurrency;
 pub mod download_defaults;
 pub mod download_groups;
 pub mod download_registry;

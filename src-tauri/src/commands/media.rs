@@ -86,8 +86,13 @@ pub async fn inspect_media(
     let cookies = load_cookie_preferences(database.inner())?;
     let network =
         load_task_network_preferences(database.database()?, Some(use_proxy.unwrap_or(false)))?;
+    let permit = app
+        .state::<crate::services::concurrency::MetadataPool>()
+        .acquire(url.clone())
+        .await?;
 
     tauri::async_runtime::spawn_blocking(move || {
+        let _permit = permit;
         let detector =
             ComponentDetector::from_environment(ComponentPaths::from_app_data_dir(app_data_dir));
         let installations = probe_all(detector.detect_all(&custom_paths));
@@ -169,7 +174,12 @@ pub async fn estimate_playlist_size(
         ));
     }
     let guard = operations.begin()?;
+    let permit = app
+        .state::<crate::services::concurrency::MetadataPool>()
+        .acquire(url.clone())
+        .await?;
     tauri::async_runtime::spawn_blocking(move || {
+        let _permit = permit;
         let _guard = guard;
         let cookies = load_cookie_preferences(app.state::<DatabaseManager>().inner())?;
         let engine = configured_media_engine(&app, Some(use_proxy.unwrap_or(false)))?
@@ -190,7 +200,7 @@ pub async fn estimate_playlist_size(
 #[tauri::command]
 pub async fn inspect_playlist_entries(
     app: AppHandle,
-    operations: State<'_, crate::services::playlist_size::PlaylistSizeOperations>,
+    session_id: Option<String>,
     url: String,
     items: Vec<crate::services::playlist_size::PlaylistSizeRequestItem>,
     use_proxy: Option<bool>,
@@ -213,7 +223,10 @@ pub async fn inspect_playlist_entries(
     let indices = crate::security::playlist_indices::validate_indices(
         &items.iter().map(|item| item.index).collect::<Vec<_>>(),
     )?;
-    let guard = operations.begin()?;
+    let guard = app
+        .state::<crate::services::concurrency::MetadataPool>()
+        .acquire(session_id.unwrap_or_else(|| url.clone()))
+        .await?;
     tauri::async_runtime::spawn_blocking(move || {
         let _guard = guard;
         let cookies = load_cookie_preferences(app.state::<DatabaseManager>().inner())?;
@@ -284,11 +297,19 @@ pub fn match_playlist_quality(
 #[tauri::command]
 pub async fn inspect_playlist_parts(
     app: AppHandle,
-    operations: State<'_, crate::services::playlist_size::PlaylistSizeOperations>,
+    session_id: Option<String>,
     parts: Vec<crate::domain::download::PlaylistPartContext>,
     use_proxy: Option<bool>,
 ) -> CommandResult<Vec<crate::services::playlist_quality::PlaylistDetails>> {
-    let guard = operations.begin()?;
+    let owner = session_id.unwrap_or_else(|| {
+        parts
+            .first()
+            .map_or_else(|| "parts".into(), |p| p.source_url.clone())
+    });
+    let guard = app
+        .state::<crate::services::concurrency::MetadataPool>()
+        .acquire(owner)
+        .await?;
     tauri::async_runtime::spawn_blocking(move || {
         let _guard = guard;
         let cookies = load_cookie_preferences(app.state::<DatabaseManager>().inner())?;

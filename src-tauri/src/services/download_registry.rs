@@ -32,6 +32,7 @@ struct RegistryState {
     cancellations: HashMap<String, CancellationToken>,
     pending: VecDeque<String>,
     active_task_ids: HashSet<String>,
+    active_groups: HashMap<String, u8>,
     max_concurrent: usize,
     repository: Option<DownloadTaskRepository>,
     shutting_down: bool,
@@ -45,6 +46,7 @@ impl Default for RegistryState {
             cancellations: HashMap::new(),
             pending: VecDeque::new(),
             active_task_ids: HashSet::new(),
+            active_groups: HashMap::new(),
             max_concurrent: 1,
             repository: None,
             shutting_down: false,
@@ -301,10 +303,26 @@ impl DownloadTaskRegistry {
 
     pub fn claim_next(&self) -> Result<Option<(DownloadTask, DownloadOptions)>, AppError> {
         let mut state = self.lock()?;
-        if state.shutting_down || state.active_task_ids.len() >= state.max_concurrent {
+        if state.shutting_down {
             return Ok(None);
         }
-        while let Some(task_id) = state.pending.pop_front() {
+        let alive: HashSet<_> = state
+            .active_task_ids
+            .iter()
+            .chain(state.pending.iter().filter(|id| {
+                state
+                    .tasks
+                    .get(*id)
+                    .is_some_and(|t| t.status == DownloadTaskStatus::Queued)
+            }))
+            .filter_map(|id| state.tasks.get(id))
+            .map(task_group_key)
+            .collect();
+        state.active_groups.retain(|key, _| alive.contains(key));
+        for _ in 0..state.pending.len() {
+            let Some(task_id) = state.pending.pop_front() else {
+                break;
+            };
             let Some(task) = state.tasks.get(&task_id).cloned() else {
                 continue;
             };
@@ -314,6 +332,35 @@ impl DownloadTaskRegistry {
             let Some(options) = state.options.get(&task_id).cloned() else {
                 continue;
             };
+            let group = task_group_key(&task);
+            let limit =
+                state
+                    .active_groups
+                    .get(&group)
+                    .copied()
+                    .unwrap_or(if task.group.is_some() {
+                        options.video_concurrency.unwrap_or(1)
+                    } else {
+                        1
+                    }) as usize;
+            let running = state
+                .active_task_ids
+                .iter()
+                .filter(|id| {
+                    state
+                        .tasks
+                        .get(*id)
+                        .is_some_and(|t| task_group_key(t) == group)
+                })
+                .count();
+            if running >= limit
+                || (!state.active_groups.contains_key(&group)
+                    && state.active_groups.len() >= state.max_concurrent)
+            {
+                state.pending.push_back(task_id);
+                continue;
+            }
+            state.active_groups.entry(group).or_insert(limit as u8);
             state.active_task_ids.insert(task_id);
             return Ok(Some((task, options)));
         }
@@ -351,6 +398,12 @@ impl DownloadTaskRegistry {
             .lock()
             .map_err(|_| AppError::new(ErrorCode::Unknown, "下载任务状态暂时不可用。", true))
     }
+}
+
+fn task_group_key(task: &DownloadTask) -> String {
+    task.group
+        .as_ref()
+        .map_or_else(|| format!("single:{}", task.id), |g| g.key.clone())
 }
 
 fn now_unix_ms() -> Result<u64, AppError> {
@@ -486,6 +539,45 @@ mod tests {
     }
 
     #[test]
+    fn groups_have_independent_video_slots_and_keep_the_parent_slot_until_drained() {
+        let registry = DownloadTaskRegistry::default();
+        registry.set_max_concurrent(2).unwrap();
+        let mut created = Vec::new();
+        for (group, count) in [("A", 3), ("B", 2), ("C", 1)] {
+            for index in 0..count {
+                let mut options =
+                    test_options(&format!("https://example.com/{group}"), group, "v+a");
+                options.group = Some(
+                    crate::services::download_groups::make(
+                        &options.url,
+                        None,
+                        Some(index + 1),
+                        None,
+                    )
+                    .unwrap(),
+                );
+                options.video_concurrency = Some(2);
+                let task = registry.create(options).unwrap();
+                registry.enqueue(&task.id).unwrap();
+                created.push(task);
+            }
+        }
+        for index in [0, 1, 3, 4] {
+            assert_eq!(
+                registry.claim_next().unwrap().unwrap().0.id,
+                created[index].id
+            );
+        }
+        assert!(registry.claim_next().unwrap().is_none());
+        registry.finish(&created[0].id).unwrap();
+        assert_eq!(registry.claim_next().unwrap().unwrap().0.id, created[2].id);
+        registry.finish(&created[1].id).unwrap();
+        assert!(registry.claim_next().unwrap().is_none());
+        registry.finish(&created[2].id).unwrap();
+        assert_eq!(registry.claim_next().unwrap().unwrap().0.id, created[5].id);
+    }
+
+    #[test]
     fn exit_stops_workers_without_cancelling_saved_work_and_user_cancellation_stays_manual() {
         use crate::infrastructure::database::{Database, repositories::DownloadTaskRepository};
         use DownloadTaskStatus::*;
@@ -604,6 +696,7 @@ mod tests {
         std::fs::create_dir_all(&directory).unwrap();
         let path = directory.join("tasks.sqlite3");
         let selected = DownloadOptionDefaults {
+            video_concurrency: Some(3),
             audio_only: true,
             subtitle_languages: vec!["en".into(), "zh-Hans".into()],
             write_automatic_subtitles: true,
@@ -830,6 +923,7 @@ mod tests {
 
     fn test_options(url: &str, title: &str, format_id: &str) -> DownloadOptions {
         DownloadOptions {
+            video_concurrency: None,
             format_details: Some(crate::domain::task_format::TaskFormat {
                 output_extension: Some("mp4".into()),
                 resolution: Some("1920x1080".into()),

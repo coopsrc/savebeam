@@ -561,7 +561,7 @@ try {
               (call) => call.command === "inspect_playlist_entries",
             ).length,
         ),
-        1,
+        2,
       );
       await page.getByRole("button", { name: "重新读取详情", exact: true }).click();
     }

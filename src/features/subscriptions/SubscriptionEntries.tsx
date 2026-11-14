@@ -5,15 +5,8 @@ import { subscriptionApi } from "./subscriptionApi";
 import type { SubscriptionEntry, SubscriptionEntryMetadata } from "./subscriptionApi";
 import { entryDuration, missingTitle } from "./entryMetadata";
 import { isPending } from "./selection";
-
-// One bounded request across expanded lists. Queued reads check their lifetime
-// before invoking IPC, so hidden/collapsed lists do not start more site requests.
-let metadataLane: Promise<unknown> = Promise.resolve();
-function serialRead(read: () => Promise<SubscriptionEntryMetadata[]>) {
-  const request = metadataLane.catch(() => {}).then(read);
-  metadataLane = request;
-  return request;
-}
+import { rollingQueue } from "../../utils/rollingQueue";
+import { metadataConcurrency } from "../../ipc/concurrency";
 
 interface Props {
   id: number;
@@ -83,43 +76,44 @@ export function SubscriptionEntries({
       setReading(true);
       let done = 0;
       try {
-        for (let offset = 0; offset < targets.length; offset += 5) {
-          if (cancelled || stop.current) break;
-          const chunk = targets.slice(offset, offset + 5);
-          setProgress(t("正在补全视频信息 {0}/{1}（不下载媒体）", [done, targets.length]));
-          const request = serialRead(async () => {
-            if (cancelled || stop.current) return [];
-            const current = chunk.filter((entry) =>
-              latest.current.entries.some(
-                (value) =>
-                  value.id === entry.id &&
-                  value.index === entry.index &&
-                  value.available &&
-                  (missingTitle(value.title) || (revision > 0 && value.durationSeconds == null)),
-              ),
-            );
-            current.forEach((entry) => attempted.current.add(`${entry.index}:${entry.id}`));
-            if (!current.length) return [];
-            budget.current -= current.length;
-            return subscriptionApi.details(
-              id,
-              current.map((entry) => entry.id),
-            );
-          });
-          pending.current = request;
-          const rows = await request;
-          if (rows.some((row) => row.error)) retryNeeded.current = true;
-          // A completed bounded request can persist/show its result while hidden;
-          // only later requests are stopped. Parent verifies ID and position again.
-          latest.current.onMetadata(rows);
-          setFailures((previous) => ({
-            ...previous,
-            ...Object.fromEntries(
-              rows.filter((row) => row.error).map((row) => [row.id, row.error!]),
-            ),
-          }));
-          done += rows.length;
-        }
+        const request = rollingQueue(
+          targets,
+          await metadataConcurrency(),
+          async (entry) => {
+            if (cancelled || stop.current) return;
+            if (
+              !latest.current.entries.some(
+                (value) => value.id === entry.id && value.index === entry.index && value.available,
+              )
+            )
+              return;
+            attempted.current.add(`${entry.index}:${entry.id}`);
+            budget.current--;
+            try {
+              const rows = await subscriptionApi.details(id, [entry.id]);
+              if (rows.some((row) => row.error)) retryNeeded.current = true;
+              latest.current.onMetadata(rows);
+              setFailures((previous) => ({
+                ...previous,
+                ...Object.fromEntries(
+                  rows.filter((row) => row.error).map((row) => [row.id, row.error!]),
+                ),
+              }));
+            } catch (error) {
+              retryNeeded.current = true;
+              setFailures((previous) => ({
+                ...previous,
+                [entry.id]:
+                  error instanceof Error ? error.message : t("读取视频信息失败，可稍后重试。"),
+              }));
+            }
+            done++;
+            setProgress(t("正在补全视频信息 {0}/{1}（不下载媒体）", [done, targets.length]));
+          },
+          () => cancelled || stop.current,
+        );
+        pending.current = request;
+        await request;
         setProgress(t("已读取 {0}/{1} 项视频信息；缺失或失败项可重试。", [done, targets.length]));
       } catch (error: unknown) {
         retryNeeded.current = true;
@@ -143,7 +137,7 @@ export function SubscriptionEntries({
         <Text size="xs" c="dimmed" role="status">
           {progress ||
             (remaining
-              ? t("展开时分批补全缺失标题；标题和时长保存在本机。")
+              ? t("展开时逐项补全缺失标题；标题和时长保存在本机。")
               : t("视频信息已保存到本机。"))}
         </Text>
         {reading ? (
@@ -152,7 +146,7 @@ export function SubscriptionEntries({
             variant="subtle"
             onClick={() => {
               stop.current = true;
-              setProgress(t("当前批次完成后停止后续读取。"));
+              setProgress(t("停止补充新条目，已开始的读取完成后停止。"));
             }}
           >
             {t("停止读取信息")}

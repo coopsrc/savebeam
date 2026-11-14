@@ -10,6 +10,7 @@ import {
 import { DownloadOptionsPanel } from "./DownloadOptionsPanel";
 import { NetworkPreferencesPanel } from "./NetworkPreferencesPanel";
 import { GeneralPreferencesPanel } from "./GeneralPreferencesPanel";
+import { ConcurrencyPanel } from "./ConcurrencyPanel";
 
 const groups = [
   {
@@ -102,6 +103,7 @@ export function SettingsPage({ active }: { active: boolean }) {
         <Tabs.Panel value="download">
           <Stack gap="lg">
             <DownloadPreferencesPanel />
+            <ConcurrencyPanel />
             <DownloadOptionsPanel />
           </Stack>
         </Tabs.Panel>

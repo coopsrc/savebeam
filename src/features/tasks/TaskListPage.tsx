@@ -62,10 +62,11 @@ export function TaskListPage({ active }: { active: boolean }) {
                 summary={
                   <Stack gap={6}>
                     <Text size="sm" c="dimmed">
-                      {t("本轮 {0} 条 · 完成 {1} · 进行中 {2} · 失败 {3} · 已取消 {4}", [
+                      {t("本轮 {0} 条 · 完成 {1} · 执行中 {2} · 等待 {3} · 失败 {4} · 已取消 {5}", [
                         group.items.length,
                         summary.counts.completed,
-                        summary.active,
+                        summary.active - summary.counts.queued,
+                        summary.counts.queued,
                         summary.counts.failed,
                         summary.counts.cancelled,
                       ])}

@@ -28,8 +28,6 @@ use tauri::{AppHandle, Manager, State};
 
 #[derive(Clone, Default)]
 pub struct SubscriptionOperations(Arc<Mutex<()>>);
-#[derive(Clone, Default)]
-pub struct SubscriptionMetadataOperations(Arc<Mutex<()>>);
 
 fn busy() -> AppError {
     AppError::new(
@@ -193,12 +191,12 @@ pub async fn inspect_subscription_entries(
     id: i64,
     media_ids: Vec<String>,
 ) -> CommandResult<Vec<crate::infrastructure::database::subscriptions::SubscriptionEntryMetadata>> {
-    let operations = app
-        .state::<SubscriptionMetadataOperations>()
-        .inner()
-        .clone();
+    let permit = app
+        .state::<crate::services::concurrency::MetadataPool>()
+        .acquire(format!("subscription:{id}"))
+        .await?;
     tauri::async_runtime::spawn_blocking(move || {
-        let _guard = operations.0.try_lock().map_err(|_| busy())?;
+        let _permit = permit;
         let wanted: HashSet<_> = media_ids.iter().collect();
         if wanted.is_empty()
             || wanted.len() > 5

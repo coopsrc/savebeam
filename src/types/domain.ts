@@ -216,6 +216,7 @@ export interface DownloadGroup {
 }
 
 export interface DownloadOptions {
+  videoConcurrency?: number | null;
   formatDetails?: TaskFormat | null;
   thumbnailDataUrl?: string | null;
   title: string;
@@ -256,6 +257,7 @@ export type DownloadOptionDefaults = Pick<
   | "writeInfoJson"
   | "embedMetadata"
   | "keepIntermediateFiles"
+  | "videoConcurrency"
 >;
 
 export interface CookiePreferences {

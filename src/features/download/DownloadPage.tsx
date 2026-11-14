@@ -644,6 +644,12 @@ export function DownloadPage({
                         {isMultipart
                           ? t("个分 P（不下载媒体）")
                           : t("个合集条目（分 P 独立读取，不下载媒体）")}
+                        {series.loading
+                          ? t(" · 读取中 {0} · 等待 {1}", [
+                              series.activity.running,
+                              series.activity.waiting,
+                            ])
+                          : ""}
                       </Text>
                       {series.loading ? (
                         <Button variant="subtle" size="compact-xs" onClick={series.stop}>

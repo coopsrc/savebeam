@@ -90,7 +90,11 @@ pub(crate) fn queue_download(
         };
     }
     options.conflict_strategy = preferences.conflict_strategy;
-    tasks.set_max_concurrent(preferences.max_concurrent)?;
+    let concurrency = crate::services::concurrency::load(database.database()?)?;
+    tasks.set_max_concurrent(concurrency.download_tasks)?;
+    options
+        .video_concurrency
+        .get_or_insert(concurrency.videos_per_task);
     validate_task_options(&options)?;
     load_task_network_preferences(database.database()?, options.use_proxy)?;
     options
@@ -152,7 +156,9 @@ pub fn save_download_preferences(
         &preferences,
         unix_ms_now()?,
     )?;
-    tasks.set_max_concurrent(preferences.max_concurrent)?;
+    tasks.set_max_concurrent(
+        crate::services::concurrency::load(database.database()?)?.download_tasks,
+    )?;
     Ok(preferences)
 }
 
@@ -414,6 +420,16 @@ pub(crate) fn launch_next_task(
 }
 
 pub(crate) fn validate_task_options(options: &DownloadOptions) -> CommandResult<()> {
+    if options
+        .video_concurrency
+        .is_some_and(|n| !(1..=4).contains(&n))
+    {
+        return Err(AppError::new(
+            ErrorCode::InvalidPath,
+            "每个列表的视频并发数必须在 1 到 4 之间。",
+            false,
+        ));
+    }
     if options.format_details.as_ref().is_some_and(|f| !f.valid()) {
         return Err(AppError::new(
             ErrorCode::InvalidPath,

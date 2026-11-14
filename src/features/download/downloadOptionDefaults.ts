@@ -17,6 +17,13 @@ export function copyDownloadOptions(value: DownloadOptionDefaults): DownloadOpti
 
 export function validateDownloadOptions(value: DownloadOptionDefaults): string | null {
   if (
+    value.videoConcurrency != null &&
+    (!Number.isInteger(value.videoConcurrency) ||
+      value.videoConcurrency < 1 ||
+      value.videoConcurrency > 4)
+  )
+    return t("每个列表的视频并发数必须在 1 到 4 之间。");
+  if (
     value.subtitleLanguages.length > 10 ||
     value.subtitleLanguages.some((language) => !/^[a-zA-Z0-9_.-]{1,64}$/.test(language))
   )

@@ -396,6 +396,7 @@ mod tests {
 
     fn options(directory: &std::path::Path) -> DownloadOptions {
         DownloadOptions {
+            video_concurrency: None,
             format_details: None,
             thumbnail_data_url: None,
             group: None,

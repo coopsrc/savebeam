@@ -1,6 +1,6 @@
 import { t, useUiLocale } from "../../i18n/translate.ts";
 import { useState } from "react";
-import { Button, Group, Modal, Stack, Text } from "@mantine/core";
+import { Button, Group, Modal, NumberInput, Stack, Text } from "@mantine/core";
 import type { DownloadOptionDefaults, SubtitleTrack } from "../../types/domain";
 import type { SubtitleScope } from "./subtitleSelection";
 import { DownloadOptionFields } from "./DownloadOptionFields";
@@ -58,6 +58,20 @@ export function DownloadOptionsModal({
           )}
         </Text>
         <div className="download-advanced-fields">
+          {subtitleScope !== "video" && (
+            <NumberInput
+              label={t("本任务视频并发数")}
+              description={t("留空使用并发设置中的默认值；创建任务后随恢复与重试保留。")}
+              value={draft.videoConcurrency ?? ""}
+              min={1}
+              max={4}
+              allowDecimal={false}
+              disabled={loading}
+              onChange={(n) =>
+                setDraft({ ...draft, videoConcurrency: typeof n === "number" ? n : null })
+              }
+            />
+          )}
           <DownloadOptionFields
             value={draft}
             onChange={(next) => {

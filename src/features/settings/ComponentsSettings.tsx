@@ -7,7 +7,6 @@ import {
   Button,
   Checkbox,
   Group,
-  NumberInput,
   Paper,
   Progress,
   Select,
@@ -884,7 +883,7 @@ export function DownloadPreferencesPanel() {
         <div>
           <Text fw={650}>{t("下载设置")}</Text>
           <Text size="sm" c="dimmed" mt={3}>
-            {t("目录必须已存在；留空时使用系统下载目录。并发数限制为 1–4。")}
+            {t("目录必须已存在；留空时使用系统下载目录。")}
           </Text>
         </div>
         <TextInput
@@ -918,19 +917,6 @@ export function DownloadPreferencesPanel() {
           }}
         />
         <Group grow align="end">
-          <NumberInput
-            label={t("最大并发任务数")}
-            min={1}
-            max={4}
-            step={1}
-            value={preferences.maxConcurrent}
-            onChange={(value) =>
-              setPreferences((current) => ({
-                ...current,
-                maxConcurrent: typeof value === "number" ? value : 1,
-              }))
-            }
-          />
           <Select
             label={t("文件重名时")}
             value={preferences.conflictStrategy}

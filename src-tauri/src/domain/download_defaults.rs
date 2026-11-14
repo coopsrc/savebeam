@@ -6,6 +6,8 @@ use super::download::DownloadOptions;
 #[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct DownloadOptionDefaults {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub video_concurrency: Option<u8>,
     pub audio_only: bool,
     pub subtitle_languages: Vec<String>,
     pub write_automatic_subtitles: bool,
@@ -17,6 +19,7 @@ pub struct DownloadOptionDefaults {
 
 impl DownloadOptionDefaults {
     pub fn apply_to(&self, options: &mut DownloadOptions) {
+        options.video_concurrency = self.video_concurrency;
         options.audio_only = self.audio_only;
         options.subtitle_languages = self.subtitle_languages.clone();
         options.write_automatic_subtitles = self.write_automatic_subtitles;
@@ -30,6 +33,7 @@ impl DownloadOptionDefaults {
 impl From<&DownloadOptions> for DownloadOptionDefaults {
     fn from(options: &DownloadOptions) -> Self {
         Self {
+            video_concurrency: options.video_concurrency,
             audio_only: options.audio_only,
             subtitle_languages: options.subtitle_languages.clone(),
             write_automatic_subtitles: options.write_automatic_subtitles,

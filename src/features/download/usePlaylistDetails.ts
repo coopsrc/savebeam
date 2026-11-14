@@ -7,6 +7,8 @@ import type {
   PlaylistQuality,
 } from "../../types/domain";
 import { invokeCommand } from "../../ipc/client";
+import { metadataConcurrency } from "../../ipc/concurrency";
+import { rollingQueue } from "../../utils/rollingQueue";
 import { optionError } from "./useDownloadOptions";
 import { expandedEntries, expandedOverrides, taskDetails } from "./playlistParts";
 
@@ -26,6 +28,7 @@ export function usePlaylistDetails(
     error: string | null;
   }>({ source: null, details: {}, loading: false, done: 0, error: null });
   const stop = useRef(false);
+  const [activity, setActivity] = useState({ running: 0, waiting: 0 });
   const pending = useRef<Promise<unknown> | null>(null);
   useEffect(() => {
     let cancelled = false;
@@ -36,28 +39,48 @@ export function usePlaylistDetails(
       const entries = media.playlist.entries.filter((entry) => entry.available).slice(0, 50);
       const details: Record<number, PlaylistDetails> = {};
       setState({ source: media, details, loading: true, done: 0, error: null });
-      // If the previous link is still finishing its bounded request, do not race its lock.
       await pending.current?.catch(() => {});
-      for (let offset = 0; offset < entries.length; offset += 5) {
-        if (cancelled || stop.current) break;
-        const chunk = entries.slice(offset, offset + 5);
-        let error: string | null = null;
-        try {
-          const request = invokeCommand<PlaylistDetails[]>("inspect_playlist_entries", {
-            url: media.webpageUrl,
-            useProxy,
-            items: chunk.map(({ index, id }) => ({ index, id })),
+      if (cancelled) return;
+      const sessionId = crypto.randomUUID();
+      let done = 0;
+      let lastError: string | null = null;
+      const publish = () => {
+        if (!cancelled)
+          setState({
+            source: media,
+            details: { ...details },
+            loading: true,
+            done,
+            error: lastError,
           });
-          pending.current = request;
-          const response = await request;
-          if (cancelled) return;
-          for (const entry of chunk) {
-            const rows = response.filter((row) => row.index === entry.index);
-            const row = rows.length === 1 ? rows[0] : null;
-            details[entry.index] =
-              row && (!entry.id || row.id === entry.id)
-                ? row
+      };
+      type Work = { index: number; id: string | null; part?: PlaylistDetails };
+      const run = rollingQueue<Work>(
+        entries,
+        await metadataConcurrency(),
+        async (entry, enqueue) => {
+          if (cancelled || stop.current) return;
+          try {
+            const response = await invokeCommand<PlaylistDetails[]>(
+              entry.part ? "inspect_playlist_parts" : "inspect_playlist_entries",
+              entry.part
+                ? { sessionId, parts: [entry.part.part], useProxy }
                 : {
+                    sessionId,
+                    url: media.webpageUrl,
+                    useProxy,
+                    items: [{ index: entry.index, id: entry.id }],
+                  },
+            );
+            if (cancelled) return;
+            const rows = response.filter(
+              (row) => row.index === entry.index && (!entry.id || row.id === entry.id),
+            );
+            const row =
+              rows.length === 1
+                ? rows[0]
+                : {
+                    ...(entry.part ?? {}),
                     index: entry.index,
                     id: entry.id,
                     title: null,
@@ -65,74 +88,41 @@ export function usePlaylistDetails(
                     formats: [],
                     error: t("条目 ID 已变化或未返回，请重新读取。"),
                   };
-            for (const part of details[entry.index].parts ?? []) details[part.index] = part;
-          }
-          setState({
-            source: media,
-            details: { ...details },
-            loading: true,
-            done: offset,
-            error: null,
-          });
-          for (const entry of chunk) {
-            const parts = details[entry.index].parts ?? [];
-            for (let p = 0; p < parts.length; p += 5) {
-              if (cancelled || stop.current) break;
-              const batch = parts.slice(p, p + 5);
-              try {
-                const request = invokeCommand<PlaylistDetails[]>("inspect_playlist_parts", {
-                  parts: batch.map((part) => part.part),
-                  useProxy,
-                });
-                pending.current = request;
-                const response = await request;
-                if (cancelled) return;
-                for (const part of batch) {
-                  const rows = response.filter((r) => r.index === part.index && r.id === part.id);
-                  details[part.index] =
-                    rows.length === 1
-                      ? rows[0]
-                      : { ...part, error: t("分 P 身份已变化，请重新读取。") };
-                }
-              } catch (reason) {
-                if (cancelled) return;
-                for (const part of batch)
-                  details[part.index] = { ...part, error: optionError(reason) };
-              }
-              setState({
-                source: media,
-                details: { ...details },
-                loading: true,
-                done: offset,
-                error: null,
-              });
+            details[entry.index] = row;
+            if (!entry.part) {
+              done++;
+              for (const part of row.parts ?? []) details[part.index] = part;
+              enqueue((row.parts ?? []).map((part) => ({ index: part.index, id: part.id, part })));
             }
-          }
-        } catch (reason) {
-          if (cancelled) return;
-          error = optionError(reason);
-          for (const entry of chunk)
+          } catch (reason) {
+            if (cancelled) return;
+            lastError = optionError(reason);
             details[entry.index] = {
+              ...(entry.part ?? {}),
               index: entry.index,
               id: entry.id,
               title: null,
               durationSeconds: null,
               formats: [],
-              error,
+              error: optionError(reason),
             };
-        }
-        setState({
-          source: media,
-          details: { ...details },
-          loading: !error && !stop.current && offset + 5 < entries.length,
-          done: Math.min(offset + 5, entries.length),
-          error,
-        });
-        if (error) break;
-      }
+            if (!entry.part) done++;
+          }
+          publish();
+        },
+        () => cancelled || stop.current,
+        (running, waiting) => {
+          if (!cancelled) setActivity({ running, waiting });
+        },
+      );
+      pending.current = run;
+      await run;
       if (!cancelled) setState((value) => ({ ...value, loading: false }));
     }
-    void read();
+    void read().catch((reason) => {
+      if (!cancelled)
+        setState((value) => ({ ...value, loading: false, error: optionError(reason) }));
+    });
     return () => {
       cancelled = true;
     };
@@ -175,6 +165,7 @@ export function usePlaylistDetails(
     };
   }, [input]);
   return {
+    activity,
     details,
     entries: expandedEntries(media, details),
     matches: matched.input === input ? matched.rows : [],

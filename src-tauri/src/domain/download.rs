@@ -92,6 +92,8 @@ impl CookieBrowser {
 #[serde(rename_all = "camelCase")]
 pub struct DownloadOptions {
     #[serde(default)]
+    pub video_concurrency: Option<u8>,
+    #[serde(default)]
     pub format_details: Option<super::task_format::TaskFormat>,
     #[serde(default)]
     pub batch_id: Option<String>,

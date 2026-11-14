@@ -14,9 +14,9 @@ pub fn run() {
         .manage(commands::components::ComponentRegistry::default())
         .manage(services::component_install_registry::ComponentInstallRegistry::default())
         .manage(services::download_registry::DownloadTaskRegistry::default())
+        .manage(services::concurrency::MetadataPool::default())
         .manage(infrastructure::database::DatabaseManager::default())
         .manage(commands::subscriptions::SubscriptionOperations::default())
-        .manage(commands::subscriptions::SubscriptionMetadataOperations::default())
         .manage(services::network_connection_test::NetworkConnectionTester::default())
         .manage(services::playlist_size::PlaylistSizeOperations::default())
         .setup(|app| {
@@ -24,24 +24,24 @@ pub fn run() {
             let database_manager = app.state::<infrastructure::database::DatabaseManager>();
             database_manager.initialize(app_data.join("savebeam.sqlite3"));
             if let Ok(database) = database_manager.database() {
+                let concurrency = services::concurrency::load(database.clone())?;
+                infrastructure::database::repositories::SettingsRepository::new(database.clone())
+                    .set("queue.preferences", &concurrency, 0)?;
+                app.state::<services::concurrency::MetadataPool>()
+                    .configure(concurrency)?;
                 app.state::<commands::components::ComponentRegistry>()
                     .initialize(database.clone())?;
-                if let Ok(Some(preferences)) =
-                    infrastructure::database::repositories::SettingsRepository::new(
-                        database.clone(),
-                    )
-                    .get::<domain::download::DownloadPreferences>("download.preferences")
-                {
-                    app.state::<services::download_registry::DownloadTaskRegistry>()
-                        .set_max_concurrent(preferences.max_concurrent)?;
-                }
                 app.state::<services::download_registry::DownloadTaskRegistry>()
                     .initialize_from_database(database)?;
+                app.state::<services::download_registry::DownloadTaskRegistry>()
+                    .set_max_concurrent(concurrency.download_tasks)?;
                 commands::downloads::resume_queued_downloads(app.handle().clone());
             }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            commands::concurrency::get_concurrency_preferences,
+            commands::concurrency::save_concurrency_preferences,
             commands::components::get_component_status,
             commands::components::get_component_releases,
             commands::components::install_component_from_release,
