@@ -329,7 +329,7 @@ fn parse_f64(value: Option<&Value>) -> Option<f64> {
     (value.is_finite() && value >= 0.0).then_some(value)
 }
 
-fn terminate_child(child: &mut Child) {
+pub(crate) fn terminate_child(child: &mut Child) {
     #[cfg(unix)]
     {
         let process_group = -(child.id() as i32);
@@ -345,7 +345,7 @@ fn terminate_child(child: &mut Child) {
     }
 }
 
-fn configure_process_group(command: &mut Command) {
+pub(crate) fn configure_process_group(command: &mut Command) {
     #[cfg(unix)]
     {
         use std::os::unix::process::CommandExt;

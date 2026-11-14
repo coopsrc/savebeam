@@ -8,9 +8,14 @@ use std::{
     time::{Duration, Instant},
 };
 
-use crate::domain::component::{ComponentInstallation, ComponentKind, ComponentStatus};
+use crate::{
+    domain::component::{ComponentInstallation, ComponentKind, ComponentStatus},
+    infrastructure::process_supervisor::{configure_process_group, terminate_child},
+};
 
 const PROBE_TIMEOUT: Duration = Duration::from_secs(5);
+// Signed standalone yt-dlp has a cold-start unpack/security check on macOS.
+const YTDLP_PROBE_TIMEOUT: Duration = Duration::from_secs(30);
 const MAX_CAPTURE_BYTES: usize = 16 * 1024;
 
 pub fn probe_installation(installation: &ComponentInstallation) -> ComponentInstallation {
@@ -25,7 +30,12 @@ pub fn probe_installation(installation: &ComponentInstallation) -> ComponentInst
         return unhealthy(installation);
     };
 
-    match run_bounded_version_command(Path::new(executable_path), argument) {
+    let timeout = if installation.kind == ComponentKind::YtDlp {
+        YTDLP_PROBE_TIMEOUT
+    } else {
+        PROBE_TIMEOUT
+    };
+    match run_bounded_version_command(Path::new(executable_path), argument, timeout) {
         Ok(output) => match extract_version(&output) {
             Some(version) => ComponentInstallation {
                 status: compatibility_status(
@@ -76,13 +86,19 @@ fn version_command(kind: ComponentKind, path: &Path) -> Option<&'static str> {
     }
 }
 
-fn run_bounded_version_command(executable: &Path, argument: &str) -> std::io::Result<String> {
-    let mut child = Command::new(executable)
+fn run_bounded_version_command(
+    executable: &Path,
+    argument: &str,
+    timeout: Duration,
+) -> std::io::Result<String> {
+    let mut command = Command::new(executable);
+    command
         .arg(argument)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()?;
+        .stderr(Stdio::piped());
+    configure_process_group(&mut command);
+    let mut child = command.spawn()?;
 
     let stdout = child.stdout.take().expect("stdout is piped");
     let stderr = child.stderr.take().expect("stderr is piped");
@@ -94,9 +110,8 @@ fn run_bounded_version_command(executable: &Path, argument: &str) -> std::io::Re
         if let Some(status) = child.try_wait()? {
             break status;
         }
-        if started_at.elapsed() >= PROBE_TIMEOUT {
-            let _ = child.kill();
-            let _ = child.wait();
+        if started_at.elapsed() >= timeout {
+            terminate_child(&mut child);
             let _ = stdout_reader.join();
             let _ = stderr_reader.join();
             return Err(std::io::Error::new(
@@ -210,6 +225,24 @@ fn parse_version_components(version: &str) -> Option<[u32; 3]> {
 
 #[cfg(test)]
 mod tests {
+    #[cfg(unix)]
+    #[test]
+    fn timeout_terminates_descendants_holding_probe_pipes() {
+        let root = std::env::temp_dir().join(format!("savebeam-probe-tree-{}", std::process::id()));
+        std::fs::create_dir_all(&root).unwrap();
+        let script = root.join("probe.sh");
+        std::fs::write(&script, "sleep 60 &\nwait\n").unwrap();
+        let start = std::time::Instant::now();
+        let error = super::run_bounded_version_command(
+            std::path::Path::new("/bin/sh"),
+            script.to_str().unwrap(),
+            std::time::Duration::from_millis(100),
+        )
+        .unwrap_err();
+        assert_eq!(error.kind(), std::io::ErrorKind::TimedOut);
+        assert!(start.elapsed() < std::time::Duration::from_secs(2));
+        std::fs::remove_dir_all(root).unwrap();
+    }
     use std::{
         fs,
         path::PathBuf,
