@@ -240,8 +240,8 @@ M6 待决：T6b 应用侧交互及 T8 本地准备已完成，但 Savebeam 仓�
 任务：
 
 - [x] M8-T1 完成应用图标、安装包名称和版本信息。
-- [x] M8-T2 建立 Windows x64 签名与 NSIS 流水线（实现与静态/边界验证完成，远端原生执行及签名验收未完成）。
-- [x] M8-T3 建立 macOS Apple Silicon 签名、公证与 DMG 流水线（本机未签名候选已验证，正式凭据缺失，签名/公证未验收）。
+- [x] M8-T2 建立 Windows x64 签名与 NSIS 流水线（远端原生检查、未签名 NSIS 构建和独立更新签名通过，正式 OS 签名验收未完成，见 [CI 记录](verification/ci-builds.md)）。
+- [x] M8-T3 建立 macOS Apple Silicon 签名、公证与 DMG 流水线（本机及远端未签名候选已验证，正式凭据缺失，签名/公证未验收）。
 - [x] M8-T4 实现主应用更新机制；组件更新保持独立（实现及隔离回归完成，真实已签名发行包升级仍属发布验收）。
 - [x] M8-T5 完成隐私政策、使用条款和开源许可证页面（依赖 notices 的发行审计仍随 M7 门禁跟踪）。
 - [ ] M8-T6 执行全新环境、升级、卸载和回滚测试。
@@ -555,6 +555,9 @@ M6 放在下载闭环之后，是为了先通过用户已有组件验证核心�
 
 ### 剩余验收与发布闭环（RELEASE-GATES）
 
+- [x] 获明确授权首次推送公开源码；macOS/Windows 基础检查与原生组件 CI 通过，见 [CI 记录](verification/ci-builds.md)。未创建 Release。
+- [x] 双平台未签名 DMG / NSIS 候选构建通过，下载后独立复验构建提交、长度、SHA-256 和版本绑定的更新签名。
+- [x] macOS arm64 的 yt-dlp/Deno、Windows x64 的 yt-dlp/Deno/FFmpeg/ffprobe 真实下载哈希、取消清理、解压、探测、替换及失败回滚通过。
 - [ ] M6：不可变组件资产与哈希/notice 审核，真实签名清单及安装/更新/取消/回滚验收。
 - [ ] M7：原生 GUI/键盘/辅助技术、真实站点与平台进程行为验收，重新进行依赖及许可证审计。
 - [ ] M8-T2/T3：签名凭据就绪后运行 Windows/macOS 安装包流水线；凭据未具备时不伪报签名/公证通过。
@@ -562,7 +565,7 @@ M6 放在下载闭环之后，是为了先通过用户已有组件验证核心�
 - [x] M8-T5/T7：应用内政策/条款/notices 和用户主动本地问题报告/反馈流程，见 [验证记录](verification/application-updates.md)。
 - [ ] M8-T6：本地安装产物与全新/升级/卸载/回滚矩阵，未实际运行的平台保持未验收。
 
-2026-11-14 复核：并发、主应用更新、关于/政策/反馈、双平台打包流水线均已实现；依赖安全整改、本机 DMG/更新包与真实 macOS 组件生命周期已验证。凭据、首次公开代码/发行资产、其他原生平台及二进制许可审核依然是外部验收门禁，不将它们改写为代码已完成即可通过。详见 [依赖审计](verification/dependency-audit-2026-11.md)、[冷启动修复](verification/component-cold-start.md) 和 [发布验收](verification/desktop-release.md)。
+2026-11-14 复核：并发、主应用更新、关于/政策/反馈、双平台打包流水线均已实现。已获用户授权首次推送公开仓库并执行未签名 CI；依赖安全整改、macOS 候选包及 macOS arm64 / Windows x64 的原生编译、测试、进程取消与真实组件生命周期通过。正式发行凭据/资产、已安装应用人工矩阵、其他架构及二进制许可审核依然是验收门禁，不将它们改写为代码已完成即可通过。详见 [CI 记录](verification/ci-builds.md)、[依赖审计](verification/dependency-audit-2026-11.md)、[冷启动修复](verification/component-cold-start.md) 和 [发布验收](verification/desktop-release.md)。
 
 ## 5. 首个开发切片
 

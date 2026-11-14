@@ -1,6 +1,6 @@
 # 桌面发布候选与生命周期验收
 
-日期：2026-11-14；macOS Apple Silicon。**M8 整体验收未通过；以下为实现/本机候选验证，不能推断 Windows 或正式签名通过。**
+日期：2026-11-14；本机 macOS Apple Silicon，远程 macOS arm64 / Windows x64 CI。**M8 整体验收未通过；未签名候选、原生自动化与正式签名/安装后人工验收分别记录。**
 
 ## 发布实现
 
@@ -23,12 +23,12 @@
 | 数据备份与移除 | 对隔离 profile 使用 SQLite backup；删除临时安装的应用 bundle 后 profile 仍在且完整。未删用户下载文件/数据库。                                               |
 | 数据/任务回归  | 198 Rust 测试通过、1 ignored，覆盖旧结构升级、文件缺失恢复、终态历史、任务快照、组件失败回滚及 probe 子进程超时清理。                                       |
 | UI 与策略      | 74 前端测试通过；中英文应用更新、政策、反馈、并发设置 UI 回归通过；设置 Tab 的原有导航/草稿/滚动和三平台预览已通过。                                        |
-| 工作流         | actionlint 1.7.12 校验通过；本机验证配置与产物/清单生成的拒绝边界。远端 workflow 未运行，不等同于 Windows 编译成功。                                        |
+| 工作流         | actionlint 1.7.12 校验通过；远端 macOS/Windows 基础检查及原生组件生命周期通过；安装包 CI 与修复证据见 [双平台 CI](ci-builds.md)。                           |
 | 第三方站点     | 官方原生 yt-dlp 读取用户提供的 Bilibili BV1uVy7BCErV（P1）在当前网络返回 HTTP 412；未提供 Cookie 或规避限制，未声称真实站点下载通过。                       |
 
 另以应用管理的 Deno 读取 YouTube Sc9HOaCIrmU，直连在 60 秒内未完成，已停止整个测试进程组。没有使用 Cookie/代理或规避限制，不能据此声称 YouTube 下载已验证。
 
-最终本机候选保存在 `src-tauri/target/release/candidate/`（Git 忽略），包括 DMG、updater tar.gz、sig、SHA256SUMS、build-info 和 notices。此包仅供本机内部验证。
+首次公开推送前的本机候选保存在 `src-tauri/target/release/candidate/`（Git 忽略），包括 DMG、updater tar.gz、sig、SHA256SUMS、build-info 和 notices。以下哈希只对应该历史候选；本轮 CI 已更新 notices，应优先使用 [CI 记录](ci-builds.md) 中与提交绑定的产物。
 
 ```text
 e137c461adcdd01667798e63bacba0feb9bc2c9375323d79e4b2558ff4adf71b  Savebeam_0.1.0_aarch64.dmg
@@ -37,12 +37,12 @@ e137c461adcdd01667798e63bacba0feb9bc2c9375323d79e4b2558ff4adf71b  Savebeam_0.1.0
 
 ## 尚未关闭的实际门禁
 
-最终检查：`pnpm check` 全部通过（74 前端测试、198 Rust 测试通过/1 忽略），`release-tools` 全目标 Clippy 和两份发布工作流 actionlint 通过。Gitleaks 8.30.1 的官方 arm64 工具包 SHA-256 已核对；对全部 129 个 Git 提交进行脱敏扫描，未发现泄露。该扫描不等于代码或法律审计全部通过。
+检查：`pnpm check` 全部通过（74 前端测试；macOS 198、Windows 176 Rust 测试通过，各 1 忽略），`release-tools` 全目标 Clippy 和发布工作流 actionlint 通过。Gitleaks 8.30.1 的官方 arm64 工具包 SHA-256 已核对；首次推送前及 CI 修复后对完整 Git 历史进行脱敏扫描，未发现泄露。该扫描不等于代码或法律审计全部通过。
 
 1. 项目没有 Developer ID Application / Notary 或 Windows 代码签名凭据，不能执行正式签名验收。
-2. Windows 原生构建、安装/升级/卸载、进程取消及辅助技术未运行；macOS 正式 release 安装启动、跨版本真实更新和 VoiceOver 人工巡检仍未完成。屏幕捕获工具未能获取验证窗口图像，不以此替代人工巡检。
-3. GitHub 仓库当前为空且公开，本地尚未配置 remote；没有首次公开推送、Release 或 workflow dispatch。
-4. 组件各目标的真实二进制/notices 审核及生产签名目录端到端仍打开；当前审核 JSON 故意不批准发布。
+2. Windows/macOS 已安装应用的全新/升级/卸载、跨版本真实更新及辅助技术人工矩阵仍未完成。Windows 原生编译、测试、进程取消及实际组件检查已通过，不能替代这些矩阵。屏幕捕获工具未能获取本机验证窗口图像，不以此替代人工巡检。
+3. 已获用户授权首次推送公开源码并运行未签名 CI，remote 为 `git@github.com:coopsrc/savebeam.git`。没有创建或发布 Release；正式发行资产和公开更新端点仍未验证。
+4. macOS arm64 / Windows x64 的真实组件哈希和安装生命周期通过；其他目标、二进制 notices 审核及生产签名目录端到端仍打开；当前审核 JSON 故意不批准发布。
 5. [依赖审计](dependency-audit-2026-11.md) 中的 Linux GTK 风险与一项 npm 作者许可来源复核仍需处理，不能把 notices 文本“已生成”当成法律审核全部关闭。
 
 发行凭据与全新环境就绪后，按 [发布说明](../releases/desktop-release.md) 执行候选构建、双平台安装/升级/卸载和带匹配数据库快照的回滚矩阵。M6/M7/M8 全部门禁关闭前，不创建里程碑完成提交。

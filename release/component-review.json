@@ -15,8 +15,8 @@
       "binaryNoticesReviewed": false
     },
     "yt_dlp/windows/x86_64": {
-      "downloadedHashVerified": false,
-      "nativeSmokePassed": false,
+      "downloadedHashVerified": true,
+      "nativeSmokePassed": true,
       "binaryNoticesReviewed": false
     },
     "yt_dlp/windows/aarch64": {
@@ -45,8 +45,8 @@
       "binaryNoticesReviewed": false
     },
     "java_script_runtime/windows/x86_64": {
-      "downloadedHashVerified": false,
-      "nativeSmokePassed": false,
+      "downloadedHashVerified": true,
+      "nativeSmokePassed": true,
       "binaryNoticesReviewed": false
     },
     "java_script_runtime/windows/aarch64": {
@@ -65,13 +65,13 @@
       "binaryNoticesReviewed": false
     },
     "ffmpeg/windows/x86_64": {
-      "downloadedHashVerified": false,
-      "nativeSmokePassed": false,
+      "downloadedHashVerified": true,
+      "nativeSmokePassed": true,
       "binaryNoticesReviewed": false
     },
     "ffprobe/windows/x86_64": {
-      "downloadedHashVerified": false,
-      "nativeSmokePassed": false,
+      "downloadedHashVerified": true,
+      "nativeSmokePassed": true,
       "binaryNoticesReviewed": false
     },
     "ffmpeg/windows/aarch64": {
